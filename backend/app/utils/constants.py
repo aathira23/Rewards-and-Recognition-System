@@ -1,0 +1,17 @@
+"""
+Application constants.
+"""
+
+# Points and rewards
+DEFAULT_POINTS_EXPIRY_DAYS = 365
+MIN_CONVERSION_POINTS = 100
+
+# Pagination
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
+
+# Notifications
+NOTIFICATION_RETENTION_DAYS = 90
+
+# Celebrations
+CELEBRATION_RETRY_MAX_ATTEMPTS = 3
