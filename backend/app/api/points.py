@@ -14,7 +14,7 @@ from app.schemas.points_conversion import (
     PointsConversionActionRequest
 )
 from app.schemas.points_policy import PointsPolicyCreate, PointsPolicyUpdate, PointsPolicyResponse
-from app.services.points_service import PointsService, get_aggregates, fetch_ledger_history
+from app.services.points_service import PointsService
 from app.services.store_service import StoreService
 from app.utils.response import success, created, client_error
 
@@ -71,8 +71,15 @@ def convert_points_to_cash(
     """Request points conversion to cash/payroll. (User Shortcut)"""
     service = StoreService(db)
     try:
-        # Dummy rate 0.1
-        calculated_cash = request.points_converted * 0.1
+        # Get conversion rate from active policies
+        policies = service.get_policies()
+        rate = 0.1 # default fallback
+        for p in policies:
+            if p.recognition_type == "CONVERSION" and p.conversion_reward_type == request.conversion_type:
+                rate = float(p.conversion_rate or 0.1)
+                break
+                
+        calculated_cash = float(request.points_converted) * rate
         conversion = service.create_conversion_request(
             user_id=current_user_id,
             points=request.points_converted,
@@ -115,12 +122,42 @@ def action_conversion(
         return client_error(message=str(e))
 
 
+# --- Policy/Rules Endpoints ---
+
 @router.get("/rules/points", response_model=List[PointsPolicyResponse])
 def get_points_rules(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
-    """Get all points policy rules (The 'Rules' tab)."""
+    """Get all points policy rules."""
     service = StoreService(db)
     policies = service.get_policies()
     return success(data=policies, message="Policies retrieved")
+
+
+@router.post("/rules/points", response_model=PointsPolicyResponse, status_code=status.HTTP_201_CREATED)
+def create_points_rule(
+    rule: PointsPolicyCreate,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """Create a new points policy rule (admin only)."""
+    service = StoreService(db)
+    result = service.create_policy(rule)
+    return created(data=result, message="Rule created successfully")
+
+
+@router.put("/rules/points/{rule_id}", response_model=PointsPolicyResponse)
+def update_points_rule(
+    rule_id: int,
+    rule: PointsPolicyUpdate,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """Update a points policy rule (admin only)."""
+    service = StoreService(db)
+    try:
+        result = service.update_policy(rule_id, rule)
+        return success(data=result, message="Rule updated successfully")
+    except ValueError as e:
+        return client_error(message=str(e))

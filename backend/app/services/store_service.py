@@ -155,3 +155,27 @@ class StoreService:
         """Get all active points and conversion rules."""
         from app.models.points_policy import PointsPolicy
         return self.db.query(PointsPolicy).filter(PointsPolicy.is_active == True).all()
+
+    def create_policy(self, policy_data: Any) -> Any:
+        """Create a new point policy."""
+        from app.models.points_policy import PointsPolicy
+        policy = PointsPolicy(**policy_data.model_dump())
+        self.db.add(policy)
+        self.db.commit()
+        self.db.refresh(policy)
+        return policy
+
+    def update_policy(self, policy_id: int, policy_data: Any) -> Any:
+        """Update an existing policy."""
+        from app.models.points_policy import PointsPolicy
+        policy = self.db.query(PointsPolicy).filter(PointsPolicy.id == policy_id).first()
+        if not policy:
+            raise ValueError("Policy not found.")
+        
+        update_data = policy_data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(policy, key, value)
+            
+        self.db.commit()
+        self.db.refresh(policy)
+        return policy
