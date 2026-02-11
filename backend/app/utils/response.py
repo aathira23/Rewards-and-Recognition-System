@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 
+from fastapi.encoders import jsonable_encoder
+
 def _now_iso() -> str:
     return datetime.utcnow().isoformat() + "Z"
 
@@ -23,14 +25,15 @@ class CommonResponse(BaseModel):
         from_attributes = True
 
 
-def _build_body(status_text: str, status_code: int, message: str | None, data: Any) -> dict:
-    return CommonResponse(
+def _build_body(status_text: str, status_code: int, message: str | None, data: Any) -> Any:
+    response = CommonResponse(
         status=status_text,
         status_code=status_code,
         message=message or "",
         data=data,
         timestamp=_now_iso(),
-    ).dict()
+    )
+    return jsonable_encoder(response)
 
 
 def success(data: Any = None, message: str | None = "OK", status_code: int = http_status.HTTP_200_OK) -> JSONResponse:

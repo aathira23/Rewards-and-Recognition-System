@@ -21,7 +21,9 @@ def get_catalog_items(db: Session = Depends(get_db)):
     """Browse all active rewards in the catalog."""
     service = StoreService(db)
     items = service.get_catalog()
-    return success(data=items, message="Catalog retrieved successfully")
+    # Convert models to schemas
+    data = [RewardResponse.model_validate(i) for i in items]
+    return success(data=data, message="Catalog retrieved successfully")
 
 
 @router.post("/redeem", response_model=RedemptionResponse)
@@ -37,34 +39,12 @@ def redeem_reward(
             user_id=current_user_id,
             reward_id=redemption_data.reward_id
         )
-        return created(data=redemption, message="Redemption successful")
+        data = RedemptionResponse.model_validate(redemption)
+        return created(data=data, message="Redemption successful")
     except ValueError as e:
         return client_error(message=str(e))
 
 
-@router.post("/convert", response_model=PointsConversionResponse)
-def convert_points(
-    conversion_data: PointsConversionCreate,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Request point conversion to Payroll or CSR (Requires Approval)."""
-    service = StoreService(db)
-    try:
-        # In a real system, cash_amount would be calculated via a points policy service.
-        # For this demo, we'll use a dummy rate of 0.1 (10 pts = $1).
-        dummy_rate = 0.1
-        calculated_cash = conversion_data.points_converted * dummy_rate
-        
-        conversion = service.create_conversion_request(
-            user_id=current_user_id,
-            points=conversion_data.points_converted,
-            conversion_type=conversion_data.conversion_type,
-            cash_amount=calculated_cash
-        )
-        return created(data=conversion, message="Conversion request submitted for approval")
-    except ValueError as e:
-        return client_error(message=str(e))
 
 
 @router.get("/history")

@@ -1,7 +1,7 @@
 """
 Store service - Business logic for reward catalog and redemptions.
 """
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 

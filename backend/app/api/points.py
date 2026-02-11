@@ -62,8 +62,8 @@ def get_points_history(
     return success(data=payload, message="Points history fetched")
 
 
-@router.post("/convert-to-cash", response_model=PointsConversionResponse, status_code=status.HTTP_201_CREATED)
-def convert_points_to_cash(
+@router.post("/convert", response_model=PointsConversionResponse, status_code=status.HTTP_201_CREATED)
+def convert_points_request(
     request: PointsConversionCreate,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
@@ -86,7 +86,8 @@ def convert_points_to_cash(
             conversion_type=request.conversion_type,
             cash_amount=calculated_cash
         )
-        return created(data=conversion, message="Conversion request submitted")
+        data = PointsConversionResponse.model_validate(conversion)
+        return created(data=data, message="Conversion request submitted")
     except ValueError as e:
         return client_error(message=str(e))
 
@@ -99,7 +100,8 @@ def get_conversions(
     """Get conversion requests (User's own requests)."""
     service = StoreService(db)
     conversions = service.get_conversion_history(current_user_id)
-    return success(data=conversions)
+    data = [PointsConversionResponse.model_validate(c) for c in conversions]
+    return success(data=data)
 
 
 @router.post("/conversions/{conversion_id}/action")
@@ -114,17 +116,19 @@ def action_conversion(
     try:
         if request.action.upper() == "APPROVE":
             result = service.approve_conversion(conversion_id, current_user_id)
-            return success(data=result, message="Request approved and points deducted")
+            data = PointsConversionResponse.model_validate(result)
+            return success(data=data, message="Request approved and points deducted")
         else:
             result = service.reject_conversion(conversion_id, current_user_id)
-            return success(data=result, message="Request rejected")
+            data = PointsConversionResponse.model_validate(result)
+            return success(data=data, message="Request rejected")
     except ValueError as e:
         return client_error(message=str(e))
 
 
 # --- Policy/Rules Endpoints ---
 
-@router.get("/rules/points", response_model=List[PointsPolicyResponse])
+@router.get("/rules", response_model=List[PointsPolicyResponse])
 def get_points_rules(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
@@ -132,10 +136,11 @@ def get_points_rules(
     """Get all points policy rules."""
     service = StoreService(db)
     policies = service.get_policies()
-    return success(data=policies, message="Policies retrieved")
+    data = [PointsPolicyResponse.model_validate(p) for p in policies]
+    return success(data=data, message="Policies retrieved")
 
 
-@router.post("/rules/points", response_model=PointsPolicyResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/rules", response_model=PointsPolicyResponse, status_code=status.HTTP_201_CREATED)
 def create_points_rule(
     rule: PointsPolicyCreate,
     db: Session = Depends(get_db),
@@ -144,10 +149,11 @@ def create_points_rule(
     """Create a new points policy rule (admin only)."""
     service = StoreService(db)
     result = service.create_policy(rule)
-    return created(data=result, message="Rule created successfully")
+    data = PointsPolicyResponse.model_validate(result)
+    return created(data=data, message="Rule created successfully")
 
 
-@router.put("/rules/points/{rule_id}", response_model=PointsPolicyResponse)
+@router.put("/rules/{rule_id}", response_model=PointsPolicyResponse)
 def update_points_rule(
     rule_id: int,
     rule: PointsPolicyUpdate,
@@ -158,6 +164,7 @@ def update_points_rule(
     service = StoreService(db)
     try:
         result = service.update_policy(rule_id, rule)
-        return success(data=result, message="Rule updated successfully")
+        data = PointsPolicyResponse.model_validate(result)
+        return success(data=data, message="Rule updated successfully")
     except ValueError as e:
         return client_error(message=str(e))
