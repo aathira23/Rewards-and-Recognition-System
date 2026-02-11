@@ -167,26 +167,55 @@ class RecognitionService:
             source_type=ReferenceType.CELEBRATION.value,
             source_id=entry.id
         )
-        
         return entry
+    
+    # --- Leaderboard ---
+    def get_leaderboard(self, period: str = "MONTHLY", metric: str = "POINTS", limit: int = 10) -> List[Dict[str, Any]]:
+        """Calculate leaderboard ranking."""
+        from sqlalchemy import func, desc
+        from app.models.points_ledger import PointsLedger
+        from app.models.wallets import Wallet
+        from app.models.ecards import ECard
 
-    def create_feed_entry(
-        self,
-        actor_id: int,
-        receiver_id: Optional[int],
-        source_type: str,
-        source_id: int,
-        message: str
-    ) -> RecognitionFeed:
-        """Create a recognition feed entry."""
-        feed_entry = RecognitionFeed(
-            actor_id=actor_id,
-            receiver_id=receiver_id,
-            source_type=source_type,
-            source_id=source_id,
-            message=message
-        )
-        self.db.add(feed_entry)
-        self.db.commit()
-        self.db.refresh(feed_entry)
-        return feed_entry
+        # Determine start date
+        start_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if period == "YEARLY":
+            start_date = start_date.replace(month=1)
+        
+        # Base Query
+        if metric == "POINTS":
+            # Rank by total points received
+            results = self.db.query(
+                User,
+                func.sum(PointsLedger.points).label("total_score"),
+                func.count(PointsLedger.id).label("count")
+            ).join(Wallet, User.id == Wallet.user_id
+            ).join(PointsLedger, Wallet.id == PointsLedger.target_wallet_id
+            ).filter(
+                PointsLedger.transaction_type == "CREDIT",
+                PointsLedger.created_at >= start_date
+            ).group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+        else:
+            # Rank by number of recognitions (eCards) received
+            results = self.db.query(
+                User,
+                func.count(ECard.id).label("total_score"),
+                func.sum(ECard.points_awarded).label("points")
+            ).join(ECard, User.id == ECard.receiver_id).filter(
+                ECard.created_at >= start_date
+            ).group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+
+        leaderboard = []
+        for rank, (user, score, secondary) in enumerate(results, start=1):
+            leaderboard.append({
+                "user_id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "department": user.department.name if user.department else None,
+                "profile_picture": getattr(user, "profile_picture", None),
+                "rank": rank,
+                "score": int(score or 0),
+                "recognitions_received": int(secondary or 0) if metric == "POINTS" else int(score or 0)
+            })
+            
+        return leaderboard
