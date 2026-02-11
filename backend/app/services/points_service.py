@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc, func
+from datetime import date, datetime
 
 from app.models.wallets import Wallet
 from app.models.points_ledger import PointsLedger
@@ -14,7 +15,6 @@ from app.models.award_types import AwardType
 from app.models.rewards import Reward
 from app.models.points_batches import PointsBatch
 from app.utils.enums import TransactionType, ReferenceType
-from datetime import date
 
 
 def get_employee_wallet(db: Session, user_id: int) -> Optional[Wallet]:
@@ -162,10 +162,19 @@ def fetch_ledger_history(
         or_(PointsLedger.source_wallet_id == wallet.id, PointsLedger.target_wallet_id == wallet.id)
     )
 
+    # Parse date strings if provided
     if start_date:
-        q = q.filter(PointsLedger.created_at >= start_date)
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            q = q.filter(PointsLedger.created_at >= start_dt)
+        except ValueError:
+            pass  # Skip invalid date format
     if end_date:
-        q = q.filter(PointsLedger.created_at <= end_date)
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            q = q.filter(PointsLedger.created_at <= end_dt)
+        except ValueError:
+            pass  # Skip invalid date format
 
     # category filters
     # Exclude ledger rows created by expiry job; expired items will be sourced from PointsBatch

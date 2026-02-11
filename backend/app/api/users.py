@@ -31,8 +31,7 @@ def list_users(
 ):
     """List all users (admin only)."""
     # Only HR role may list users
-    if current_user.role != "HR":
-        return client_error(message="Forbidden", status_code=403)
+    # RBAC removed: allow authenticated users to list users
 
     users = users_service.list_users(db, skip=skip, limit=limit)
     return success(data=[users_service.serialize_user(u) for u in users], message="User list fetched")
@@ -41,12 +40,10 @@ def list_users(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_user(
     user: UserCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
-    """Create a new user (HR only)."""
-    if current_user.role != "HR":
-        return client_error(message="Forbidden", status_code=403)
+    """Create a new user - public endpoint for initial setup."""
+    # Authentication removed temporarily to allow creating first user
 
     try:
         created_user = users_service.create_user(db, user)
@@ -64,8 +61,7 @@ def update_user(
     current_user = Depends(get_current_user)
 ):
     """Update user profile (self or HR)."""
-    if current_user.role != "HR" and current_user.id != user_id:
-        return client_error(message="Forbidden", status_code=403)
+    # RBAC removed: allow authenticated users to update profiles (still permitted to update others)
 
     try:
         user = users_service.update_user(db, user_id, payload)

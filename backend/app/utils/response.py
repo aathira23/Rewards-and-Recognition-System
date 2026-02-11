@@ -20,7 +20,7 @@ class CommonResponse(BaseModel):
     timestamp: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 def _build_body(status_text: str, status_code: int, message: str | None, data: Any) -> dict:
