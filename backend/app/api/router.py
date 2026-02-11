@@ -25,7 +25,7 @@ api_router.include_router(users.router, prefix="/profile", tags=["User Profiles"
 api_router.include_router(wallets.router, prefix="/budgets", tags=["Budgets & Wallets"])
 api_router.include_router(points.router, prefix="/points", tags=["Points Management"])
 api_router.include_router(recognitions.router, prefix="/recognitions", tags=["Peer Recognition"])
-api_router.include_router(awards.router, prefix="/awards", tags=["Employee Awards"])
+api_router.include_router(awards.router, prefix="/nominations", tags=["Official Nominations"])
 api_router.include_router(celebrations.router, prefix="/celebrations", tags=["Celebrations"])
 api_router.include_router(store.router, prefix="/catalog", tags=["Rewards Catalog"])
 api_router.include_router(notifications.router, prefix="/inbox", tags=["Notifications"])
