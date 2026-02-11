@@ -99,74 +99,74 @@ backend/
 ## API Endpoints Implemented
 
 ### Authentication
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/logout` - User logout
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
 
 ### Users
-- `GET /api/v1/users/me` - Get current user
-- `GET /api/v1/users/` - List users (admin)
-- `POST /api/v1/users/` - Create user (admin)
+- `GET /api/users/me` - Get current user
+- `GET /api/users/` - List users (admin)
+- `POST /api/users/` - Create user (admin)
 
 ### Recognitions
-- `POST /api/v1/recognitions` - Send eCard
-- `GET /api/v1/recognitions/feed` - Recognition feed
-- `GET /api/v1/recognitions/{id}` - Get recognition
-- `GET /api/v1/recognitions/auto` - Auto recognitions
-- `GET /api/v1/leaderboard` - Leaderboard
+- `POST /api/recognitions` - Send eCard
+- `GET /api/recognitions/feed` - Recognition feed
+- `GET /api/recognitions/{id}` - Get recognition
+- `GET /api/recognitions/auto` - Auto recognitions
+- `GET /api/leaderboard` - Leaderboard
 
 ### Points
-- `GET /api/v1/points/balance` - Get balance
-- `GET /api/v1/points/history` - Transaction history
-- `POST /api/v1/points/convert-to-cash` - Request conversion
-- `GET /api/v1/points/conversions` - List conversions
-- `POST /api/v1/points/conversions/{id}/action` - Approve/reject
-- `POST /api/v1/rules/points` - Create rule (admin)
-- `PUT /api/v1/rules/points/{id}` - Update rule (admin)
-- `GET /api/v1/rules/points` - List rules
+- `GET /api/points/balance` - Get balance
+- `GET /api/points/history` - Transaction history
+- `POST /api/points/convert-to-cash` - Request conversion
+- `GET /api/points/conversions` - List conversions
+- `POST /api/points/conversions/{id}/action` - Approve/reject
+- `POST /api/rules/points` - Create rule (admin)
+- `PUT /api/rules/points/{id}` - Update rule (admin)
+- `GET /api/rules/points` - List rules
 
 ### Awards
-- `POST /api/v1/awards/nominations` - Nominate
-- `GET /api/v1/awards/nominations` - List nominations
-- `GET /api/v1/awards/nominations/{id}` - Get nomination
-- `POST /api/v1/awards/nominations/{id}/action` - Approve/reject
-- `POST /api/v1/awards/types` - Create type (admin)
-- `PUT /api/v1/awards/types/{id}` - Update type (admin)
-- `PATCH /api/v1/awards/types/{id}/deactivate` - Deactivate type
-- `GET /api/v1/awards/types` - List types
-- `POST /api/v1/badges` - Create badge (admin)
-- `PUT /api/v1/badges/{id}` - Update badge (admin)
-- `PATCH /api/v1/badges/{id}/deactivate` - Deactivate badge
-- `GET /api/v1/badges` - List badges
+- `POST /api/awards/nominations` - Nominate
+- `GET /api/awards/nominations` - List nominations
+- `GET /api/awards/nominations/{id}` - Get nomination
+- `POST /api/awards/nominations/{id}/action` - Approve/reject
+- `POST /api/awards/types` - Create type (admin)
+- `PUT /api/awards/types/{id}` - Update type (admin)
+- `PATCH /api/awards/types/{id}/deactivate` - Deactivate type
+- `GET /api/awards/types` - List types
+- `POST /api/badges` - Create badge (admin)
+- `PUT /api/badges/{id}` - Update badge (admin)
+- `PATCH /api/badges/{id}/deactivate` - Deactivate badge
+- `GET /api/badges` - List badges
 
 ### Wallets
-- `GET /api/v1/wallets/manager` - Get manager wallet
-- `POST /api/v1/wallets/manager/allocate` - HR allocate budget
-- `POST /api/v1/wallets/manager/reward` - Manager reward employee
+- `GET /api/wallets/manager` - Get manager wallet
+- `POST /api/wallets/manager/allocate` - HR allocate budget
+- `POST /api/wallets/manager/reward` - Manager reward employee
 
 ### Celebrations
-- `GET /api/v1/celebrations/upcoming` - Upcoming events
-- `GET /api/v1/celebrations/history` - Past celebrations
-- `POST /api/v1/celebrations/{id}/retry` - Retry failed event
+- `GET /api/celebrations/upcoming` - Upcoming events
+- `GET /api/celebrations/history` - Past celebrations
+- `POST /api/celebrations/{id}/retry` - Retry failed event
 
 ### Store
-- `GET /api/v1/store/items` - List rewards
-- `GET /api/v1/store/items/{id}` - Get reward
-- `POST /api/v1/store/items` - Create reward (admin)
-- `PUT /api/v1/store/items/{id}` - Update reward (admin)
-- `PATCH /api/v1/store/items/{id}/deactivate` - Deactivate reward
-- `POST /api/v1/store/redeem` - Redeem reward
-- `GET /api/v1/store/redemptions` - Redemption history
+- `GET /api/store/items` - List rewards
+- `GET /api/store/items/{id}` - Get reward
+- `POST /api/store/items` - Create reward (admin)
+- `PUT /api/store/items/{id}` - Update reward (admin)
+- `PATCH /api/store/items/{id}/deactivate` - Deactivate reward
+- `POST /api/store/redeem` - Redeem reward
+- `GET /api/store/redemptions` - Redemption history
 
 ### Notifications
-- `GET /api/v1/notifications` - List notifications
-- `POST /api/v1/notifications/{id}/read` - Mark as read
+- `GET /api/notifications` - List notifications
+- `POST /api/notifications/{id}/read` - Mark as read
 
 ### Analytics
-- `GET /api/v1/analytics` - Dashboard metrics
+- `GET /api/analytics` - Dashboard metrics
 
 ### Reports
-- `GET /api/v1/reports` - Generate reports
-- `GET /api/v1/reports/payroll` - Payroll encashment report
+- `GET /api/reports` - Generate reports
+- `GET /api/reports/payroll` - Payroll encashment report
 
 ---
 

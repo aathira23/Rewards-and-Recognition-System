@@ -3,10 +3,10 @@ Points management API endpoints.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
+from app.core.dependencies import get_current_user, get_current_user_id
 from app.schemas.points_ledger import PointsLedgerResponse
 from app.schemas.points_conversion import (
     PointsConversionCreate,
@@ -14,6 +14,8 @@ from app.schemas.points_conversion import (
     PointsConversionActionRequest
 )
 from app.schemas.points_policy import PointsPolicyCreate, PointsPolicyUpdate, PointsPolicyResponse
+from app.services import points_service
+from app.utils.response import success
 
 router = APIRouter()
 
@@ -21,29 +23,40 @@ router = APIRouter()
 @router.get("/balance")
 def get_points_balance(
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Get current user's points balance."""
-    # TODO: Implement get balance logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    """Get current user's points balance and aggregates."""
+    aggregates = points_service.get_aggregates(db, current_user.id)
+    return success(data=aggregates, message="Balance fetched")
 
 
-@router.get("/history", response_model=List[PointsLedgerResponse])
+@router.get("/history")
 def get_points_history(
-    skip: int = 0,
-    limit: int = 20,
+    category: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 20,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Get points transaction history."""
-    # TODO: Implement get history logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
+    """Get points history with balance, aggregates, and filters (received, spent, expired, pending)."""
+    aggregates = points_service.get_aggregates(db, current_user.id)
+    total, history = points_service.fetch_ledger_history(
+        db, current_user.id, category, start_date, end_date, page, per_page
     )
+    
+    payload = {
+        "balance": aggregates["balance"],
+        "total_earned": aggregates["total_earned"],
+        "total_redeemed": aggregates["total_redeemed"],
+        "pending_count": aggregates["pending_count"],
+        "history": history,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+    }
+    return success(data=payload, message="Points history fetched")
 
 
 @router.post("/convert-to-cash", response_model=PointsConversionResponse, status_code=status.HTTP_201_CREATED)

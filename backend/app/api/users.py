@@ -6,49 +6,70 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
-from app.schemas.users import UserCreate, UserResponse
+from app.core.dependencies import get_current_user
+from app.schemas.users import UserCreate, UserResponse, UserUpdate
+from app.utils.response import success, client_error, created
+from app.services import users_service
 
 router = APIRouter()
 
 
-@router.get("/me", response_model=UserResponse)
-def get_current_user(
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+@router.get("/me")
+def get_current_user_route(
+    current_user = Depends(get_current_user)
 ):
     """Get current authenticated user details."""
-    # TODO: Implement get current user logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    return success(data=users_service.serialize_user(current_user), message="Fetched current user")
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/")
 def list_users(
     skip: int = 0,
     limit: int = 20,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
     """List all users (admin only)."""
-    # TODO: Implement list users logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    # Only HR role may list users
+    if current_user.role != "HR":
+        return client_error(message="Forbidden", status_code=403)
+
+    users = users_service.list_users(db, skip=skip, limit=limit)
+    return success(data=[users_service.serialize_user(u) for u in users], message="User list fetched")
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_user(
     user: UserCreate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Create a new user (admin only)."""
-    # TODO: Implement create user logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    """Create a new user (HR only)."""
+    if current_user.role != "HR":
+        return client_error(message="Forbidden", status_code=403)
+
+    try:
+        created_user = users_service.create_user(db, user)
+    except ValueError as e:
+        return client_error(message=str(e), status_code=409)
+
+    return created(data=users_service.serialize_user(created_user), message="User created")
+
+
+@router.put("/{user_id}")
+def update_user(
+    user_id: int,
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Update user profile (self or HR)."""
+    if current_user.role != "HR" and current_user.id != user_id:
+        return client_error(message="Forbidden", status_code=403)
+
+    try:
+        user = users_service.update_user(db, user_id, payload)
+    except ValueError as e:
+        return client_error(message=str(e), status_code=404)
+
+    return success(data=users_service.serialize_user(user), message="User updated")

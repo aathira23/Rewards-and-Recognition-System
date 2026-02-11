@@ -12,6 +12,7 @@ from app.core.security import verify_password, create_access_token
 from app.core.config import settings
 from app.models.users import User
 from app.schemas.users import Token
+from app.utils.response import success, unauthorized
 
 router = APIRouter()
 
@@ -35,11 +36,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
     access_token = create_access_token(data=token_data, expires_delta=access_token_expires)
 
-    return Token(access_token=access_token)
+    return success(data={"access_token": access_token, "token_type": "bearer"}, message="Login successful")
 
 
 @router.post("/logout")
 def logout():
     """Logout endpoint (token invalidation if needed)."""
     # Token invalidation (blacklist) is not implemented; this is a placeholder.
-    return {"message": "Logged out successfully"}
+    return success(data=None, message="Logged out successfully")
