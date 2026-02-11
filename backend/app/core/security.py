@@ -6,6 +6,9 @@ from typing import Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from uuid import uuid4
+from typing import Tuple
+from datetime import date as _date
 
 from app.core.config import settings
 
@@ -55,6 +58,28 @@ def decode_access_token(token: str) -> Optional[dict]:
     Returns:
         Decoded token data or None if invalid
     """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a refresh token JWT. Includes a `jti` and `type: refresh`."""
+    to_encode = data.copy()
+    to_encode.update({"type": "refresh", "jti": str(uuid4())})
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=getattr(settings, "REFRESH_TOKEN_EXPIRE_DAYS", 30))
+
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_token(token: str) -> Optional[dict]:
+    """Decode any token (access or refresh)."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload

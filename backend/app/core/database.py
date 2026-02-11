@@ -16,6 +16,34 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for models
 Base = declarative_base()
 
+# Import all model modules so SQLAlchemy registers mappers for relationships
+# This ensures relationships referenced by string names (e.g. "Department")
+# are available when mappers are configured at runtime.
+try:
+    from app.models import (
+        users,
+        departments,
+        wallets,
+        wallet_funding,
+        points_ledger,
+        points_batches,
+        points_conversion,
+        points_policy,
+        ecards,
+        awards,
+        award_approvals,
+        award_types,
+        badges,
+        celebrations,
+        recognition_feed,
+        redemptions,
+        rewards,
+        notifications,
+    )
+except Exception:
+    # Import errors during initial setup should not crash the module import.
+    pass
+
 
 def get_db():
     """

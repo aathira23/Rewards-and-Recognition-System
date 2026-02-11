@@ -28,7 +28,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/")
 def root():
     """Root endpoint."""
-    return {"message": "Rewards & Recognition System API"}
+    return {"message": "Rewards & Recognition System"}
 
 
 @app.get("/health")
