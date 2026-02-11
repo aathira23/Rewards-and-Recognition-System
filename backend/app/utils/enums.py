@@ -93,7 +93,6 @@ class ConversionType(str, Enum):
     """Points conversion types."""
     PAYROLL = "PAYROLL"
     CSR = "CSR"
-    VOUCHER = "VOUCHER"
 
 
 class ConversionStatus(str, Enum):

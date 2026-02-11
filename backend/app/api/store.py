@@ -1,117 +1,90 @@
 """
-Store API endpoints (rewards catalog, redemptions).
+Catalog & Rewards API - Catalog browsing, redemptions, and point conversions.
 """
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id
-from app.schemas.rewards import RewardCreate, RewardUpdate, RewardResponse
+from app.services.store_service import StoreService
+from app.schemas.rewards import RewardResponse
 from app.schemas.redemptions import RedemptionCreate, RedemptionResponse
+from app.schemas.points_conversion import PointsConversionCreate, PointsConversionResponse
+from app.utils.response import success, created, client_error
 
 router = APIRouter()
 
 
-# Reward Items
 @router.get("/items", response_model=List[RewardResponse])
-def get_store_items(
-    reward_type: str = None,
-    skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Get reward catalog items."""
-    # TODO: Implement get store items logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+def get_catalog_items(db: Session = Depends(get_db)):
+    """Browse all active rewards in the catalog."""
+    service = StoreService(db)
+    items = service.get_catalog()
+    return success(data=items, message="Catalog retrieved successfully")
 
 
-@router.get("/items/{item_id}", response_model=RewardResponse)
-def get_store_item(
-    item_id: int,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Get specific reward item details."""
-    # TODO: Implement get store item logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
-
-
-@router.post("/items", response_model=RewardResponse, status_code=status.HTTP_201_CREATED)
-def create_store_item(
-    item: RewardCreate,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Create a new reward item (admin only)."""
-    # TODO: Implement create store item logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
-
-
-@router.put("/items/{item_id}", response_model=RewardResponse)
-def update_store_item(
-    item_id: int,
-    item: RewardUpdate,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Update a reward item (admin only)."""
-    # TODO: Implement update store item logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
-
-
-@router.patch("/items/{item_id}/deactivate")
-def deactivate_store_item(
-    item_id: int,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Deactivate a reward item (admin only)."""
-    # TODO: Implement deactivate store item logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
-
-
-# Redemptions
-@router.post("/redeem", response_model=RedemptionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/redeem", response_model=RedemptionResponse)
 def redeem_reward(
-    redemption: RedemptionCreate,
+    redemption_data: RedemptionCreate,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
-    """Redeem points for a reward."""
-    # TODO: Implement redeem reward logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    """Instantly redeem a reward (Merchandise/Vouchers). Deducts points immediately."""
+    service = StoreService(db)
+    try:
+        redemption = service.redeem_reward(
+            user_id=current_user_id,
+            reward_id=redemption_data.reward_id
+        )
+        return created(data=redemption, message="Redemption successful")
+    except ValueError as e:
+        return client_error(message=str(e))
 
 
-@router.get("/redemptions", response_model=List[RedemptionResponse])
-def get_redemptions(
-    skip: int = 0,
-    limit: int = 20,
+@router.post("/convert", response_model=PointsConversionResponse)
+def convert_points(
+    conversion_data: PointsConversionCreate,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
-    """Get redemption history."""
-    # TODO: Implement get redemptions logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
+    """Request point conversion to Payroll or CSR (Requires Approval)."""
+    service = StoreService(db)
+    try:
+        # In a real system, cash_amount would be calculated via a points policy service.
+        # For this demo, we'll use a dummy rate of 0.1 (10 pts = $1).
+        dummy_rate = 0.1
+        calculated_cash = conversion_data.points_converted * dummy_rate
+        
+        conversion = service.create_conversion_request(
+            user_id=current_user_id,
+            points=conversion_data.points_converted,
+            conversion_type=conversion_data.conversion_type,
+            cash_amount=calculated_cash
+        )
+        return created(data=conversion, message="Conversion request submitted for approval")
+    except ValueError as e:
+        return client_error(message=str(e))
+
+
+@router.get("/history")
+def get_redemption_history(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """Get history of all redemptions and conversion requests."""
+    service = StoreService(db)
+    
+    # 1. Standard Redemptions (Merch/Vouchers)
+    redemptions = service.get_redemption_history(current_user_id)
+    
+    # 2. Conversions (Payroll/CSR)
+    conversions = service.get_conversion_history(current_user_id)
+    
+    return success(
+        data={
+            "redemptions": redemptions,
+            "conversions": conversions
+        },
+        message="History retrieved successfully"
     )
