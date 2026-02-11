@@ -1,8 +1,14 @@
-"""
-Recognition service - Business logic for eCards and recognition feed.
-"""
-from sqlalchemy.orm import Session
-from typing import Optional
+from sqlalchemy.orm import Session, joinedload
+from typing import Optional, List, Any, Dict
+from datetime import datetime
+
+from app.models.badges import Badge
+from app.models.ecards import ECard
+from app.models.recognition_feed import RecognitionFeed
+from app.models.points_policy import PointsPolicy
+from app.models.users import User
+from app.services.points_service import PointsService
+from app.utils.enums import ReferenceType
 
 
 class RecognitionService:
@@ -10,48 +16,159 @@ class RecognitionService:
 
     def __init__(self, db: Session):
         self.db = db
+        self.points_service = PointsService(db)
 
+    # --- Badge Management ---
+    def get_badges(self, active_only: bool = True) -> List[Badge]:
+        """Get all badges."""
+        query = self.db.query(Badge)
+        if active_only:
+            query = query.filter(Badge.is_active == True)
+        return query.all()
+
+    def get_badge_by_id(self, badge_id: int) -> Optional[Badge]:
+        """Get a badge by ID."""
+        return self.db.query(Badge).filter(Badge.id == badge_id).first()
+
+    def create_badge(self, name: str, description: str = None, icon_url: str = None) -> Badge:
+        """Create a new badge."""
+        badge = Badge(name=name, description=description, icon_url=icon_url)
+        self.db.add(badge)
+        self.db.commit()
+        self.db.refresh(badge)
+        return badge
+
+    def update_badge(self, badge_id: int, data: Dict[str, Any]) -> Badge:
+        """Update an existing badge."""
+        badge = self.get_badge_by_id(badge_id)
+        if not badge:
+            raise ValueError("Badge not found")
+        for key, value in data.items():
+            if value is not None:
+                setattr(badge, key, value)
+        self.db.commit()
+        self.db.refresh(badge)
+        return badge
+
+    # --- eCard / Recognition Logic ---
     def send_ecard(
         self,
         sender_id: int,
         receiver_id: int,
         badge_id: int,
         message: Optional[str] = None
-    ):
+    ) -> ECard:
         """Send an eCard recognition."""
-        # TODO: Implement send eCard logic
-        # 1. Get points value from policy
-        # 2. Create eCard record
-        # 3. Award points to receiver
-        # 4. Create recognition feed entry
-        # 5. Create notification
-        pass
+        if sender_id == receiver_id:
+            raise ValueError("You cannot send a recognition to yourself.")
 
-    def get_recognition_feed(self, skip: int = 0, limit: int = 20):
+        # 1. Validate badge
+        badge = self.get_badge_by_id(badge_id)
+        if not badge or not badge.is_active:
+            raise ValueError("Invalid or inactive badge selected.")
+
+        # 2. Get points value from policy
+        policy = self.db.query(PointsPolicy).filter(
+            PointsPolicy.recognition_type == "ECARD",
+            PointsPolicy.is_active == True
+        ).first()
+        points = policy.points if policy else 100  # Default to 100 if no policy found
+
+        # 3. Create eCard record
+        ecard = ECard(
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            badge_id=badge_id,
+            points_awarded=points,
+            message=message
+        )
+        self.db.add(ecard)
+        self.db.commit()
+        self.db.refresh(ecard)
+
+        # 4. Award points to receiver
+        self.points_service.award_points(
+            user_id=receiver_id,
+            points=points,
+            source_type=ReferenceType.ECARD.value,
+            source_id=ecard.id
+        )
+
+        # 5. Create recognition feed entry
+        self.create_feed_entry(
+            actor_id=sender_id,
+            receiver_id=receiver_id,
+            source_type="ECARD",
+            source_id=ecard.id,
+            message=message or f"Recognized with {badge.name}"
+        )
+
+        return ecard
+
+    def get_recognition_feed(self, skip: int = 0, limit: int = 20) -> List[RecognitionFeed]:
         """Get company-wide recognition feed."""
-        # TODO: Implement feed retrieval
-        # Query recognition_feed ordered by created_at DESC
-        pass
+        return self.db.query(RecognitionFeed).options(
+            joinedload(RecognitionFeed.actor),
+            joinedload(RecognitionFeed.receiver)
+        ).order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(limit).all()
 
-    def get_leaderboard(
+    def get_appreciation_overview(self, user_id: int) -> Dict[str, Any]:
+        """Get recognitions received and sent by a user."""
+        received = self.db.query(ECard).options(
+            joinedload(ECard.sender),
+            joinedload(ECard.badge)
+        ).filter(ECard.receiver_id == user_id).order_by(ECard.created_at.desc()).all()
+        
+        sent = self.db.query(ECard).options( joinedload(ECard.receiver), joinedload(ECard.badge) ).filter(ECard.sender_id == user_id).order_by(ECard.created_at.desc()).all()
+
+        return {
+            "received": received,
+            "sent": sent,
+            "total_received": len(received),
+            "total_sent": len(sent)
+        }
+
+    # --- Automated Logic ---
+    def create_automated_recognition(
         self,
-        period: str = "MONTHLY",
-        metric: str = "POINTS",
-        limit: int = 10
-    ):
-        """
-        Get recognition leaderboard.
+        user_id: int,
+        celebration_type: str, # BIRTHDAY or ANNIVERSARY
+        message: str
+    ) -> RecognitionFeed:
+        """Logic for automated system recognitions."""
+        # 1. Fetch points from policy
+        policy = self.db.query(PointsPolicy).filter(
+            PointsPolicy.recognition_type == "CELEBRATION",
+            PointsPolicy.event_key == celebration_type,
+            PointsPolicy.is_active == True
+        ).first()
+        points = policy.points if policy else 500
 
-        Args:
-            period: MONTHLY or YEARLY
-            metric: POINTS (total points) or COUNT (number of recognitions)
-            limit: Number of top users to return
-        """
-        # TODO: Implement leaderboard logic
-        # 1. Determine date range based on period
-        # 2. Aggregate by metric
-        # 3. Order and limit results
-        pass
+        # 2. Award points
+        # In a real system, we'd also create a record in 'celebrations' table
+        # For simplicity and feed logic, we directly feed the recognition feed
+        
+        # Find an admin user to act as the "system" sender
+        admin = self.db.query(User).filter(User.role == "ADMIN").first()
+        system_actor_id = admin.id if admin else 1 # fallback to 1 if no admin found
+
+        entry = self.create_feed_entry(
+            actor_id=system_actor_id,
+            receiver_id=user_id,
+            source_type="CELEBRATION",
+            source_id=0, # System generated
+            message=message
+        )
+        
+        # Award points via points service
+        self.points_service.award_points(
+            user_id=user_id,
+            points=points,
+            source_type=ReferenceType.CELEBRATION.value,
+            source_id=entry.id
+        )
+        
+        return entry
 
     def create_feed_entry(
         self,
@@ -60,7 +177,16 @@ class RecognitionService:
         source_type: str,
         source_id: int,
         message: str
-    ):
+    ) -> RecognitionFeed:
         """Create a recognition feed entry."""
-        # TODO: Implement feed entry creation
-        pass
+        feed_entry = RecognitionFeed(
+            actor_id=actor_id,
+            receiver_id=receiver_id,
+            source_type=source_type,
+            source_id=source_id,
+            message=message
+        )
+        self.db.add(feed_entry)
+        self.db.commit()
+        self.db.refresh(feed_entry)
+        return feed_entry

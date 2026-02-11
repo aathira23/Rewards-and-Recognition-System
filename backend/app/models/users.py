@@ -29,6 +29,7 @@ class User(Base):
     manager = relationship("User", remote_side=[id], backref="subordinates")
     wallets = relationship("Wallet", back_populates="user")
     sent_ecards = relationship("ECard", foreign_keys="ECard.sender_id", back_populates="sender")
+    received_ecards = relationship("ECard", foreign_keys="ECard.receiver_id", back_populates="receiver")
     nominations_made = relationship("Award", foreign_keys="Award.nominator_id", back_populates="nominator")
     nominations_received = relationship("Award", foreign_keys="Award.nominee_id", back_populates="nominee")
     celebrations = relationship("Celebration", back_populates="user")

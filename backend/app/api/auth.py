@@ -16,27 +16,33 @@ from app.models.users import User
 from app.schemas.users import Token, UserLogin
 from app.utils.response import success
 
+from fastapi.security import OAuth2PasswordRequestForm
+
 router = APIRouter()
 
 
 @router.post("/login")
-def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    """Login endpoint for user authentication. Returns a long-lived access token."""
-    user = db.query(User).filter(User.email == login_data.email).first()
-    if not user or not verify_password(login_data.password, user.password):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    """Login endpoint compatible with OAuth2 Password Flow."""
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Token expires in 24 hours for easier testing/development
     access_expires = timedelta(hours=24)
     token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
-
     access_token = create_access_token(data=token_data, expires_delta=access_expires)
 
-    return success(
-        data={"access_token": access_token, "token_type": "bearer"},
-        message="Login successful",
-    )
+    # Return standard OAuth2 response at the top level for Swagger compatibility
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user_id": user.id,
+        "message": "Login successful"
+    }

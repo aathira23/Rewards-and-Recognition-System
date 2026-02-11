@@ -17,8 +17,14 @@ class RecognitionFeedResponse(RecognitionFeedBase):
     """Schema for recognition feed response."""
     id: int
     actor_id: int
-    receiver_id: Optional[int]
+    receiver_id: Optional[int] = None
     created_at: datetime
+
+    actor: Optional["UserShortResponse"] = None
+    receiver: Optional["UserShortResponse"] = None
 
     class Config:
         from_attributes = True
+
+from app.schemas.ecards import UserShortResponse
+RecognitionFeedResponse.model_rebuild()
