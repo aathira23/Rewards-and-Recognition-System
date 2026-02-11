@@ -30,8 +30,8 @@ def create_user(db: Session, user_in: UserCreate) -> User:
         email=user_in.email,
         password=hashed,
         role=user_in.role,
-        department_id=user_in.department_id,
-        manager_id=user_in.manager_id,
+        department_id=user_in.department_id if user_in.department_id != 0 else None,
+        manager_id=user_in.manager_id if user_in.manager_id != 0 else None,
         date_of_joining=user_in.date_of_joining,
         birth_date=user_in.birth_date,
     )
@@ -47,6 +47,8 @@ def update_user(db: Session, user_id: int, user_in: UserUpdate) -> User:
         raise ValueError("User not found")
 
     for field, value in user_in.__dict__.items():
+        if field in ["department_id", "manager_id"] and value == 0:
+            value = None
         if value is not None:
             setattr(user, field, value)
 
