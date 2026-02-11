@@ -18,8 +18,8 @@ class PointsLedger(Base):
     target_wallet_id = Column(BigInteger, ForeignKey("wallets.id"), nullable=True)
     points = Column(Integer, nullable=False)
     transaction_type = Column(String, nullable=False)  # CREDIT, DEBIT
-    reference_type = Column(String, nullable=False)  # ECARD, AWARD, REDEMPTION, CONVERSION
-    reference_id = Column(BigInteger, nullable=False)
+    reference_type = Column(String, nullable=True)  # ECARD, AWARD, REDEMPTION, CONVERSION
+    reference_id = Column(BigInteger, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

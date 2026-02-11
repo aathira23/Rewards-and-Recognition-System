@@ -19,7 +19,7 @@ from app.utils.response import success
 router = APIRouter()
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 def login(login_data: UserLogin, db: Session = Depends(get_db)):
     """Login endpoint for user authentication. Returns a long-lived access token."""
     user = db.query(User).filter(User.email == login_data.email).first()
