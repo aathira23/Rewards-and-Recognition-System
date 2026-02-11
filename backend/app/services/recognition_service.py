@@ -127,6 +127,26 @@ class RecognitionService:
             "total_received": len(received),
             "total_sent": len(sent)
         }
+    def create_feed_entry(
+        self,
+        actor_id: int,
+        receiver_id: Optional[int],
+        source_type: str,
+        source_id: int,
+        message: str
+    ) -> RecognitionFeed:
+        """Create a new entry in the recognition feed."""
+        entry = RecognitionFeed(
+            actor_id=actor_id,
+            receiver_id=receiver_id,
+            source_type=source_type,
+            source_id=source_id,
+            message=message
+        )
+        self.db.add(entry)
+        self.db.commit()
+        self.db.refresh(entry)
+        return entry
 
     # --- Automated Logic ---
     def create_automated_recognition(

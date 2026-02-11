@@ -21,6 +21,9 @@ class UserShortResponse(BaseModel):
     id: int
     name: str
 
+    class Config:
+        from_attributes = True
+
 class ECardResponse(ECardBase):
     """Schema for ecard response."""
     id: int

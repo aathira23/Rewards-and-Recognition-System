@@ -9,6 +9,8 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user_id
 from app.schemas.notifications import NotificationResponse
 
+from app.utils.response import success
+
 router = APIRouter()
 
 
@@ -21,11 +23,7 @@ def get_notifications(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Get user notifications."""
-    # TODO: Implement get notifications logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    return success(data=[], message="Notifications logic not yet implemented", status_code=501)
 
 
 @router.post("/{notification_id}/read")
@@ -35,8 +33,4 @@ def mark_notification_read(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Mark a notification as read."""
-    # TODO: Implement mark as read logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not yet implemented"
-    )
+    return success(message="Mark as read logic not yet implemented", status_code=501)

@@ -1,27 +1,23 @@
-"""
-Celebration schemas for request/response validation.
-"""
 from datetime import datetime
 from pydantic import BaseModel
-
+from typing import Optional
 
 class CelebrationBase(BaseModel):
-    """Base celebration schema."""
-    celebration_type: str
+    user_id: int
+    celebration_type: str  # BIRTHDAY, ANNIVERSARY
     year: int
     points_awarded: int
 
+class CelebrationCreate(CelebrationBase):
+    pass
 
 class CelebrationResponse(CelebrationBase):
-    """Schema for celebration response."""
-    id: int
-    user_id: int
-    created_at: datetime
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    user_name: Optional[str] = None
+    date: Optional[str] = None
+    years_of_service: Optional[int] = None
 
     class Config:
         from_attributes = True
-
-
-class CelebrationRetryRequest(BaseModel):
-    """Schema for retrying a failed celebration."""
-    celebration_id: int

@@ -57,14 +57,16 @@ def get_redemption_history(
     
     # 1. Standard Redemptions (Merch/Vouchers)
     redemptions = service.get_redemption_history(current_user_id)
+    redemption_data = [RedemptionResponse.model_validate(r) for r in redemptions]
     
     # 2. Conversions (Payroll/CSR)
     conversions = service.get_conversion_history(current_user_id)
+    conversion_data = [PointsConversionResponse.model_validate(c) for c in conversions]
     
     return success(
         data={
-            "redemptions": redemptions,
-            "conversions": conversions
+            "redemptions": redemption_data,
+            "conversions": conversion_data
         },
         message="History retrieved successfully"
     )

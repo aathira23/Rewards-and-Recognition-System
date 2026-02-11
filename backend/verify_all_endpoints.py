@@ -48,7 +48,7 @@ def test_endpoint(method, path, token=None, data=None, params=None, expected_sta
 
 def main():
     print("="*60)
-    print("VERIFYING ALL 26 FUNCTIONAL ENDPOINTS")
+    print("VERIFYING ALL 28 FUNCTIONAL ENDPOINTS")
     print("="*60)
 
     # 1. Auth (1)
@@ -64,13 +64,16 @@ def main():
     print("\n--- 2. Points Management ---")
     test_endpoint("GET", "/points/balance", token=token) # 1
     test_endpoint("GET", "/points/history", token=token) # 2
-    test_endpoint("GET", "/points/rules", token=token)   # 3
+    rules_resp = test_endpoint("GET", "/points/rules", token=token)   # 3
+    rule_id = 1
+    if rules_resp and rules_resp.json().get("data"):
+        rule_id = rules_resp.json()["data"][0]["id"]
+    
     test_endpoint("GET", "/points/conversions", token=token) # 4
     
-    # Rules creation/update (Admin logic, but Alice is usually seeded as EMPLOYEE in demo)
-    # However, let's just see if they exist and return 200 or 403 (expected) rather than 500
+    # Rules creation/update
     test_endpoint("POST", "/points/rules", token=token, data={"recognition_type": "TEST", "points": 10}, expected_status=[201, 200, 403, 401]) # 5
-    test_endpoint("PUT", "/points/rules/1", token=token, data={"points": 50}, expected_status=[200, 403, 401]) # 6
+    test_endpoint("PUT", f"/points/rules/{rule_id}", token=token, data={"points": 50}, expected_status=[200, 403, 401]) # 6
     
     # Conversion action placeholders
     test_endpoint("POST", "/points/convert", token=token, data={"points_converted": 100, "conversion_type": "PAYROLL"}, expected_status=[201, 200, 400]) # 7
@@ -109,6 +112,11 @@ def main():
     # Recognition specific
     test_endpoint("POST", "/recognitions/", token=token, data={"receiver_id": 1 if user_id != 1 else 2, "badge_id": 1, "message": "Great job"}, expected_status=[201, 200, 400]) # 9
     test_endpoint("GET", "/recognitions/1", token=token, expected_status=[200, 404]) # 10
+
+    # 6. Celebrations
+    print("\n--- 6. Celebrations ---")
+    test_endpoint("GET", "/celebrations/upcoming", token=token)
+    test_endpoint("GET", "/celebrations/history", token=token)
 
     print("\n" + "="*60)
     print("VERIFICATION COMPLETE")

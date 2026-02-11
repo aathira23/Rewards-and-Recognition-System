@@ -33,6 +33,7 @@ class ReferenceType(str, Enum):
     CONVERSION = "CONVERSION"
     CELEBRATION = "CELEBRATION"
     MANAGER_REWARD = "MANAGER_REWARD"
+    EXPIRY = "EXPIRY"
 
 
 class SourceType(str, Enum):
