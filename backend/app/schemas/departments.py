@@ -17,6 +17,6 @@ class DepartmentCreate(DepartmentBase):
 class DepartmentResponse(DepartmentBase):
     """Schema for department response."""
     id: int
-    
+
     class Config:
         from_attributes = True

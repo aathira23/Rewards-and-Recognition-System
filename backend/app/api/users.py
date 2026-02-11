@@ -7,7 +7,7 @@ from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id
-from app.schemas.users import UserCreate, UserResponse, UserUpdate
+from app.schemas.users import UserCreate, UserResponse
 
 router = APIRouter()
 

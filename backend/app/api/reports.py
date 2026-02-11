@@ -22,7 +22,7 @@ def get_reports(
 ):
     """
     Generate and export reports.
-    
+
     Report types:
     - AWARDS_GIVEN: Awards given by type, giver, date range
     - REDEMPTIONS: Redemption details by type, user, date range
@@ -43,7 +43,7 @@ def get_payroll_report(
 ):
     """
     Generate monthly payroll encashment report.
-    
+
     Returns details of all approved point-to-cash conversions
     for the specified month for payroll integration.
     """

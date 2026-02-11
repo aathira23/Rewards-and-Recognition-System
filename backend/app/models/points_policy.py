@@ -9,9 +9,9 @@ from app.core.database import Base
 
 class PointsPolicy(Base):
     """Points policy model for configuring recognition point values."""
-    
+
     __tablename__ = "points_policy"
-    
+
     id = Column(BigInteger, primary_key=True, index=True)
     recognition_type = Column(String, nullable=False)  # ECARD, AWARD, CELEBRATION
     event_key = Column(String, nullable=True)  # BIRTHDAY, ANNIVERSARY, STAR_PERFORMER

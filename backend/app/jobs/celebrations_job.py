@@ -1,31 +1,29 @@
 """
 Celebrations job - Automated birthday and anniversary recognition.
 """
-from datetime import date, datetime
+from datetime import date
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.models.users import User
-from app.models.celebrations import Celebration
 
 
 def process_celebrations():
     """
     Background job to process daily celebrations.
-    
+
     Should be run daily (e.g., via cron or scheduler).
     Processes birthdays and work anniversaries for the current date.
     """
     db = SessionLocal()
     try:
         today = date.today()
-        
+
         # Process birthdays
         process_birthdays(db, today)
-        
+
         # Process work anniversaries
         process_anniversaries(db, today)
-        
+
         db.commit()
     except Exception as e:
         db.rollback()

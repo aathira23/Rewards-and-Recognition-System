@@ -16,6 +16,6 @@ class WalletFundingResponse(WalletFundingBase):
     id: int
     funded_by: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True

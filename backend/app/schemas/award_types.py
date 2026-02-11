@@ -36,6 +36,6 @@ class AwardTypeResponse(AwardTypeBase):
     """Schema for award type response."""
     id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True

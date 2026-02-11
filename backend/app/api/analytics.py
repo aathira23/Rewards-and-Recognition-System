@@ -21,7 +21,7 @@ def get_analytics(
 ):
     """
     Get analytics dashboard data.
-    
+
     Scope determines the level of data:
     - ORG: Organization-wide (HR/Admin only)
     - DEPARTMENT: Department-level (Dept Head and above)

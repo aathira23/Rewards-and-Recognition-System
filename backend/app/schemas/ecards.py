@@ -23,6 +23,6 @@ class ECardResponse(ECardBase):
     sender_id: int
     points_awarded: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True

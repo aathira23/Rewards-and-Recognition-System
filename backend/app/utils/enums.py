@@ -36,12 +36,11 @@ class ReferenceType(str, Enum):
 
 
 class SourceType(str, Enum):
-    """Source types for points batches."""
     ECARD = "ECARD"
     AWARD = "AWARD"
     CELEBRATION = "CELEBRATION"
     MANAGER_REWARD = "MANAGER_REWARD"
-
+    CONVERSION = "CONVERSION"
 
 class RecognitionType(str, Enum):
     """Recognition types for points policy."""

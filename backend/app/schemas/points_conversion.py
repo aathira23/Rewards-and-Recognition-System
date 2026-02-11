@@ -27,7 +27,7 @@ class PointsConversionResponse(PointsConversionBase):
     requested_at: datetime
     approved_by: Optional[int]
     approved_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 

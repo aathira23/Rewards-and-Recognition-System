@@ -2,15 +2,15 @@
 Recognition service - Business logic for eCards and recognition feed.
 """
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional
 
 
 class RecognitionService:
     """Service for managing recognitions and leaderboard."""
-    
+
     def __init__(self, db: Session):
         self.db = db
-    
+
     def send_ecard(
         self,
         sender_id: int,
@@ -26,13 +26,13 @@ class RecognitionService:
         # 4. Create recognition feed entry
         # 5. Create notification
         pass
-    
+
     def get_recognition_feed(self, skip: int = 0, limit: int = 20):
         """Get company-wide recognition feed."""
         # TODO: Implement feed retrieval
         # Query recognition_feed ordered by created_at DESC
         pass
-    
+
     def get_leaderboard(
         self,
         period: str = "MONTHLY",
@@ -41,7 +41,7 @@ class RecognitionService:
     ):
         """
         Get recognition leaderboard.
-        
+
         Args:
             period: MONTHLY or YEARLY
             metric: POINTS (total points) or COUNT (number of recognitions)
@@ -52,7 +52,7 @@ class RecognitionService:
         # 2. Aggregate by metric
         # 3. Order and limit results
         pass
-    
+
     def create_feed_entry(
         self,
         actor_id: int,

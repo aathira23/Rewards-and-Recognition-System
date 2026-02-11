@@ -2,27 +2,25 @@
 Points service - Business logic for points management.
 """
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from decimal import Decimal
 
 
 class PointsService:
     """Service for managing points, ledger, and conversions."""
-    
+
     def __init__(self, db: Session):
         self.db = db
-    
+
     def get_user_balance(self, user_id: int) -> int:
         """Get total available points for a user."""
         # TODO: Implement balance calculation
         # Sum all points_batches.remaining_points for user
         pass
-    
+
     def get_points_history(self, user_id: int, skip: int = 0, limit: int = 20):
         """Get points transaction history."""
         # TODO: Implement history retrieval from points_ledger
         pass
-    
+
     def award_points(
         self,
         user_id: int,
@@ -37,7 +35,7 @@ class PointsService:
         # 2. Update wallet balance
         # 3. Create ledger entry
         pass
-    
+
     def deduct_points(self, user_id: int, points: int, reference_type: str, reference_id: int):
         """Deduct points from user using FIFO."""
         # TODO: Implement FIFO deduction logic
@@ -46,7 +44,7 @@ class PointsService:
         # 3. Update remaining_points
         # 4. Create ledger entry
         pass
-    
+
     def create_conversion_request(
         self,
         user_id: int,
@@ -60,7 +58,7 @@ class PointsService:
         # 3. Create conversion record
         # 4. Reserve points (or deduct immediately)
         pass
-    
+
     def approve_conversion(self, conversion_id: int, approver_id: int):
         """Approve a conversion request."""
         # TODO: Implement approval logic
@@ -68,12 +66,12 @@ class PointsService:
         # 2. Deduct points if not already done
         # 3. Create notification
         pass
-    
+
     def reject_conversion(self, conversion_id: int, approver_id: int, reason: str):
         """Reject a conversion request."""
         # TODO: Implement rejection logic
         pass
-    
+
     def expire_points(self):
         """Background job to expire old points batches."""
         # TODO: Implement expiry logic

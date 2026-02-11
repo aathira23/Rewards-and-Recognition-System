@@ -2,15 +2,15 @@
 Awards service - Business logic for award nominations and approvals.
 """
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional
 
 
 class AwardsService:
     """Service for managing award nominations and approvals."""
-    
+
     def __init__(self, db: Session):
         self.db = db
-    
+
     def nominate_for_award(
         self,
         nominator_id: int,
@@ -25,7 +25,7 @@ class AwardsService:
         # 3. Determine approval workflow
         # 4. Create notification for first approver
         pass
-    
+
     def approve_nomination(
         self,
         award_id: int,
@@ -40,7 +40,7 @@ class AwardsService:
         # 3. If complete, award points and update status to APPROVED
         # 4. Create notification for next approver or nominee
         pass
-    
+
     def reject_nomination(
         self,
         award_id: int,
@@ -54,12 +54,12 @@ class AwardsService:
         # 2. Update award status to REJECTED
         # 3. Create notification for nominator and nominee
         pass
-    
+
     def get_pending_approvals(self, approver_id: int, approval_level: str):
         """Get nominations pending approval for a user."""
         # TODO: Implement get pending approvals
         pass
-    
+
     def create_award_type(
         self,
         award_key: str,
@@ -72,7 +72,7 @@ class AwardsService:
         """Create a new award type (admin only)."""
         # TODO: Implement create award type
         pass
-    
+
     def create_badge(
         self,
         name: str,

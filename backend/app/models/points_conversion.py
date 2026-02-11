@@ -10,9 +10,9 @@ from app.core.database import Base
 
 class PointsConversion(Base):
     """Points conversion model for encashment and donations."""
-    
+
     __tablename__ = "points_conversion"
-    
+
     id = Column(BigInteger, primary_key=True, index=True)
     user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     points_converted = Column(Integer, nullable=False)
@@ -22,7 +22,7 @@ class PointsConversion(Base):
     requested_at = Column(DateTime(timezone=True), server_default=func.now())
     approved_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="conversions")
     approver = relationship("User", foreign_keys=[approved_by])

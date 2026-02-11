@@ -37,7 +37,7 @@ class UserResponse(UserBase):
     """Schema for user response."""
     id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

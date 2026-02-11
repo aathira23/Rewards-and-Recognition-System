@@ -37,6 +37,6 @@ class PointsPolicyResponse(PointsPolicyBase):
     """Schema for points policy response."""
     id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
