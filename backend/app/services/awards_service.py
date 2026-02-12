@@ -29,7 +29,16 @@ class AwardsService:
         award_type_id: int,
         justification: Optional[str] = None
     ) -> Award:
-        """Create an award nomination."""
+        """
+        Create an award nomination.
+        - HR nominations are auto-approved.
+        - Managers and Dept Heads' own level is marked as approved automatically.
+        - Employees can nominate; their nominations follow the full workflow.
+        """
+        nominator = self.db.query(User).filter(User.id == nominator_id).first()
+        if not nominator:
+            raise HTTPException(status_code=404, detail="Nominator not found.")
+
         # 1. Verify eligibility rules
         if nominator_id == nominee_id:
             raise HTTPException(status_code=400, detail="You cannot nominate yourself for an award.")
@@ -44,22 +53,105 @@ class AwardsService:
             nominator_id=nominator_id,
             award_type_id=award_type_id,
             status=AwardStatus.PENDING.value,
-            points_awarded=award_type.points
+            points_awarded=award_type.points,
+            justification=justification
         )
         self.db.add(award)
+        self.db.flush() # Use flush to get award.id before commit
+
+        # 3. Handle Auto-Approval for Nominator's Own Level (Only for Manager+, not Employee)
+        # HR nominations are fully auto-approved.
+        # Managers and Dept Heads' own level is marked as approved automatically.
+        # Employees' nominations follow the full workflow, no auto-approvals.
+        
+        current_approvals = [] # Keep track of approvals added in this step
+        
+        if nominator.role == UserRole.HR.value:
+            # HR nominations are fully auto-approved
+            award.status = AwardStatus.APPROVED.value
+            required_levels = self._get_required_approval_levels(award_type)
+            for level in required_levels:
+                approval = AwardApproval(
+                    award_id=award.id,
+                    approver_id=nominator_id,
+                    approval_level=level,
+                    status=ApprovalStatus.APPROVED.value,
+                    comments="Auto-approved by HR nominator"
+                )
+                self.db.add(approval)
+                current_approvals.append(level)
+            
+            # Award points immediately if HR auto-approved
+            self.points_service.award_points(
+                user_id=award.nominee_id,
+                points=award.points_awarded,
+                source_type=ReferenceType.AWARD.value,
+                source_id=award.id
+            )
+            
+            # Notify nominee of approval
+            self.notification_service.create_notification(
+                user_id=award.nominee_id,
+                message=f"Congratulations! Your {award.award_type.name} award has been fully approved by HR. {award.points_awarded} points awarded!",
+                source_type=ReferenceType.AWARD.value,
+                source_id=award.id
+            )
+
+        elif nominator.role != UserRole.EMPLOYEE.value: # Manager or Dept Head
+            # Add an automatic approval for the nominator's level and any preceding levels
+            required_levels = self._get_required_approval_levels(award_type)
+            nominator_level = nominator.role # e.g., "MANAGER" or "DEPT_HEAD"
+            
+            # Record approvals for all levels up to and including the nominator's role
+            for level in required_levels:
+                approval = AwardApproval(
+                    award_id=award.id,
+                    approver_id=nominator_id,
+                    approval_level=level,
+                    status=ApprovalStatus.APPROVED.value,
+                    comments=f"Auto-approved by {nominator_level} nominator"
+                )
+                self.db.add(approval)
+                current_approvals.append(level)
+                if level == nominator_level:
+                    break
+            
+            # Check if all approvals are now complete due to nominator's role
+            if self._all_approvals_complete(required_levels, current_approvals):
+                award.status = AwardStatus.APPROVED.value
+                self.points_service.award_points(
+                    user_id=award.nominee_id,
+                    points=award.points_awarded,
+                    source_type=ReferenceType.AWARD.value,
+                    source_id=award.id
+                )
+                self.notification_service.create_notification(
+                    user_id=award.nominee_id,
+                    message=f"Congratulations! Your {award.award_type.name} award has been fully approved. {award.points_awarded} points awarded!",
+                    source_type=ReferenceType.AWARD.value,
+                    source_id=award.id
+                )
+            else:
+                # Notify next approver if more approvals are needed
+                next_level = self._get_next_required_level(required_levels, current_approvals)
+                if next_level:
+                    # Logic to notify the next approver (e.g., Dept Head if Manager approved)
+                    pass # Placeholder for actual notification logic
+
         self.db.commit()
         self.db.refresh(award)
 
-        # 3. Create notification for nominee
-        self.notification_service.create_notification(
-            user_id=nominee_id,
-            message=f"You have been nominated for a {award_type.name} award by {award.nominator.name}!",
-            source_type=ReferenceType.AWARD.value,
-            source_id=award.id
-        )
+        # 4. Create notification for nominee (if not already approved)
+        if award.status == AwardStatus.PENDING.value:
+            self.notification_service.create_notification(
+                user_id=nominee_id,
+                message=f"You have been nominated for a {award_type.name} award by {nominator.name}!",
+                source_type=ReferenceType.AWARD.value,
+                source_id=award.id
+            )
         
-        # 4. Create notification for manager (if nominee has a manager)
-        if award.nominee.manager_id:
+        # 5. Create notification for manager (if nominee has a manager and award is pending)
+        if award.status == AwardStatus.PENDING.value and award.nominee.manager_id:
             self.notification_service.create_notification(
                 user_id=award.nominee.manager_id,
                 message=f"New Award Nomination: {award.nominee.name} has been nominated for {award_type.name}.",

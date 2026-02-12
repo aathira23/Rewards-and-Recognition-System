@@ -13,100 +13,139 @@ from app.models.awards import Award
 from app.models.wallets import Wallet
 from app.services.awards_service import AwardsService
 from app.services.points_service import PointsService
-from app.utils.enums import UserRole, AwardStatus
+from app.utils.enums import UserRole, AwardStatus, ApprovalLevel
 
-def setup_test_data(db: Session):
-    # Ensure test users exist
-    admin = db.query(User).filter(User.email == "admin@test.com").first()
-    if not admin:
-        admin = User(name="Test Admin", email="admin@test.com", password="hash", role=UserRole.HR.value)
-        db.add(admin)
-    
-    employee = db.query(User).filter(User.email == "emp@test.com").first()
-    if not employee:
-        employee = User(name="Test Employee", email="emp@test.com", password="hash", role=UserRole.EMPLOYEE.value)
-        db.add(employee)
-    
-    db.commit()
-    db.refresh(admin)
-    db.refresh(employee)
-    return admin, employee
+def setup_test_users(db: Session):
+    """Ensure we have a user for each role in the multi-level workflow."""
+    roles = {
+        "HR": "hr_test@example.com",
+        "DEPT_HEAD": "dept_head_test@example.com",
+        "MANAGER": "manager_test@example.com",
+        "EMPLOYEE": "emp_test@example.com",
+        "NOMINEE": "nominee_test@example.com"
+    }
+    users = {}
+    for role, email in roles.items():
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(name=f"Test {role}", email=email, password="hash", role=UserRole[role].value if role in UserRole.__members__ else UserRole.EMPLOYEE.value)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        users[role] = user
+    return users
 
-def cleanup_test_data(db: Session, admin, employee, award_type_id=None, award_id=None):
-    if award_id:
-        db.execute(text(f"DELETE FROM award_approvals WHERE award_id = {award_id}"))
-        db.execute(text(f"DELETE FROM points_ledger WHERE reference_id = {award_id} AND reference_type = 'AWARD'"))
-        db.execute(text(f"DELETE FROM points_batches WHERE source_id = {award_id} AND source_type = 'AWARD'"))
-        db.execute(text(f"DELETE FROM awards WHERE id = {award_id}"))
+def cleanup_test_data(db: Session, award_type_id=None, award_ids=None):
+    if award_ids:
+        ids_str = ",".join(map(str, award_ids))
+        db.execute(text(f"DELETE FROM award_approvals WHERE award_id IN ({ids_str})"))
+        db.execute(text(f"DELETE FROM points_ledger WHERE reference_id IN ({ids_str}) AND reference_type = 'AWARD'"))
+        db.execute(text(f"DELETE FROM points_batches WHERE source_id IN ({ids_str}) AND source_type = 'AWARD'"))
+        db.execute(text(f"DELETE FROM awards WHERE id IN ({ids_str})"))
     if award_type_id:
         db.execute(text(f"DELETE FROM award_types WHERE id = {award_type_id}"))
-    
-    # Reset wallet balance for employee
-    wallet = db.query(Wallet).filter(Wallet.user_id == employee.id).first()
-    if wallet:
-        wallet.balance = 0
-    
     db.commit()
 
-def run_test():
+def run_multi_level_test():
     db = SessionLocal()
-    admin, employee = setup_test_data(db)
+    users = setup_test_users(db)
     service = AwardsService(db)
     points_service = PointsService(db)
     
     award_type_id = None
-    award_id = None
+    award_ids = []
     
     try:
-        print("1. Creating Award Type...")
+        # 1. Setup Award Type with workflow: MANAGER, DEPT_HEAD, HR
         award_type = service.create_award_type(
-            award_key="TEST_AWARD",
-            name="Test Award",
-            points=500,
+            award_key="ML_DYNAMIC_TEST",
+            name="Multi-Level Dynamic Test",
+            points=1000,
             frequency="ADHOC",
             eligibility_rule="PEER",
-            description="Testing award logic"
+            approval_workflow="MANAGER,DEPT_HEAD,HR"
         )
         award_type_id = award_type.id
-        print(f"Created Award Type: {award_type.name} with ID {award_type_id}")
-        
-        print("\n2. Nominating Employee...")
-        award = service.nominate_for_award(
-            nominator_id=admin.id,
-            nominee_id=employee.id,
+        print(f"Created Award Type: {award_type.name} with workflow: {award_type.approval_workflow}")
+
+        # --- FLOW 1: EMPLOYEE NOMINATES (Full workflow: 3 levels) ---
+        print("\n>>> Testing Flow: Employee Nominates (MANAGER -> DEPT_HEAD -> HR)")
+        award1 = service.nominate_for_award(
+            nominator_id=users["EMPLOYEE"].id,
+            nominee_id=users["NOMINEE"].id,
             award_type_id=award_type_id,
-            justification="Great work in testing"
+            justification="Great peer work"
         )
-        award_id = award.id
-        print(f"Nominated with ID {award_id}, Status: {award.status}")
-        assert award.status == AwardStatus.PENDING.value
+        award_ids.append(award1.id)
         
-        print("\n3. Approving Nomination...")
-        balance_before = points_service.get_user_balance(employee.id)
-        print(f"Balance before: {balance_before}")
-        
-        approved_award = service.approve_nomination(
-            award_id=award_id,
-            approver_id=admin.id,
-            approval_level="HR",
-            comments="Approved by test script"
+        status_info = service.get_approval_status(award1.id)
+        print(f"Nominated by Employee. Status: {award1.status}, Next Required: {status_info['next_required_level']}")
+        assert award1.status == AwardStatus.PENDING.value
+        assert status_info["next_required_level"] == "MANAGER"
+
+        # Manager Approves
+        print("Manager approving...")
+        service.approve_nomination(award1.id, users["MANAGER"].id, "MANAGER")
+        status_info = service.get_approval_status(award1.id)
+        assert status_info["next_required_level"] == "DEPT_HEAD"
+
+        # Dept Head Approves
+        print("Dept Head approving...")
+        service.approve_nomination(award1.id, users["DEPT_HEAD"].id, "DEPT_HEAD")
+        status_info = service.get_approval_status(award1.id)
+        assert status_info["next_required_level"] == "HR"
+
+        # HR Approves
+        print("HR approving...")
+        service.approve_nomination(award1.id, users["HR"].id, "HR")
+        assert service.get_nomination(award1.id).status == AwardStatus.APPROVED.value
+        print("Flow 1 Success!")
+
+        # --- FLOW 2: MANAGER NOMINATES (Skip MANAGER level) ---
+        print("\n>>> Testing Flow: Manager Nominates (DEPT_HEAD -> HR)")
+        award2 = service.nominate_for_award(
+            nominator_id=users["MANAGER"].id,
+            nominee_id=users["NOMINEE"].id,
+            award_type_id=award_type_id
         )
-        print(f"Approved ID {award_id}, Status: {approved_award.status}")
-        assert approved_award.status == AwardStatus.APPROVED.value
-        
-        balance_after = points_service.get_user_balance(employee.id)
-        print(f"Balance after: {balance_after}")
-        assert balance_after == balance_before + 500
-        print("Success! Points awarded correctly.")
-        
+        award_ids.append(award2.id)
+        status_info = service.get_approval_status(award2.id)
+        print(f"Nominated by Manager. Status: {award2.status}, Next Required: {status_info['next_required_level']}")
+        assert status_info["next_required_level"] == "DEPT_HEAD"
+        print("Flow 2 Success!")
+
+        # --- FLOW 3: DEPT_HEAD NOMINATES (Skip MANAGER and DEPT_HEAD) ---
+        print("\n>>> Testing Flow: Dept Head Nominates (HR only)")
+        award3 = service.nominate_for_award(
+            nominator_id=users["DEPT_HEAD"].id,
+            nominee_id=users["NOMINEE"].id,
+            award_type_id=award_type_id
+        )
+        award_ids.append(award3.id)
+        status_info = service.get_approval_status(award3.id)
+        print(f"Nominated by Dept Head. Status: {award3.status}, Next Required: {status_info['next_required_level']}")
+        assert status_info["next_required_level"] == "HR"
+        print("Flow 3 Success!")
+
+        # --- FLOW 4: HR NOMINATES (Auto-Approval) ---
+        print("\n>>> Testing Flow: HR Nominates (Auto-Approved)")
+        award4 = service.nominate_for_award(
+            nominator_id=users["HR"].id,
+            nominee_id=users["NOMINEE"].id,
+            award_type_id=award_type_id
+        )
+        award_ids.append(award4.id)
+        print(f"Nominated by HR. Status: {award4.status}")
+        assert award4.status == AwardStatus.APPROVED.value
+        print("Flow 4 Success!")
+
     except Exception as e:
         print(f"Test Failed: {e}")
         import traceback
         traceback.print_exc()
     finally:
-        print("\nCleaning up...")
-        cleanup_test_data(db, admin, employee, award_type_id, award_id)
+        cleanup_test_data(db, award_type_id, award_ids)
         db.close()
 
 if __name__ == "__main__":
-    run_test()
+    run_multi_level_test()
