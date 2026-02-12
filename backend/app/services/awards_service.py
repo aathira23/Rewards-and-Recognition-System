@@ -2,14 +2,22 @@
 Awards service - Business logic for award nominations and approvals.
 """
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 
+from app.models.awards import Award
+from app.models.award_types import AwardType
+from app.models.award_approvals import AwardApproval
+from app.models.users import User
+from app.services.points_service import PointsService
+from app.utils.enums import AwardStatus, ApprovalStatus, ReferenceType, UserRole
 
 class AwardsService:
     """Service for managing award nominations and approvals."""
 
     def __init__(self, db: Session):
         self.db = db
+        self.points_service = PointsService(db)
 
     def nominate_for_award(
         self,
@@ -17,14 +25,32 @@ class AwardsService:
         nominee_id: int,
         award_type_id: int,
         justification: Optional[str] = None
-    ):
+    ) -> Award:
         """Create an award nomination."""
-        # TODO: Implement nomination logic
         # 1. Verify eligibility rules
+        if nominator_id == nominee_id:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="You cannot nominate yourself for an award.")
+
+        award_type = self.db.query(AwardType).filter(AwardType.id == award_type_id, AwardType.is_active == True).first()
+        if not award_type:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Award type not found or inactive.")
+
         # 2. Create award record with PENDING status
-        # 3. Determine approval workflow
-        # 4. Create notification for first approver
-        pass
+        award = Award(
+            nominee_id=nominee_id,
+            nominator_id=nominator_id,
+            award_type_id=award_type_id,
+            status=AwardStatus.PENDING.value,
+            points_awarded=award_type.points
+        )
+        self.db.add(award)
+        self.db.commit()
+        self.db.refresh(award)
+
+        # TODO: Create notification for approver
+        return award
 
     def approve_nomination(
         self,
@@ -32,14 +58,41 @@ class AwardsService:
         approver_id: int,
         approval_level: str,
         comments: Optional[str] = None
-    ):
+    ) -> Award:
         """Approve an award nomination."""
-        # TODO: Implement approval logic
+        award = self.db.query(Award).filter(Award.id == award_id).first()
+        if not award:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Award nomination not found.")
+        
+        if award.status != AwardStatus.PENDING.value:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
+
         # 1. Create approval record
-        # 2. Check if all required approvals are done
-        # 3. If complete, award points and update status to APPROVED
-        # 4. Create notification for next approver or nominee
-        pass
+        approval = AwardApproval(
+            award_id=award_id,
+            approver_id=approver_id,
+            approval_level=approval_level,
+            status=ApprovalStatus.APPROVED.value,
+            comments=comments
+        )
+        self.db.add(approval)
+
+        # 2. Update status to APPROVED (Assume 1-level for now)
+        award.status = AwardStatus.APPROVED.value
+        
+        # 3. Award points
+        self.points_service.award_points(
+            user_id=award.nominee_id,
+            points=award.points_awarded,
+            source_type=ReferenceType.AWARD.value,
+            source_id=award.id
+        )
+
+        self.db.commit()
+        self.db.refresh(award)
+        return award
 
     def reject_nomination(
         self,
@@ -47,18 +100,70 @@ class AwardsService:
         approver_id: int,
         approval_level: str,
         comments: str
-    ):
+    ) -> Award:
         """Reject an award nomination."""
-        # TODO: Implement rejection logic
-        # 1. Create approval record with REJECTED status
-        # 2. Update award status to REJECTED
-        # 3. Create notification for nominator and nominee
-        pass
+        award = self.db.query(Award).filter(Award.id == award_id).first()
+        if not award:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Award nomination not found.")
 
-    def get_pending_approvals(self, approver_id: int, approval_level: str):
-        """Get nominations pending approval for a user."""
-        # TODO: Implement get pending approvals
-        pass
+        if award.status != AwardStatus.PENDING.value:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
+
+        # 1. Create approval record with REJECTED status
+        approval = AwardApproval(
+            award_id=award_id,
+            approver_id=approver_id,
+            approval_level=approval_level,
+            status=ApprovalStatus.REJECTED.value,
+            comments=comments
+        )
+        self.db.add(approval)
+
+        # 2. Update award status to REJECTED
+        award.status = AwardStatus.REJECTED.value
+        
+        self.db.commit()
+        self.db.refresh(award)
+        return award
+
+    def get_nominations(
+        self,
+        user_id: int,
+        role: str,
+        status_filter: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 20
+    ) -> List[Award]:
+        """Get award nominations based on user role."""
+        query = self.db.query(Award)
+        
+        if role == UserRole.EMPLOYEE.value:
+            # Employee sees nominations they made or received
+            query = query.filter((Award.nominator_id == user_id) | (Award.nominee_id == user_id))
+        elif role == UserRole.MANAGER.value:
+            # Manager sees all nominations (could be refined to subordinates)
+            pass 
+        elif role in [UserRole.HR.value, UserRole.DEPT_HEAD.value]:
+            # HR/Dept Head sees all
+            pass
+
+        if status_filter:
+            query = query.filter(Award.status == status_filter)
+
+        return query.order_by(Award.created_at.desc()).offset(skip).limit(limit).all()
+
+    def get_nomination(self, award_id: int) -> Optional[Award]:
+        """Get specific nomination details."""
+        return self.db.query(Award).filter(Award.id == award_id).first()
+
+    def get_award_types(self, active_only: bool = True) -> List[AwardType]:
+        """Get all award types."""
+        query = self.db.query(AwardType)
+        if active_only:
+            query = query.filter(AwardType.is_active == True)
+        return query.all()
 
     def create_award_type(
         self,
@@ -68,17 +173,31 @@ class AwardsService:
         frequency: str,
         eligibility_rule: str,
         description: Optional[str] = None
-    ):
+    ) -> AwardType:
         """Create a new award type (admin only)."""
-        # TODO: Implement create award type
-        pass
+        award_type = AwardType(
+            award_key=award_key,
+            name=name,
+            points=points,
+            frequency=frequency,
+            eligibility_rule=eligibility_rule,
+            description=description
+        )
+        self.db.add(award_type)
+        self.db.commit()
+        self.db.refresh(award_type)
+        return award_type
 
-    def create_badge(
-        self,
-        name: str,
-        description: Optional[str] = None,
-        icon_url: Optional[str] = None
-    ):
-        """Create a new badge (admin only)."""
-        # TODO: Implement create badge
-        pass
+    def update_award_type(self, type_id: int, updates: Dict[str, Any]) -> Optional[AwardType]:
+        """Update an award type."""
+        award_type = self.db.query(AwardType).filter(AwardType.id == type_id).first()
+        if not award_type:
+            return None
+        
+        for field, value in updates.items():
+            if value is not None:
+                setattr(award_type, field, value)
+        
+        self.db.commit()
+        self.db.refresh(award_type)
+        return award_type
