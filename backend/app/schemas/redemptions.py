@@ -22,6 +22,8 @@ class RedemptionResponse(RedemptionBase):
     points_used: int
     status: str
     created_at: datetime
+    reward_name: str = None
+    reward_category: str = None
 
     class Config:
         from_attributes = True

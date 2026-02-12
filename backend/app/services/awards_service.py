@@ -4,6 +4,7 @@ Awards service - Business logic for award nominations and approvals.
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from fastapi import HTTPException
 
 from app.models.awards import Award
 from app.models.award_types import AwardType
@@ -29,12 +30,10 @@ class AwardsService:
         """Create an award nomination."""
         # 1. Verify eligibility rules
         if nominator_id == nominee_id:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="You cannot nominate yourself for an award.")
 
         award_type = self.db.query(AwardType).filter(AwardType.id == award_type_id, AwardType.is_active == True).first()
         if not award_type:
-            from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Award type not found or inactive.")
 
         # 2. Create award record with PENDING status
@@ -62,11 +61,9 @@ class AwardsService:
         """Approve an award nomination."""
         award = self.db.query(Award).filter(Award.id == award_id).first()
         if not award:
-            from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Award nomination not found.")
         
         if award.status != AwardStatus.PENDING.value:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
 
         # 1. Create approval record
@@ -104,11 +101,9 @@ class AwardsService:
         """Reject an award nomination."""
         award = self.db.query(Award).filter(Award.id == award_id).first()
         if not award:
-            from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Award nomination not found.")
 
         if award.status != AwardStatus.PENDING.value:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
 
         # 1. Create approval record with REJECTED status

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
+from app.core.dependencies import get_current_user_id, get_current_user
 from app.schemas.celebrations import CelebrationResponse
 from app.services.celebration_service import CelebrationService
 from app.utils.response import success
@@ -56,3 +56,24 @@ def retry_celebration(
     # Logic: Delete existing celebration entry if any and re-run for that user
     # For now, just return not implemented as it requires complex logic from the job
     return success(message="Retry logic not yet production ready", status_code=202)
+
+
+@router.post("/process-today")
+def process_today_celebrations(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Process today's birthdays and anniversaries (HR only)."""
+    from app.utils.enums import UserRole
+    from app.utils.response import client_error
+    
+    if current_user.role != UserRole.HR.value:
+        return client_error(message="Only HR can trigger celebration processing", status_code=403)
+    
+    service = CelebrationService(db)
+    result = service.process_today_celebrations()
+    
+    return success(
+        data=result,
+        message=f"Processed {result['birthdays']} birthdays and {result['anniversaries']} anniversaries"
+    )

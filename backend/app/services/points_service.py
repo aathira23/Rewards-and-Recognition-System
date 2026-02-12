@@ -58,7 +58,34 @@ class PointsService:
         source_id: int,
         expiry_days: int = 365
     ) -> PointsBatch:
-        """Award points to a user, create a batch, and update wallet."""
+        """Award points to a user, create a batch, and update wallet with safety checks."""
+        # 1. Check System-Wide Monthly Budget Cap
+        from app.services.config_service import ConfigService
+        config_service = ConfigService(self.db)
+        cap_val = config_service.get_config("SYSTEM_MONTHLY_BUDGET_CAP")
+        
+        if cap_val:
+            try:
+                cap = int(cap_val)
+                # Calculate total awarded this month
+                first_day = date.today().replace(day=1)
+                month_total = self.db.query(func.sum(PointsLedger.points)).filter(
+                    PointsLedger.transaction_type == TransactionType.CREDIT.value,
+                    PointsLedger.created_at >= first_day
+                ).scalar() or 0
+                
+                if month_total + points > cap:
+                    available = max(0, cap - month_total)
+                    raise ValueError(
+                        f"System-wide monthly budget cap reached. "
+                        f"Remaining budget: {available}, Requested: {points}"
+                    )
+            except ValueError as e:
+                if "System-wide" in str(e): raise e
+                # If int conversion fails, ignore the cap
+                pass
+
+        # 2. Proceed with awarding
         expiry_date = date.today() + timedelta(days=expiry_days)
         batch = PointsBatch(
             user_id=user_id,

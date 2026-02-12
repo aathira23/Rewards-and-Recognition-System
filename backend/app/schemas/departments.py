@@ -1,21 +1,23 @@
 """
 Department schemas for request/response validation.
 """
+from typing import Optional
 from pydantic import BaseModel
 
 
 class DepartmentBase(BaseModel):
-    """Base department schema."""
     name: str
 
 
 class DepartmentCreate(DepartmentBase):
-    """Schema for creating a department."""
     pass
 
 
+class DepartmentUpdate(BaseModel):
+    name: Optional[str] = None
+
+
 class DepartmentResponse(DepartmentBase):
-    """Schema for department response."""
     id: int
 
     class Config:

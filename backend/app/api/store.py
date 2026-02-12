@@ -57,7 +57,14 @@ def get_redemption_history(
     
     # 1. Standard Redemptions (Merch/Vouchers)
     redemptions = service.get_redemption_history(current_user_id)
-    redemption_data = [RedemptionResponse.model_validate(r) for r in redemptions]
+    redemption_data = []
+    for r in redemptions:
+        item = RedemptionResponse.model_validate(r)
+        # Enrich with reward details
+        if r.reward:
+            item.reward_name = r.reward.name
+            item.reward_category = r.reward.category
+        redemption_data.append(item)
     
     # 2. Conversions (Payroll/CSR)
     conversions = service.get_conversion_history(current_user_id)

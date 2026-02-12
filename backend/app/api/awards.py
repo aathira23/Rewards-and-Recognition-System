@@ -12,12 +12,13 @@ from app.schemas.awards import AwardNominationCreate, AwardResponse, AwardAction
 from app.schemas.award_types import AwardTypeCreate, AwardTypeUpdate, AwardTypeResponse
 from app.services.awards_service import AwardsService
 from app.utils.enums import UserRole, ApprovalLevel
+from app.utils.response import success, client_error, created
 
 router = APIRouter()
 
 
 # Award Nominations
-@router.post("/nominations", response_model=AwardResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/nominations")
 def nominate_for_award(
     nomination: AwardNominationCreate,
     db: Session = Depends(get_db),
@@ -25,15 +26,16 @@ def nominate_for_award(
 ):
     """Nominate an employee for an award."""
     service = AwardsService(db)
-    return service.nominate_for_award(
+    result = service.nominate_for_award(
         nominator_id=current_user.id,
         nominee_id=nomination.nominee_id,
         award_type_id=nomination.award_type_id,
         justification=nomination.justification
     )
+    return created(data=AwardResponse.model_validate(result), message="Nomination successful")
 
 
-@router.get("/nominations", response_model=List[AwardResponse])
+@router.get("/nominations")
 def get_nominations(
     skip: int = 0,
     limit: int = 20,
@@ -43,16 +45,17 @@ def get_nominations(
 ):
     """Get award nominations (filtered by role)."""
     service = AwardsService(db)
-    return service.get_nominations(
+    nominations = service.get_nominations(
         user_id=current_user.id,
         role=current_user.role,
         status_filter=status_filter,
         skip=skip,
         limit=limit
     )
+    return success(data=[AwardResponse.model_validate(n) for n in nominations], message="Nominations fetched")
 
 
-@router.get("/nominations/{nomination_id}", response_model=AwardResponse)
+@router.get("/nominations/{nomination_id}")
 def get_nomination(
     nomination_id: int,
     db: Session = Depends(get_db),
@@ -62,17 +65,17 @@ def get_nomination(
     service = AwardsService(db)
     nomination = service.get_nomination(nomination_id)
     if not nomination:
-        raise HTTPException(status_code=404, detail="Nomination not found")
+        return client_error(message="Nomination not found", status_code=404)
     
     # Check if user has access (Admin, or participant)
     if current_user.role != UserRole.HR.value and \
        current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
-        raise HTTPException(status_code=403, detail="Not authorized to view this nomination")
+        return client_error(message="Not authorized to view this nomination", status_code=403)
         
-    return nomination
+    return success(data=AwardResponse.model_validate(nomination), message="Nomination details fetched")
 
 
-@router.post("/nominations/{nomination_id}/action", response_model=AwardResponse)
+@router.post("/nominations/{nomination_id}/action")
 def action_nomination(
     nomination_id: int,
     request: AwardActionRequest,
@@ -82,7 +85,7 @@ def action_nomination(
     """Approve or reject an award nomination."""
     # Basic role check: Manager or above can approve
     if current_user.role == UserRole.EMPLOYEE.value:
-        raise HTTPException(status_code=403, detail="Employees cannot approve nominations")
+        return client_error(message="Employees cannot approve nominations", status_code=403)
         
     service = AwardsService(db)
     
@@ -94,23 +97,25 @@ def action_nomination(
         approval_level = ApprovalLevel.DEPT_HEAD.value
 
     if request.action == "APPROVE":
-        return service.approve_nomination(
+        result = service.approve_nomination(
             award_id=nomination_id,
             approver_id=current_user.id,
             approval_level=approval_level,
             comments=request.comments
         )
+        return success(data=AwardResponse.model_validate(result), message="Nomination approved")
     else:
-        return service.reject_nomination(
+        result = service.reject_nomination(
             award_id=nomination_id,
             approver_id=current_user.id,
             approval_level=approval_level,
             comments=request.comments or "Rejected"
         )
+        return success(data=AwardResponse.model_validate(result), message="Nomination rejected")
 
 
 # Award Types
-@router.post("/types", response_model=AwardTypeResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/types")
 def create_award_type(
     award_type: AwardTypeCreate,
     db: Session = Depends(get_db),
@@ -118,10 +123,10 @@ def create_award_type(
 ):
     """Create a new award type (admin only)."""
     if current_user.role != UserRole.HR.value:
-        raise HTTPException(status_code=403, detail="Only HR can create award types")
+        return client_error(message="Only HR can create award types", status_code=403)
         
     service = AwardsService(db)
-    return service.create_award_type(
+    result = service.create_award_type(
         award_key=award_type.award_key,
         name=award_type.name,
         points=award_type.points,
@@ -129,9 +134,10 @@ def create_award_type(
         eligibility_rule=award_type.eligibility_rule,
         description=award_type.description
     )
+    return created(data=AwardTypeResponse.model_validate(result), message="Award type created")
 
 
-@router.put("/types/{type_id}", response_model=AwardTypeResponse)
+@router.put("/types/{type_id}")
 def update_award_type(
     type_id: int,
     award_type: AwardTypeUpdate,
@@ -140,16 +146,16 @@ def update_award_type(
 ):
     """Update an award type (admin only)."""
     if current_user.role != UserRole.HR.value:
-        raise HTTPException(status_code=403, detail="Only HR can update award types")
+        return client_error(message="Only HR can update award types", status_code=403)
         
     service = AwardsService(db)
     updated = service.update_award_type(type_id, award_type.model_dump(exclude_unset=True))
     if not updated:
-        raise HTTPException(status_code=404, detail="Award type not found")
-    return updated
+        return client_error(message="Award type not found", status_code=404)
+    return success(data=AwardTypeResponse.model_validate(updated), message="Award type updated")
 
 
-@router.patch("/types/{type_id}/deactivate", response_model=AwardTypeResponse)
+@router.patch("/types/{type_id}/deactivate")
 def deactivate_award_type(
     type_id: int,
     db: Session = Depends(get_db),
@@ -157,20 +163,21 @@ def deactivate_award_type(
 ):
     """Deactivate an award type (admin only)."""
     if current_user.role != UserRole.HR.value:
-        raise HTTPException(status_code=403, detail="Only HR can deactivate award types")
+        return client_error(message="Only HR can deactivate award types", status_code=403)
         
     service = AwardsService(db)
     updated = service.update_award_type(type_id, {"is_active": False})
     if not updated:
-        raise HTTPException(status_code=404, detail="Award type not found")
-    return updated
+        return client_error(message="Award type not found", status_code=404)
+    return success(data=AwardTypeResponse.model_validate(updated), message="Award type deactivated")
 
 
-@router.get("/types", response_model=List[AwardTypeResponse])
+@router.get("/types")
 def get_award_types(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get all award types."""
     service = AwardsService(db)
-    return service.get_award_types()
+    types = service.get_award_types()
+    return success(data=[AwardTypeResponse.model_validate(t) for t in types], message="Award types fetched")

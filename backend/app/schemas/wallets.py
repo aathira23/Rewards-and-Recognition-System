@@ -1,6 +1,7 @@
 """
 Wallet schemas for request/response validation.
 """
+from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -32,3 +33,11 @@ class WalletRewardRequest(BaseModel):
     employee_id: int
     points: int
     reason: str
+
+
+class BulkBudgetAllocationRequest(BaseModel):
+    """Schema for bulk budget allocation by HR."""
+    points: int
+    department_id: Optional[int] = None
+    user_ids: Optional[List[int]] = None
+    role_filter: Optional[str] = None
