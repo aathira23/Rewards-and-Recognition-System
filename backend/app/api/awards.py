@@ -132,7 +132,8 @@ def create_award_type(
         points=award_type.points,
         frequency=award_type.frequency,
         eligibility_rule=award_type.eligibility_rule,
-        description=award_type.description
+        description=award_type.description,
+        approval_workflow=award_type.approval_workflow
     )
     return created(data=AwardTypeResponse.model_validate(result), message="Award type created")
 
@@ -181,3 +182,26 @@ def get_award_types(
     service = AwardsService(db)
     types = service.get_award_types()
     return success(data=[AwardTypeResponse.model_validate(t) for t in types], message="Award types fetched")
+
+
+@router.get("/nominations/{nomination_id}/approval-status")
+def get_approval_status(
+    nomination_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get detailed approval status and workflow progress for a nomination."""
+    service = AwardsService(db)
+    
+    # Verify nomination exists and user has access
+    nomination = service.get_nomination(nomination_id)
+    if not nomination:
+        return client_error(message="Nomination not found", status_code=404)
+    
+    # Check access: HR, or participants in the nomination
+    if current_user.role != UserRole.HR.value and \
+       current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
+        return client_error(message="Not authorized to view this nomination", status_code=403)
+    
+    status = service.get_approval_status(nomination_id)
+    return success(data=status, message="Approval status retrieved")

@@ -20,6 +20,7 @@ class AwardType(Base):
     points = Column(Integer, nullable=False)
     frequency = Column(String, nullable=False)  # MONTHLY, QUARTERLY, ADHOC
     eligibility_rule = Column(String, nullable=False)  # MANAGER_ONLY, PEER, CROSS_DEPT
+    approval_workflow = Column(String, nullable=True)  # Comma-separated: "MANAGER,DEPT_HEAD,HR" or "MANAGER,HR"
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

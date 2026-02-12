@@ -14,6 +14,7 @@ class AwardTypeBase(BaseModel):
     points: int
     frequency: str
     eligibility_rule: str
+    approval_workflow: Optional[str] = None  # Comma-separated levels: "MANAGER,DEPT_HEAD,HR"
     is_active: bool = True
 
 
@@ -29,6 +30,7 @@ class AwardTypeUpdate(BaseModel):
     points: Optional[int] = None
     frequency: Optional[str] = None
     eligibility_rule: Optional[str] = None
+    approval_workflow: Optional[str] = None
     is_active: Optional[bool] = None
 
 
