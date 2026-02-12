@@ -11,6 +11,7 @@ from app.models.award_types import AwardType
 from app.models.award_approvals import AwardApproval
 from app.models.users import User
 from app.services.points_service import PointsService
+from app.services.notification_service import NotificationService
 from app.utils.enums import AwardStatus, ApprovalStatus, ReferenceType, UserRole
 
 class AwardsService:
@@ -19,6 +20,7 @@ class AwardsService:
     def __init__(self, db: Session):
         self.db = db
         self.points_service = PointsService(db)
+        self.notification_service = NotificationService(db)
 
     def nominate_for_award(
         self,
@@ -48,7 +50,23 @@ class AwardsService:
         self.db.commit()
         self.db.refresh(award)
 
-        # TODO: Create notification for approver
+        # 3. Create notification for nominee
+        self.notification_service.create_notification(
+            user_id=nominee_id,
+            message=f"You have been nominated for a {award_type.name} award by {award.nominator.name}!",
+            source_type=ReferenceType.AWARD.value,
+            source_id=award.id
+        )
+        
+        # 4. Create notification for manager (if nominee has a manager)
+        if award.nominee.manager_id:
+            self.notification_service.create_notification(
+                user_id=award.nominee.manager_id,
+                message=f"New Award Nomination: {award.nominee.name} has been nominated for {award_type.name}.",
+                source_type=ReferenceType.AWARD.value,
+                source_id=award.id
+            )
+
         return award
 
     def approve_nomination(

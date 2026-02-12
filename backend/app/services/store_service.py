@@ -9,6 +9,7 @@ from app.models.rewards import Reward
 from app.models.redemptions import Redemption
 from app.models.points_conversion import PointsConversion
 from app.services.points_service import PointsService
+from app.services.notification_service import NotificationService
 from app.utils.enums import RedemptionStatus, ConversionStatus, ReferenceType
 
 
@@ -18,6 +19,7 @@ class StoreService:
     def __init__(self, db: Session):
         self.db = db
         self.points_service = PointsService(db)
+        self.notification_service = NotificationService(db)
 
     def get_catalog(self) -> List[Reward]:
         """Get all active rewards from the catalog."""
@@ -56,9 +58,13 @@ class StoreService:
         self.db.commit()
         self.db.refresh(redemption)
 
-        # 3. Update the ledger entry reference_id (optional but good practice)
-        # In a real system, you'd do this in a single transaction.
-        # Here we'll just leave it since the deduction already happened.
+        # 3. Notify user
+        self.notification_service.create_notification(
+            user_id=user_id,
+            message=f"Redemption successful! You redeemed '{reward.name}' for {reward.points_required} points.",
+            source_type=ReferenceType.REDEMPTION.value,
+            source_id=redemption.id
+        )
 
         return redemption
 
@@ -90,7 +96,14 @@ class StoreService:
 
         # NOTE: We don't deduct points yet. 
         # Points are usually deducted upon APPROVAL for payroll.
-        # Or we could "reserve" them. For this demo, we'll deduct upon Approval.
+        
+        # 3. Notify HR/Admin (Optional, but let's notify the user that request is received)
+        self.notification_service.create_notification(
+            user_id=user_id,
+            message=f"Your request to convert {points} points to cash ({cash_amount}) has been submitted and is pending approval.",
+            source_type=ReferenceType.CONVERSION.value,
+            source_id=conversion.id
+        )
         
         return conversion
 
@@ -136,6 +149,15 @@ class StoreService:
         
         self.db.commit()
         self.db.refresh(conversion)
+
+        # 3. Notify User
+        self.notification_service.create_notification(
+            user_id=conversion.user_id,
+            message=f"Your points conversion request for {conversion.points_converted} points has been approved.",
+            source_type=ReferenceType.CONVERSION.value,
+            source_id=conversion.id
+        )
+
         return conversion
 
     def reject_conversion(self, conversion_id: int, approver_id: int) -> PointsConversion:
