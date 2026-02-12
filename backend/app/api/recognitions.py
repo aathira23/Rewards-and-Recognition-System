@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
+from app.core.dependencies import get_current_user_id, get_current_user
 from app.schemas.ecards import ECardCreate, ECardResponse
 from app.schemas.recognition_feed import RecognitionFeedResponse
 from app.schemas.badges import BadgeCreate, BadgeUpdate, BadgeResponse
@@ -91,9 +91,13 @@ def get_leaderboard(
 def create_badge(
     badge: BadgeCreate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Create a new badge (admin only)."""
+    """Create a new badge (HR only)."""
+    from app.utils.enums import UserRole
+    if current_user.role != UserRole.HR.value:
+        return client_error(message="Only HR can create badges", status_code=403)
+        
     service = RecognitionService(db)
     badge_obj = service.create_badge(
         name=badge.name,
@@ -109,9 +113,13 @@ def update_badge(
     badge_id: int,
     badge: BadgeUpdate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Update a badge (admin only)."""
+    """Update a badge (HR only)."""
+    from app.utils.enums import UserRole
+    if current_user.role != UserRole.HR.value:
+        return client_error(message="Only HR can update badges", status_code=403)
+
     service = RecognitionService(db)
     try:
         updated = service.update_badge(badge_id, badge.model_dump(exclude_unset=True))
@@ -125,9 +133,13 @@ def update_badge(
 def deactivate_badge(
     badge_id: int,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Deactivate a badge (admin only)."""
+    """Deactivate a badge (HR only)."""
+    from app.utils.enums import UserRole
+    if current_user.role != UserRole.HR.value:
+        return client_error(message="Only HR can deactivate badges", status_code=403)
+
     service = RecognitionService(db)
     try:
         updated = service.update_badge(badge_id, {"is_active": False})
