@@ -8,6 +8,7 @@ from app.models.recognition_feed import RecognitionFeed
 from app.models.points_policy import PointsPolicy
 from app.models.users import User
 from app.services.points_service import PointsService
+from app.services.notification_service import NotificationService
 from app.utils.enums import ReferenceType
 
 
@@ -17,6 +18,7 @@ class RecognitionService:
     def __init__(self, db: Session):
         self.db = db
         self.points_service = PointsService(db)
+        self.notification_service = NotificationService(db)
 
     # --- Badge Management ---
     def get_badges(self, active_only: bool = True) -> List[Badge]:
@@ -101,6 +103,16 @@ class RecognitionService:
             source_type="ECARD",
             source_id=ecard.id,
             message=message or f"Recognized with {badge.name}"
+        )
+
+        # 6. Create notification for receiver
+        sender = self.db.query(User).filter(User.id == sender_id).first()
+        sender_name = sender.name if sender else "A colleague"
+        self.notification_service.create_notification(
+            user_id=receiver_id,
+            message=f"{sender_name} appreciated you with a '{badge.name}' badge! {points} points earned.",
+            source_type=ReferenceType.ECARD.value,
+            source_id=ecard.id
         )
 
         return ecard
