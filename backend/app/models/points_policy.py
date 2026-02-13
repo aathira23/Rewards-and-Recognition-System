@@ -22,3 +22,5 @@ class PointsPolicy(Base):
     conversion_reward_type = Column(String, nullable=True)  # PAYROLL, CSR, VOUCHER
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
