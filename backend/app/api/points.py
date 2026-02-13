@@ -111,11 +111,17 @@ def convert_points_request(
 @router.get("/conversions", response_model=List[PointsConversionResponse])
 def get_conversions(
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
     current_user_id: int = Depends(get_current_user_id)
 ):
-    """Get conversion requests (User's own requests)."""
+    """Get conversion requests: HR sees all requests; users see only their own."""
     service = StoreService(db)
-    conversions = service.get_conversion_history(current_user_id)
+    # HR can view all conversions
+    if getattr(current_user, "role", None) == UserRole.HR.value:
+        conversions = service.get_all_conversion_history()
+    else:
+        conversions = service.get_conversion_history(current_user_id)
+
     data = []
     for c in conversions:
         conv_dict = {
@@ -181,7 +187,12 @@ def action_conversion(
         # Only HR users can approve/reject conversions
         if getattr(current_user, "role", None) != UserRole.HR.value:
             return forbidden("Only HR users can approve or reject conversion requests")
-        if request.action.upper() == "APPROVE":
+        # Strictly validate action
+        action = (request.action or "").strip().upper()
+        if action not in ("APPROVE", "REJECT"):
+            return client_error(message="Invalid action. Must be 'APPROVE' or 'REJECT'.", status_code=400)
+
+        if action == "APPROVE":
             result = service.approve_conversion(conversion_id, current_user_id)
             conv_dict = {
                 "id": result.id,

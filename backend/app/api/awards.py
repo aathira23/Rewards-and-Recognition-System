@@ -163,15 +163,18 @@ def action_nomination(
         return client_error(message="Employees cannot approve nominations", status_code=403)
         
     service = AwardsService(db)
-    
+    # Validate action value strictly
+    action = (request.action or "").strip().upper()
+    if action not in ("APPROVE", "REJECT"):
+        return client_error(message="Invalid action. Must be 'APPROVE' or 'REJECT'.", status_code=400)
+
     # Determine approval level based on role
     approval_level = ApprovalLevel.MANAGER.value
     if current_user.role == UserRole.HR.value:
         approval_level = ApprovalLevel.HR.value
     elif current_user.role == UserRole.DEPT_HEAD.value:
         approval_level = ApprovalLevel.DEPT_HEAD.value
-
-    if request.action == "APPROVE":
+    if action == "APPROVE":
         result = service.approve_nomination(
             award_id=nomination_id,
             approver_id=current_user.id,

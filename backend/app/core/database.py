@@ -44,6 +44,23 @@ def import_models():
 import_models()
 
 
+# Ensure certain optional/dev columns exist to avoid runtime errors when the
+# DB was created without newer columns (helps local/dev setups where migrations
+# were stamped but not applied). Uses a safe "IF NOT EXISTS" ALTER.
+from sqlalchemy import text
+from app.core.config import settings
+
+# Only run this best-effort ALTER in development/debug mode. Production
+# environments should use Alembic migrations to manage schema changes.
+if getattr(settings, "DEBUG", False):
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS stock INTEGER;"))
+    except Exception:
+        # Best-effort only; don't raise so app can continue to start.
+        pass
+
+
 def get_db():
     """
     Dependency for getting database session.

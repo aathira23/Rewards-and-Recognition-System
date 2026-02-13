@@ -85,7 +85,28 @@ class PointsService:
                 # If int conversion fails, ignore the cap
                 pass
 
-        # 2. Proceed with awarding
+        # 2. If this is a manager->employee transfer, deduct manager budget centrally
+        if source_type == ReferenceType.MANAGER_REWARD.value:
+            # source_id is expected to be the manager's user_id
+            manager_wallet = self.db.query(Wallet).filter(
+                Wallet.user_id == source_id,
+                Wallet.wallet_type == WalletType.MANAGER.value
+            ).first()
+            if not manager_wallet or manager_wallet.balance < points:
+                raise ValueError(f"Insufficient manager budget. Available: {manager_wallet.balance if manager_wallet else 0}, Requested: {points}")
+
+            # Deduct from manager wallet and create debit ledger entry
+            manager_wallet.balance -= points
+            manager_debit = PointsLedger(
+                source_wallet_id=manager_wallet.id,
+                points=points,
+                transaction_type=TransactionType.DEBIT.value,
+                reference_type=ReferenceType.MANAGER_REWARD.value,
+                reference_id=user_id
+            )
+            self.db.add(manager_debit)
+
+        # 2. Proceed with awarding (credit to employee)
         expiry_date = date.today() + timedelta(days=expiry_days)
         batch = PointsBatch(
             user_id=user_id,

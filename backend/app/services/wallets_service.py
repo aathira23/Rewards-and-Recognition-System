@@ -105,46 +105,13 @@ class WalletsService:
         manager_wallet = self.get_manager_wallet(manager_id)
         if not manager_wallet:
             raise ValueError("Manager wallet not found.")
-
-        # 2. Verify manager has sufficient balance
-        if manager_wallet.balance < points:
-            raise ValueError(f"Insufficient budget. Available: {manager_wallet.balance}, Requested: {points}")
-
-        # 3. Deduct from manager wallet
-        manager_wallet.balance -= points
-
-        # 4. Award points to employee (creates PointsBatch and EMPLOYEE wallet if needed)
-        # Note: PointsService.award_points currently doesn't track source_wallet_id in ledger perfectly for transfers
-        # We will manually handle ledger for the debit side and let award_points handle credit+batch
-        
-        # We'll use a transaction
+        # 2. Delegate awarding to PointsService which will centrally deduct manager budget
         batch = self.points_service.award_points(
             user_id=employee_id,
             points=points,
             source_type=ReferenceType.MANAGER_REWARD.value,
-            source_id=manager_id # Using manager_id as source_id for now
+            source_id=manager_id # Using manager_id as source_id so PointsService can deduct manager wallet
         )
-
-        # Find the ledger entry created by award_points and update its source_wallet_id
-        ledger_credit = self.db.query(PointsLedger).filter(
-            PointsLedger.target_wallet_id != None,
-            PointsLedger.reference_type == ReferenceType.MANAGER_REWARD.value,
-            PointsLedger.points == points
-        ).order_by(PointsLedger.created_at.desc()).first()
-        
-        if ledger_credit:
-            ledger_credit.source_wallet_id = manager_wallet.id
-        
-        # Create a DEBIT entry for manager
-        ledger_debit = PointsLedger(
-            source_wallet_id=manager_wallet.id,
-            target_wallet_id=None, # or employee wallet? usually target is empty for debit but here it's a transfer
-            points=points,
-            transaction_type=TransactionType.DEBIT.value,
-            reference_type=ReferenceType.MANAGER_REWARD.value,
-            reference_id=employee_id
-        )
-        self.db.add(ledger_debit)
 
         # 5. Create recognition feed entry
         self.recognition_service.create_feed_entry(
