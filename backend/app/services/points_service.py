@@ -342,6 +342,147 @@ class PointsService:
 
         return f"{ref_type} #{ref_id}", "Other"
 
+    def notify_upcoming_expiries(self, days: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Notify users of points batches that will expire within the next `days` days.
+
+        Creates a `Notification` for each qualifying `PointsBatch` unless a notification
+        for the same batch already exists.
+        """
+        from app.models.notifications import Notification
+        from app.core.config import settings
+
+        if days is None:
+            days = settings.POINTS_EXPIRY_REMINDER_DAYS
+
+        today = date.today()
+        cutoff = today + timedelta(days=days)
+
+        upcoming_batches = self.db.query(PointsBatch).filter(
+            PointsBatch.expiry_date > today,
+            PointsBatch.expiry_date <= cutoff,
+            PointsBatch.remaining_points > 0
+        ).all()
+
+        if not upcoming_batches:
+            return {
+                "date": str(today),
+                "days": days,
+                "batches_notified": 0,
+                "total_points_notified": 0
+            }
+
+        batches_notified = 0
+        total_points_notified = 0
+
+        for batch in upcoming_batches:
+            # avoid duplicate reminders for the same batch
+            exists = self.db.query(Notification).filter(
+                Notification.source_type == ReferenceType.EXPIRY.value,
+                Notification.source_id == batch.id
+            ).first()
+            if exists:
+                continue
+
+            days_left = (batch.expiry_date - today).days
+            message = (
+                f"Reminder: {batch.remaining_points} points will expire on {batch.expiry_date.isoformat()} "
+                f"(in {days_left} days). Use them soon."
+            )
+            notification = Notification(
+                user_id=batch.user_id,
+                message=message,
+                source_type=ReferenceType.EXPIRY.value,
+                source_id=batch.id
+            )
+            self.db.add(notification)
+
+            batches_notified += 1
+            total_points_notified += batch.remaining_points
+
+        self.db.commit()
+
+        return {
+            "date": str(today),
+            "days": days,
+            "batches_notified": batches_notified,
+            "total_points_notified": total_points_notified
+        }
+
+    def expire_points_batches(self) -> Dict[str, Any]:
+        """
+        Expire old points batches.
+        
+        Finds batches past their expiry date and deducts remaining points.
+        Should be called by scheduled job daily.
+        
+        Returns:
+            Dictionary with expiry results (count, total_points_expired)
+        """
+        from app.models.notifications import Notification
+        
+        today = date.today()
+        
+        # Find expired batches with remaining points
+        expired_batches = self.db.query(PointsBatch).filter(
+            PointsBatch.expiry_date < today,
+            PointsBatch.remaining_points > 0
+        ).all()
+
+        if not expired_batches:
+            return {
+                "date": str(today),
+                "batches_expired": 0,
+                "total_points_expired": 0
+            }
+
+        total_points_expired = 0
+        batches_expired = 0
+
+        for batch in expired_batches:
+            points_to_expire = batch.remaining_points
+            
+            # 1. Get user's employee wallet
+            wallet = self.get_employee_wallet(batch.user_id)
+            
+            # 2. Deduct remaining_points from wallet balance
+            wallet.balance -= points_to_expire
+            if wallet.balance < 0:
+                wallet.balance = 0  # Safety net
+            
+            # 3. Create ledger entry for expiry
+            ledger = PointsLedger(
+                source_wallet_id=wallet.id,
+                points=points_to_expire,
+                transaction_type=TransactionType.DEBIT.value,
+                reference_type=ReferenceType.EXPIRY.value,
+                reference_id=batch.id
+            )
+            self.db.add(ledger)
+
+            # 4. Set batch.remaining_points to 0
+            batch.remaining_points = 0
+
+            # 5. Create notification
+            notification = Notification(
+                user_id=batch.user_id,
+                message=f"Alert: {points_to_expire} points have expired from your account.",
+                source_type=ReferenceType.EXPIRY.value,
+                source_id=batch.id
+            )
+            self.db.add(notification)
+            
+            total_points_expired += points_to_expire
+            batches_expired += 1
+
+        self.db.commit()
+        
+        return {
+            "date": str(today),
+            "batches_expired": batches_expired,
+            "total_points_expired": total_points_expired
+        }
+
 
 # --- BACKWARD COMPATIBILITY ---
 def get_aggregates(db: Session, user_id: int):
