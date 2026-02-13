@@ -44,8 +44,20 @@ class StoreService:
             raise ValueError("Reward not found.")
         
         update_data = reward_data.model_dump(exclude_unset=True)
+        
+        # Check if stock_quantity is being updated
+        stock_updated = 'stock_quantity' in update_data
+        
         for key, value in update_data.items():
             setattr(reward, key, value)
+        
+        # Auto-manage is_active based on stock (only if is_active wasn't explicitly set in this update)
+        if stock_updated and 'is_active' not in update_data:
+            if reward.stock_quantity is not None:
+                if reward.stock_quantity <= 0:
+                    reward.is_active = False
+                elif reward.stock_quantity > 0:
+                    reward.is_active = True
         
         self.db.commit()
         self.db.refresh(reward)

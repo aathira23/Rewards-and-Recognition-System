@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     
     # CORS Configuration
     ALLOWED_ORIGINS: str = "*"  # Use comma-separated URLs in production: "http://localhost:3000,https://yourdomain.com"
+    
+    # Points expiry reminder window (days before expiry to notify users)
+    POINTS_EXPIRY_REMINDER_DAYS: int = 7
 
 
 settings = Settings()
