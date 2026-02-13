@@ -1,24 +1,34 @@
-/// "Centralized storage for all API endpoints and network-related configuration constants."
+/// "Centralized storage for all backend endpoint URLs and networking constants."
 class ApiConstants {
+  // TODO: Replace with your actual production/staging URL
   static const String baseUrl =
-      'http://localhost:8000/api'; // Update for production
+      'http://10.0.2.2:8000/api/v1'; // Default for Android Emulator
 
-  // Auth
-  static const String login = '$baseUrl/auth/login';
-  static const String register = '$baseUrl/auth/register';
-  static const String profile = '$baseUrl/users/profile';
+  // Auth Endpoints
+  static const String login = '/auth/login';
+  static const String register = '/auth/register';
 
-  // Recognitions
-  static const String recognitions = '$baseUrl/recognitions';
-  static const String badges = '$baseUrl/recognitions/badges';
+  // Recognition Endpoints
+  static const String recognitionFeed = '/recognitions/feed';
+  static const String sendRecognition = '/recognitions/';
+  static const String badges = '/recognitions/badges';
+  static const String leaderboard = '/recognitions/leaderboard';
 
-  // Awards
-  static const String awards = '$baseUrl/awards';
-  static const String nominations = '$baseUrl/awards/nominations';
+  // Nominations Endpoints
+  static const String nominations = '/nominations/';
+  static const String awardTypes = '/nominations/types';
 
   // Points & Wallets
-  static const String wallets = '$baseUrl/wallets';
-  static const String redemptions = '$baseUrl/store/redemptions';
+  static const String userPoints = '/points/aggregates';
+  static const String pointsHistory = '/points/history';
 
-  // TODO: Add other endpoints as needed
+  // Catalog
+  static const String catalog = '/catalog/';
+
+  // Profile
+  static const String profile = '/profile/me';
+
+  // Networking settings
+  static const int connectTimeout = 30000; // 30 seconds
+  static const int receiveTimeout = 30000; // 30 seconds
 }
