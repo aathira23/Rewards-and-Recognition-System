@@ -48,7 +48,14 @@ class WalletsService:
 
     def allocate_budget(self, manager_id: int, points: int, allocated_by: int) -> WalletFunding:
         """Allocate budget to manager wallet (HR only)."""
-        # 1. Verify allocator is HR (done in API layer usually, but good to check or assume here)
+        # 1. Verify the target user is actually a manager or dept head
+        target_user = self.db.query(User).filter(User.id == manager_id).first()
+        if not target_user:
+            raise ValueError(f"User with ID {manager_id} not found")
+        
+        if target_user.role not in ["MANAGER", "DEPT_HEAD", "HR"]:
+            raise ValueError(f"Cannot allocate manager budget to user with role {target_user.role}. Only MANAGER, DEPT_HEAD, or HR roles can receive budget allocations.")
+        
         # 2. Get or create manager wallet
         wallet = self.get_or_create_wallet(manager_id, WalletType.MANAGER)
 

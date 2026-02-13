@@ -11,6 +11,7 @@ from app.services.store_service import StoreService
 from app.schemas.rewards import RewardResponse
 from app.schemas.redemptions import RedemptionCreate, RedemptionResponse
 from app.schemas.points_conversion import PointsConversionCreate, PointsConversionResponse
+import logging
 from app.utils.response import success, created, client_error
 
 router = APIRouter()
@@ -42,6 +43,8 @@ def redeem_reward(
         data = RedemptionResponse.model_validate(redemption)
         return created(data=data, message="Redemption successful")
     except ValueError as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("Redemption failed for user %s reward %s: %s", current_user_id, redemption_data.reward_id, str(e))
         return client_error(message=str(e))
 
 
@@ -63,12 +66,27 @@ def get_redemption_history(
         # Enrich with reward details
         if r.reward:
             item.reward_name = r.reward.name
-            item.reward_category = r.reward.category
+            item.reward_category = r.reward.reward_type
         redemption_data.append(item)
     
     # 2. Conversions (Payroll/CSR)
     conversions = service.get_conversion_history(current_user_id)
-    conversion_data = [PointsConversionResponse.model_validate(c) for c in conversions]
+    conversion_data = []
+    for c in conversions:
+        conv_dict = {
+            "id": c.id,
+            "points_converted": c.points_converted,
+            "conversion_type": c.conversion_type,
+            "user_id": c.user_id,
+            "user_name": c.user.name if c.user else None,
+            "cash_amount": c.cash_amount,
+            "status": c.status,
+            "requested_at": c.requested_at,
+            "approved_by": c.approved_by,
+            "approved_by_name": c.approver.name if c.approver else None,
+            "approved_at": c.approved_at,
+        }
+        conversion_data.append(PointsConversionResponse.model_validate(conv_dict))
     
     return success(
         data={

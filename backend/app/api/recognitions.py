@@ -12,7 +12,7 @@ from app.schemas.recognition_feed import RecognitionFeedResponse
 from app.schemas.badges import BadgeCreate, BadgeUpdate, BadgeResponse
 from app.schemas.leaderboard import LeaderboardEntry
 from app.services.recognition_service import RecognitionService
-from app.utils.response import success, created, client_error
+from app.utils.response import success, created, client_error, conflict, server_error
 
 router = APIRouter()
 
@@ -33,6 +33,11 @@ def send_recognition(
             message=ecard_in.message
         )
         data = ECardResponse.model_validate(ecard)
+        # Populate department names in nested user objects
+        if data.sender and ecard.sender:
+            data.sender.department_name = ecard.sender.department.name if ecard.sender.department else None
+        if data.receiver and ecard.receiver:
+            data.receiver.department_name = ecard.receiver.department.name if ecard.receiver.department else None
         return created(data=data, message="Recognition sent successfully")
     except ValueError as e:
         return client_error(message=str(e))
@@ -48,7 +53,15 @@ def get_recognition_feed(
     """Get company-wide recognition feed."""
     service = RecognitionService(db)
     items = service.get_recognition_feed(skip=skip, limit=limit)
-    data = [RecognitionFeedResponse.model_validate(i) for i in items]
+    data = []
+    for item in items:
+        feed_item = RecognitionFeedResponse.model_validate(item)
+        # Populate department names in nested user objects
+        if feed_item.actor and item.actor:
+            feed_item.actor.department_name = item.actor.department.name if item.actor.department else None
+        if feed_item.receiver and item.receiver:
+            feed_item.receiver.department_name = item.receiver.department.name if item.receiver.department else None
+        data.append(feed_item)
     return success(data=data, message="Feed retrieved")
 
 
@@ -68,15 +81,6 @@ def get_my_appreciation_overview(
         "total_received": overview["total_received"],
         "total_sent": overview["total_sent"]
     }, message="Overview retrieved")
-
-
-@router.get("/auto")
-def get_auto_recognitions(
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Get automated recognitions (celebrations, etc.)."""
-    return success(data={"message": "Automated recognitions are processed in the background."})
 
 
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])
@@ -106,13 +110,20 @@ def create_badge(
         return client_error(message="Only HR can create badges", status_code=403)
         
     service = RecognitionService(db)
-    badge_obj = service.create_badge(
-        name=badge.name,
-        description=badge.description,
-        icon_url=badge.icon_url
-    )
-    data = BadgeResponse.model_validate(badge_obj)
-    return created(data=data, message="Badge created")
+    service = RecognitionService(db)
+    try:
+        badge_obj = service.create_badge(
+            name=badge.name,
+            description=badge.description,
+            icon_url=badge.icon_url
+        )
+        data = BadgeResponse.model_validate(badge_obj)
+        return created(data=data, message="Badge created")
+    except ValueError as e:
+        # Duplicate badge name
+        return conflict(message=str(e), data={"field": "name", "value": badge.name})
+    except Exception as e:
+        return server_error(message="Failed to create badge", data=None)
 
 
 @router.put("/badges/{badge_id}", response_model=BadgeResponse)
@@ -132,26 +143,6 @@ def update_badge(
         updated = service.update_badge(badge_id, badge.model_dump(exclude_unset=True))
         data = BadgeResponse.model_validate(updated)
         return success(data=data, message="Badge updated")
-    except ValueError as e:
-        return client_error(message=str(e), status_code=status.HTTP_404_NOT_FOUND)
-
-
-@router.patch("/badges/{badge_id}/deactivate")
-def deactivate_badge(
-    badge_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """Deactivate a badge (HR only)."""
-    from app.utils.enums import UserRole
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can deactivate badges", status_code=403)
-
-    service = RecognitionService(db)
-    try:
-        updated = service.update_badge(badge_id, {"is_active": False})
-        data = BadgeResponse.model_validate(updated)
-        return success(data=data, message="Badge deactivated")
     except ValueError as e:
         return client_error(message=str(e), status_code=status.HTTP_404_NOT_FOUND)
 
@@ -186,4 +177,9 @@ def get_recognition(
     if not ecard:
         return client_error(message="ECard not found", status_code=status.HTTP_404_NOT_FOUND)
     data = ECardResponse.model_validate(ecard)
+    # Populate department names in nested user objects
+    if data.sender and ecard.sender:
+        data.sender.department_name = ecard.sender.department.name if ecard.sender.department else None
+    if data.receiver and ecard.receiver:
+        data.receiver.department_name = ecard.receiver.department.name if ecard.receiver.department else None
     return success(data=data, message="Recognition found")

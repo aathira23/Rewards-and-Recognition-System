@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_optional_current_user
 from app.schemas.users import UserCreate, UserResponse, UserUpdate
-from app.utils.response import success, client_error, created
+from app.utils.response import success, client_error, created, forbidden
+from app.utils.enums import UserRole
 from app.services import users_service
+from app.services.users_service import get_user_count
 
 router = APIRouter()
 
@@ -29,21 +31,31 @@ def list_users(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """List all users (admin only)."""
+    """List all users (HR only)."""
     # Only HR role may list users
-    # RBAC removed: allow authenticated users to list users
+    if getattr(current_user, "role", None) != UserRole.HR.value:
+        return forbidden("Only HR users can list all users")
 
+    # HR sees full details
     users = users_service.list_users(db, skip=skip, limit=limit)
-    return success(data=[users_service.serialize_user(u) for u in users], message="User list fetched")
+    return success(data=[users_service.serialize_user(u, include_sensitive=True) for u in users], message="User list fetched")
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_user(
     user: UserCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_optional_current_user)
 ):
-    """Create a new user - public endpoint for initial setup."""
-    # Authentication removed temporarily to allow creating first user
+    """Create a new user. If users already exist, only HR can create additional users.
+
+    On a fresh system (no users), this endpoint allows creating the first user without authentication.
+    """
+    # If there are existing users, only HR may create new users
+    total = get_user_count(db)
+    if total > 0:
+        if current_user is None or getattr(current_user, "role", None) != UserRole.HR.value:
+            return forbidden("Only HR users can create new users")
 
     try:
         created_user = users_service.create_user(db, user)
@@ -61,7 +73,9 @@ def update_user(
     current_user = Depends(get_current_user)
 ):
     """Update user profile (self or HR)."""
-    # RBAC removed: allow authenticated users to update profiles (still permitted to update others)
+    # Only HR or the user themself may update the profile
+    if not (getattr(current_user, "role", None) == UserRole.HR.value or getattr(current_user, "id", None) == user_id):
+        return forbidden("You do not have permission to update this user")
 
     try:
         user = users_service.update_user(db, user_id, payload)

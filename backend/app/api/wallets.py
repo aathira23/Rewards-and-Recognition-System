@@ -9,7 +9,8 @@ from app.core.dependencies import get_current_user_id
 from app.schemas.wallets import WalletResponse, WalletAllocateRequest, WalletRewardRequest, BulkBudgetAllocationRequest
 
 from app.services.wallets_service import WalletsService
-from app.utils.response import success, created, client_error
+from app.utils.response import success, created, client_error, forbidden
+from app.utils.enums import UserRole
 from app.core.dependencies import get_current_user
 
 router = APIRouter()
@@ -22,6 +23,10 @@ def get_manager_wallet(
 ):
     """Get manager wallet balance and details."""
     service = WalletsService(db)
+    # Only managers may view their own manager wallet
+    if getattr(current_user, "role", None) != UserRole.MANAGER.value:
+        return forbidden("Only managers may view their manager wallet")
+
     wallet = service.get_manager_wallet(current_user.id)
     if not wallet:
         # Create one if it doesn't exist? Or just return 0 balance.
@@ -39,21 +44,24 @@ def allocate_manager_budget(
     current_user = Depends(get_current_user)
 ):
     """HR allocates budget to manager wallet."""
-    # Simple role check for now
-    if current_user.role not in ["HR", "ADMIN"]:
-        return client_error(message="Only HR or Admin can allocate budget", status_code=403)
+    # HR only
+    if getattr(current_user, "role", None) != UserRole.HR.value:
+        return forbidden("Only HR can allocate budget")
     
     service = WalletsService(db)
-    funding = service.allocate_budget(
-        manager_id=request.manager_id,
-        points=request.points,
-        allocated_by=current_user.id
-    )
-    
-    # Return the updated manager wallet
-    wallet = service.get_manager_wallet(request.manager_id)
-    data = WalletResponse.model_validate(wallet)
-    return created(data=data, message=f"Allocated {request.points} points to manager")
+    try:
+        funding = service.allocate_budget(
+            manager_id=request.manager_id,
+            points=request.points,
+            allocated_by=current_user.id
+        )
+        
+        # Return the updated manager wallet
+        wallet = service.get_manager_wallet(request.manager_id)
+        data = WalletResponse.model_validate(wallet)
+        return created(data=data, message=f"Allocated {request.points} points to manager")
+    except ValueError as e:
+        return client_error(message=str(e), status_code=400)
 
 
 @router.post("/manager/reward", status_code=status.HTTP_201_CREATED)
@@ -63,8 +71,9 @@ def manager_reward_employee(
     current_user = Depends(get_current_user)
 ):
     """Manager rewards employee from their wallet."""
-    if current_user.role not in ["MANAGER", "ADMIN", "DEPT_HEAD"]:
-       return client_error(message="Only managers can reward employees", status_code=403)
+    # Only managers may reward employees
+    if getattr(current_user, "role", None) != UserRole.MANAGER.value:
+        return forbidden("Only managers can reward employees")
 
     service = WalletsService(db)
     try:
@@ -74,9 +83,15 @@ def manager_reward_employee(
             points=request.points,
             reason=request.reason
         )
-        return created(message=f"Successfully rewarded employee with {request.points} points")
+        # Return useful data (batch id and awarded details) instead of null
+        resp_data = {
+            "batch_id": getattr(batch, "id", None),
+            "employee_id": request.employee_id,
+            "points": request.points,
+        }
+        return created(data=resp_data, message=f"Successfully rewarded employee with {request.points} points")
     except ValueError as e:
-        return client_error(message=str(e))
+        return client_error(message=str(e), status_code=400)
 
 
 @router.post("/manager/bulk-allocate")
@@ -86,9 +101,8 @@ def bulk_allocate_budget(
     current_user = Depends(get_current_user)
 ):
     """HR bulk allocates budget to multiple managers."""
-    from app.utils.enums import UserRole
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can bulk allocate budget", status_code=403)
+    if getattr(current_user, "role", None) != UserRole.HR.value:
+        return forbidden("Only HR can bulk allocate budget")
         
     service = WalletsService(db)
     count = service.bulk_allocate_budget(

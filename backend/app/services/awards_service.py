@@ -47,6 +47,32 @@ class AwardsService:
         if not award_type:
             raise HTTPException(status_code=404, detail="Award type not found or inactive.")
 
+        # Prevent duplicate pending nominations for same nominee and award type
+        existing_nom = self.db.query(Award).filter(
+            Award.nominee_id == nominee_id,
+            Award.award_type_id == award_type_id,
+            Award.status == AwardStatus.PENDING.value
+        ).first()
+        if existing_nom:
+            raise HTTPException(status_code=400, detail="A pending nomination for this nominee and award type already exists.")
+
+        # --- Eligibility checks based on nominator role ---
+        nominee = self.db.query(User).filter(User.id == nominee_id).first()
+        if not nominee:
+            raise HTTPException(status_code=404, detail="Nominee not found.")
+
+        # Managers may only nominate their direct reports
+        if nominator.role == UserRole.MANAGER.value:
+            if nominee.manager_id != nominator_id:
+                raise HTTPException(status_code=403, detail="Managers can only nominate their direct reports.")
+
+        # Dept Heads may only nominate employees within their department
+        if nominator.role == UserRole.DEPT_HEAD.value:
+            if nominee.department_id != nominator.department_id:
+                raise HTTPException(status_code=403, detail="Dept Heads can only nominate employees within their department.")
+
+        # HR may nominate anyone; Employees follow existing rules (no extra restriction)
+
         # 2. Create award record with PENDING status
         award = Award(
             nominee_id=nominee_id,
@@ -58,6 +84,9 @@ class AwardsService:
         )
         self.db.add(award)
         self.db.flush() # Use flush to get award.id before commit
+        
+        # Refresh to load the award_type relationship
+        self.db.refresh(award)
 
         # 3. Handle Auto-Approval for Nominator's Own Level (Only for Manager+, not Employee)
         # HR nominations are fully auto-approved.
@@ -98,23 +127,20 @@ class AwardsService:
             )
 
         elif nominator.role != UserRole.EMPLOYEE.value: # Manager or Dept Head
-            # Add an automatic approval for the nominator's level and any preceding levels
+            # Add automatic approval ONLY for the nominator's own level
             required_levels = self._get_required_approval_levels(award_type)
             nominator_level = nominator.role # e.g., "MANAGER" or "DEPT_HEAD"
             
-            # Record approvals for all levels up to and including the nominator's role
-            for level in required_levels:
-                approval = AwardApproval(
-                    award_id=award.id,
-                    approver_id=nominator_id,
-                    approval_level=level,
-                    status=ApprovalStatus.APPROVED.value,
-                    comments=f"Auto-approved by {nominator_level} nominator"
-                )
-                self.db.add(approval)
-                current_approvals.append(level)
-                if level == nominator_level:
-                    break
+            # Only auto-approve the nominator's own level (not preceding levels)
+            approval = AwardApproval(
+                award_id=award.id,
+                approver_id=nominator_id,
+                approval_level=nominator_level,
+                status=ApprovalStatus.APPROVED.value,
+                comments=f"Auto-approved by {nominator_level} nominator"
+            )
+            self.db.add(approval)
+            current_approvals.append(nominator_level)
             
             # Check if all approvals are now complete due to nominator's role
             if self._all_approvals_complete(required_levels, current_approvals):
@@ -183,7 +209,7 @@ class AwardsService:
             raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
 
         # 1. Get required approval workflow from award type
-        required_levels = self._get_required_approval_levels(award.award_type)
+        required_levels = [lvl.strip().upper() for lvl in self._get_required_approval_levels(award.award_type)]
         
         if not required_levels:
             # No workflow defined, default to single approval
@@ -192,6 +218,7 @@ class AwardsService:
         # 2. Check if this approval level is required and not already approved
         existing_approvals = self._get_existing_approvals(award_id)
         
+        approval_level = str(approval_level).strip().upper()
         if approval_level in existing_approvals:
             raise HTTPException(
                 status_code=400, 
@@ -202,9 +229,10 @@ class AwardsService:
         next_required_level = self._get_next_required_level(required_levels, existing_approvals)
         
         if approval_level != next_required_level:
+            # Include debug details to help diagnose ordering issues
             raise HTTPException(
                 status_code=400,
-                detail=f"Approval must be done in order. Next required level: {next_required_level}"
+                detail=f"Approval must be done in order. Next required level: {next_required_level}. Current completed: {existing_approvals}"
             )
         
         # 4. Create approval record
@@ -213,7 +241,7 @@ class AwardsService:
             approver_id=approver_id,
             approval_level=approval_level,
             status=ApprovalStatus.APPROVED.value,
-            comments=comments
+            comments=f"Approved by {approval_level}"
         )
         self.db.add(approval)
         self.db.flush()
@@ -273,7 +301,7 @@ class AwardsService:
             approver_id=approver_id,
             approval_level=approval_level,
             status=ApprovalStatus.REJECTED.value,
-            comments=comments
+            comments=f"Rejected by {approval_level}"
         )
         self.db.add(approval)
 
@@ -295,15 +323,14 @@ class AwardsService:
         """Get award nominations based on user role."""
         query = self.db.query(Award)
         
-        if role == UserRole.EMPLOYEE.value:
-            # Employee sees nominations they made or received
-            query = query.filter((Award.nominator_id == user_id) | (Award.nominee_id == user_id))
-        elif role == UserRole.MANAGER.value:
-            # Manager sees all nominations (could be refined to subordinates)
-            pass 
-        elif role in [UserRole.HR.value, UserRole.DEPT_HEAD.value]:
-            # HR/Dept Head sees all
+        # By default, only HR (and optionally Dept Head) may view all nominations.
+        # Other roles (Employee, Manager) see only nominations they are part of (nominator or nominee).
+        if role in [UserRole.HR.value, UserRole.DEPT_HEAD.value]:
+            # HR and Dept Head can see all nominations
             pass
+        else:
+            # Employees and Managers see only nominations they made or received
+            query = query.filter((Award.nominator_id == user_id) | (Award.nominee_id == user_id))
 
         if status_filter:
             query = query.filter(Award.status == status_filter)
@@ -332,6 +359,16 @@ class AwardsService:
         approval_workflow: Optional[str] = None
     ) -> AwardType:
         """Create a new award type (admin only)."""
+        # Prevent duplicate award_key or name (case-insensitive)
+        from sqlalchemy import func
+        existing_key = self.db.query(AwardType).filter(AwardType.award_key == award_key).first()
+        if existing_key:
+            raise HTTPException(status_code=400, detail="Award type with this key already exists")
+
+        existing_name = self.db.query(AwardType).filter(func.lower(AwardType.name) == name.lower()).first()
+        if existing_name:
+            raise HTTPException(status_code=400, detail="Award type with this name already exists")
+
         award_type = AwardType(
             award_key=award_key,
             name=name,
@@ -370,8 +407,8 @@ class AwardsService:
             List of approval levels in order (e.g., ["MANAGER", "DEPT_HEAD", "HR"])
         """
         if not award_type.approval_workflow:
-            # Default workflow if not specified
-            return ["MANAGER", "HR"]
+            # Default workflow: MANAGER -> DEPT_HEAD -> HR
+            return ["MANAGER", "DEPT_HEAD", "HR"]
         
         # Parse comma-separated workflow
         levels = [level.strip().upper() for level in award_type.approval_workflow.split(",")]
@@ -389,7 +426,8 @@ class AwardsService:
             AwardApproval.status == ApprovalStatus.APPROVED.value
         ).all()
         
-        return [approval.approval_level for approval in approvals]
+        # Normalize stored approval level strings to uppercase for reliable comparisons
+        return [str(approval.approval_level).strip().upper() for approval in approvals]
     
     def _get_next_required_level(self, required_levels: List[str], completed_levels: List[str]) -> Optional[str]:
         """
@@ -402,10 +440,29 @@ class AwardsService:
         Returns:
             Next required approval level or None if all complete
         """
-        for level in required_levels:
-            if level not in completed_levels:
-                return level
-        return None
+        # If there are no required levels, nothing to do
+        if not required_levels:
+            return None
+
+        # Normalize completed levels and consider only those present in required_levels
+        completed_set = {str(l).strip().upper() for l in completed_levels if l}
+
+        # Find the highest-positioned completed level in the ordered required_levels
+        max_index = -1
+        for idx, level in enumerate(required_levels):
+            if level in completed_set:
+                max_index = idx
+
+        # If none of the required levels have been completed, the next required is the first
+        if max_index == -1:
+            return required_levels[0]
+
+        # If the highest completed level is the last in the workflow, there is no next level
+        if max_index + 1 >= len(required_levels):
+            return None
+
+        # Otherwise, return the level immediately following the highest completed one
+        return required_levels[max_index + 1]
     
     def _all_approvals_complete(self, required_levels: List[str], completed_levels: List[str]) -> bool:
         """
@@ -418,7 +475,25 @@ class AwardsService:
         Returns:
             True if all required approvals are complete
         """
-        return all(level in completed_levels for level in required_levels)
+        if not required_levels:
+            return True
+
+        # Normalize completed levels
+        completed_set = {str(l).strip().upper() for l in completed_levels if l}
+
+        # Find highest-positioned completed level within the required_levels order
+        max_index = -1
+        for idx, level in enumerate(required_levels):
+            if level in completed_set:
+                max_index = idx
+
+        # If none completed, require all required_levels
+        start_idx = 0 if max_index == -1 else max_index
+
+        # Effective required levels start from the highest completed level (inclusive)
+        effective_required = required_levels[start_idx:]
+
+        return all(level in completed_set for level in effective_required)
     
     def get_approval_status(self, award_id: int) -> Dict[str, Any]:
         """

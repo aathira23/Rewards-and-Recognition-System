@@ -1,7 +1,7 @@
 """
 Award model - Formal award nominations.
 """
-from sqlalchemy import Column, BigInteger, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -19,6 +19,7 @@ class Award(Base):
     award_type_id = Column(BigInteger, ForeignKey("award_types.id"), nullable=False)
     status = Column(String, nullable=False)  # PENDING, APPROVED, REJECTED
     points_awarded = Column(Integer, nullable=True)
+    justification = Column(Text, nullable=True)  # Reason for nomination
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

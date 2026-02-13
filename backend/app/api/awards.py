@@ -12,7 +12,7 @@ from app.schemas.awards import AwardNominationCreate, AwardResponse, AwardAction
 from app.schemas.award_types import AwardTypeCreate, AwardTypeUpdate, AwardTypeResponse
 from app.services.awards_service import AwardsService
 from app.utils.enums import UserRole, ApprovalLevel
-from app.utils.response import success, client_error, created
+from app.utils.response import success, client_error, created, conflict, server_error
 
 router = APIRouter()
 
@@ -26,13 +26,23 @@ def nominate_for_award(
 ):
     """Nominate an employee for an award."""
     service = AwardsService(db)
-    result = service.nominate_for_award(
-        nominator_id=current_user.id,
-        nominee_id=nomination.nominee_id,
-        award_type_id=nomination.award_type_id,
-        justification=nomination.justification
-    )
-    return created(data=AwardResponse.model_validate(result), message="Nomination successful")
+    try:
+        result = service.nominate_for_award(
+            nominator_id=current_user.id,
+            nominee_id=nomination.nominee_id,
+            award_type_id=nomination.award_type_id,
+            justification=nomination.justification
+        )
+        return created(data=AwardResponse.model_validate(result), message="Nomination successful")
+    except HTTPException as e:
+        # Map known duplicate nomination to structured conflict
+        detail = e.detail if hasattr(e, 'detail') else str(e)
+        if e.status_code == 400 and "pending nomination" in str(detail).lower():
+            return conflict(message=str(detail), data={"field": "award_type_id", "value": nomination.award_type_id})
+        # Propagate other HTTPExceptions
+        raise e
+    except Exception as e:
+        return server_error(message=f"Nomination failed: {str(e)}")
 
 
 @router.get("/nominations")
@@ -55,6 +65,71 @@ def get_nominations(
     return success(data=[AwardResponse.model_validate(n) for n in nominations], message="Nominations fetched")
 
 
+# Award types (renamed path to /awards) - MOVED BEFORE {nomination_id} to avoid routing conflict
+@router.get("/")
+def get_award_types(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all award types."""
+    service = AwardsService(db)
+    types = service.get_award_types()
+    return success(data=[AwardTypeResponse.model_validate(t) for t in types], message="Award types fetched")
+
+
+@router.post("/")
+def create_award_type(
+    award_type: AwardTypeCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new award type (admin only)."""
+    if current_user.role != UserRole.HR.value:
+        return client_error(message="Only HR can create award types", status_code=403)
+        
+    service = AwardsService(db)
+    try:
+        result = service.create_award_type(
+            award_key=award_type.award_key,
+            name=award_type.name,
+            points=award_type.points,
+            frequency=award_type.frequency,
+            eligibility_rule=award_type.eligibility_rule,
+            description=award_type.description,
+            approval_workflow=award_type.approval_workflow
+        )
+        return created(data=AwardTypeResponse.model_validate(result), message="Award type created")
+    except HTTPException as e:
+        detail = e.detail if hasattr(e, 'detail') else str(e)
+        # Distinguish key/name duplicates based on message
+        if e.status_code == 400 and "key" in str(detail).lower():
+            return conflict(message=str(detail), data={"field": "award_key", "value": award_type.award_key})
+        if e.status_code == 400 and "name" in str(detail).lower():
+            return conflict(message=str(detail), data={"field": "name", "value": award_type.name})
+        raise e
+    except Exception as e:
+        return server_error(message=f"Failed to create award type: {str(e)}")
+
+
+@router.put("/types/{type_id}")
+def update_award_type(
+    type_id: int,
+    award_type: AwardTypeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update an award type (admin only)."""
+    if current_user.role != UserRole.HR.value:
+        return client_error(message="Only HR can update award types", status_code=403)
+        
+    service = AwardsService(db)
+    updated = service.update_award_type(type_id, award_type.model_dump(exclude_unset=True))
+    if not updated:
+        return client_error(message="Award type not found", status_code=404)
+    return success(data=AwardTypeResponse.model_validate(updated), message="Award type updated")
+
+
+# Nomination-specific routes - AFTER /types to avoid conflict
 @router.get("/nominations/{nomination_id}")
 def get_nomination(
     nomination_id: int,
@@ -112,76 +187,6 @@ def action_nomination(
             comments=request.comments or "Rejected"
         )
         return success(data=AwardResponse.model_validate(result), message="Nomination rejected")
-
-
-# Award Types
-@router.post("/types")
-def create_award_type(
-    award_type: AwardTypeCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Create a new award type (admin only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can create award types", status_code=403)
-        
-    service = AwardsService(db)
-    result = service.create_award_type(
-        award_key=award_type.award_key,
-        name=award_type.name,
-        points=award_type.points,
-        frequency=award_type.frequency,
-        eligibility_rule=award_type.eligibility_rule,
-        description=award_type.description,
-        approval_workflow=award_type.approval_workflow
-    )
-    return created(data=AwardTypeResponse.model_validate(result), message="Award type created")
-
-
-@router.put("/types/{type_id}")
-def update_award_type(
-    type_id: int,
-    award_type: AwardTypeUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Update an award type (admin only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can update award types", status_code=403)
-        
-    service = AwardsService(db)
-    updated = service.update_award_type(type_id, award_type.model_dump(exclude_unset=True))
-    if not updated:
-        return client_error(message="Award type not found", status_code=404)
-    return success(data=AwardTypeResponse.model_validate(updated), message="Award type updated")
-
-
-@router.patch("/types/{type_id}/deactivate")
-def deactivate_award_type(
-    type_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Deactivate an award type (admin only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can deactivate award types", status_code=403)
-        
-    service = AwardsService(db)
-    updated = service.update_award_type(type_id, {"is_active": False})
-    if not updated:
-        return client_error(message="Award type not found", status_code=404)
-    return success(data=AwardTypeResponse.model_validate(updated), message="Award type deactivated")
-
-
-@router.get("/types")
-def get_award_types(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Get all award types."""
-    service = AwardsService(db)
-    types = service.get_award_types()
-    return success(data=[AwardTypeResponse.model_validate(t) for t in types], message="Award types fetched")
 
 
 @router.get("/nominations/{nomination_id}/approval-status")

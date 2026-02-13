@@ -33,9 +33,38 @@ class UserUpdate(BaseModel):
     birth_date: Optional[date] = None
 
 
-class UserResponse(UserBase):
-    """Schema for user response."""
+class UserPublicResponse(BaseModel):
+    """Public user info (safe for leaderboards, feeds, etc)."""
     id: int
+    name: str
+    department_name: Optional[str] = None
+    role: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserResponse(UserBase):
+    """Schema for user response (full details for HR/admin)."""
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserDetailResponse(BaseModel):
+    """Detailed user info (HR/admin only - includes sensitive data)."""
+    id: int
+    name: str
+    email: str
+    role: str
+    department_id: Optional[int] = None
+    department_name: Optional[str] = None
+    manager_id: Optional[int] = None
+    manager_name: Optional[str] = None
+    date_of_joining: Optional[date] = None
+    birth_date: Optional[date] = None
     created_at: datetime
 
     class Config:
