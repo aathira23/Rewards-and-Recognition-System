@@ -11,6 +11,7 @@ class RewardBase(BaseModel):
     name: str
     reward_type: str
     points_required: int
+    stock_quantity: Optional[int] = None  # NULL = unlimited stock
     is_active: bool = True
 
 
@@ -24,6 +25,7 @@ class RewardUpdate(BaseModel):
     name: Optional[str] = None
     reward_type: Optional[str] = None
     points_required: Optional[int] = None
+    stock_quantity: Optional[int] = None
     is_active: Optional[bool] = None
 
 

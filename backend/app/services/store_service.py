@@ -29,6 +29,28 @@ class StoreService:
         """Get a specific reward by ID."""
         return self.db.query(Reward).filter(Reward.id == reward_id).first()
 
+    def create_reward(self, reward_data: Any) -> Reward:
+        """Create a new reward item in the store."""
+        reward = Reward(**reward_data.model_dump())
+        self.db.add(reward)
+        self.db.commit()
+        self.db.refresh(reward)
+        return reward
+
+    def update_reward(self, reward_id: int, reward_data: Any) -> Reward:
+        """Update an existing reward item."""
+        reward = self.get_reward_by_id(reward_id)
+        if not reward:
+            raise ValueError("Reward not found.")
+        
+        update_data = reward_data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(reward, key, value)
+        
+        self.db.commit()
+        self.db.refresh(reward)
+        return reward
+
     def redeem_reward(self, user_id: int, reward_id: int) -> Redemption:
         """Instant redemption for Merch or Vouchers."""
         reward = self.get_reward_by_id(reward_id)
@@ -37,6 +59,14 @@ class StoreService:
         
         if not reward.is_active:
             raise ValueError("This reward is no longer available.")
+        
+        # Check stock availability
+        if reward.stock_quantity is not None:
+            if reward.stock_quantity <= 0:
+                # Auto-deactivate if stock is 0
+                reward.is_active = False
+                self.db.commit()
+                raise ValueError("This reward is out of stock.")
 
         # 1. Deduct points via FIFO
         self.points_service.deduct_points(
@@ -46,7 +76,14 @@ class StoreService:
             reference_id=0  # Placeholder, will update after creating redemption
         )
 
-        # 2. Create redemption record
+        # 2. Decrease stock if applicable
+        if reward.stock_quantity is not None:
+            reward.stock_quantity -= 1
+            # Auto-deactivate if stock reaches 0
+            if reward.stock_quantity <= 0:
+                reward.is_active = False
+
+        # 3. Create redemption record
         # All catalog items (Merchandise & Gift Cards) are instant fulfillment
         redemption = Redemption(
             user_id=user_id,
@@ -58,7 +95,7 @@ class StoreService:
         self.db.commit()
         self.db.refresh(redemption)
 
-        # 3. Notify user
+        # 4. Notify user
         self.notification_service.create_notification(
             user_id=user_id,
             message=f"Redemption successful! You redeemed '{reward.name}' for {reward.points_required} points.",
@@ -118,6 +155,10 @@ class StoreService:
         return self.db.query(PointsConversion).filter(
             PointsConversion.user_id == user_id
         ).order_by(PointsConversion.requested_at.desc()).all()
+
+    def get_all_conversion_history(self) -> List[PointsConversion]:
+        """Get all conversion requests (HR/admin view)."""
+        return self.db.query(PointsConversion).order_by(PointsConversion.requested_at.desc()).all()
 
     def get_pending_conversions(self) -> List[PointsConversion]:
         """Get all pending conversion requests (Admin)."""

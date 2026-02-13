@@ -6,13 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
+from app.core.dependencies import get_current_user_id, get_current_user
 from app.services.store_service import StoreService
-from app.schemas.rewards import RewardResponse
+from app.schemas.rewards import RewardResponse, RewardCreate, RewardUpdate
 from app.schemas.redemptions import RedemptionCreate, RedemptionResponse
 from app.schemas.points_conversion import PointsConversionCreate, PointsConversionResponse
 import logging
 from app.utils.response import success, created, client_error
+from app.utils.enums import UserRole
 
 router = APIRouter()
 
@@ -25,6 +26,57 @@ def get_catalog_items(db: Session = Depends(get_db)):
     # Convert models to schemas
     data = [RewardResponse.model_validate(i) for i in items]
     return success(data=data, message="Catalog retrieved successfully")
+
+
+@router.post("/items", response_model=RewardResponse)
+def create_store_item(
+    reward_data: RewardCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Create a new item in the store catalog (HR/Admin only)."""
+    # Check if user has HR role
+    if current_user.role != UserRole.HR.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only HR can create store items"
+        )
+    
+    service = StoreService(db)
+    try:
+        reward = service.create_reward(reward_data)
+        data = RewardResponse.model_validate(reward)
+        return created(data=data, message="Store item created successfully")
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("Failed to create store item: %s", str(e))
+        return client_error(message=str(e))
+
+
+@router.put("/items/{reward_id}", response_model=RewardResponse)
+def update_store_item(
+    reward_id: int,
+    reward_data: RewardUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Update a store item including stock quantity and active status (HR/Admin only)."""
+    # Check if user has HR role
+    if current_user.role != UserRole.HR.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only HR can update store items"
+        )
+    
+    service = StoreService(db)
+    try:
+        reward = service.update_reward(reward_id, reward_data)
+        data = RewardResponse.model_validate(reward)
+        return success(data=data, message="Store item updated successfully")
+    except ValueError as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("Failed to update store item %s: %s", reward_id, str(e))
+        return client_error(message=str(e))
 
 
 @router.post("/redeem", response_model=RedemptionResponse)
