@@ -25,8 +25,11 @@ def list_configs(
         return client_error(message="Access denied", status_code=403)
         
     service = ConfigService(db)
-    configs = service.get_all_configs()
-    return success(data=configs, message="Configurations retrieved")
+    try:
+        configs = service.get_all_configs()
+        return success(data=[SystemConfigResponse.model_validate(c) for c in configs], message="Configurations retrieved")
+    except Exception as e:
+        return client_error(message=f"Config retrieval failed: {str(e)}", status_code=500)
 
 
 @router.put("/{key}")

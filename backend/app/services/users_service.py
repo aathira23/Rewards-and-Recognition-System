@@ -19,6 +19,10 @@ def list_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
     return db.query(User).offset(skip).limit(limit).all()
 
 
+def get_user_count(db: Session) -> int:
+    return db.query(User).count()
+
+
 def create_user(db: Session, user_in: UserCreate) -> User:
     existing = get_user_by_email(db, user_in.email)
     if existing:
@@ -58,15 +62,29 @@ def update_user(db: Session, user_id: int, user_in: UserUpdate) -> User:
     return user
 
 
-def serialize_user(user: User) -> Dict[str, Any]:
-    return {
+def serialize_user(user: User, include_sensitive: bool = True) -> Dict[str, Any]:
+    """
+    Serialize user object to dict.
+    
+    Args:
+        user: User model instance
+        include_sensitive: If False, excludes PII (email, birth_date). Use False for public contexts.
+    """
+    data = {
         "id": user.id,
         "name": user.name,
-        "email": user.email,
         "role": user.role,
         "department_id": user.department_id,
+        "department_name": user.department.name if user.department else None,
         "manager_id": user.manager_id,
+        "manager_name": user.manager.name if user.manager else None,
         "date_of_joining": user.date_of_joining.isoformat() if user.date_of_joining else None,
-        "birth_date": user.birth_date.isoformat() if user.birth_date else None,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
+    
+    # Include sensitive fields only when appropriate
+    if include_sensitive:
+        data["email"] = user.email
+        data["birth_date"] = user.birth_date.isoformat() if user.birth_date else None
+    
+    return data

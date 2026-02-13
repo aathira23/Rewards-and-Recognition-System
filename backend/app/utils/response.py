@@ -33,7 +33,8 @@ def _build_body(status_text: str, status_code: int, message: str | None, data: A
         data=data,
         timestamp=_now_iso(),
     )
-    return jsonable_encoder(response)
+    # Exclude None values
+    return jsonable_encoder(response, exclude_none=True)
 
 
 def success(data: Any = None, message: str | None = "OK", status_code: int = http_status.HTTP_200_OK) -> JSONResponse:

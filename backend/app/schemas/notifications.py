@@ -15,7 +15,6 @@ class NotificationBase(BaseModel):
 class NotificationResponse(NotificationBase):
     """Schema for notification response."""
     id: int
-    user_id: int
     is_read: bool
     created_at: datetime
 

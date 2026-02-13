@@ -7,6 +7,8 @@ from typing import List, Optional
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_current_user_id
+from app.utils.enums import UserRole
+from app.utils.response import forbidden
 from app.schemas.points_ledger import PointsLedgerResponse
 from app.schemas.points_conversion import (
     PointsConversionCreate,
@@ -17,6 +19,7 @@ from app.schemas.points_policy import PointsPolicyCreate, PointsPolicyUpdate, Po
 from app.services.points_service import PointsService
 from app.services.store_service import StoreService
 from app.utils.response import success, created, client_error
+from app.utils.response import forbidden
 
 router = APIRouter()
 
@@ -86,7 +89,20 @@ def convert_points_request(
             conversion_type=request.conversion_type,
             cash_amount=calculated_cash
         )
-        data = PointsConversionResponse.model_validate(conversion)
+        conv_dict = {
+            "id": conversion.id,
+            "points_converted": conversion.points_converted,
+            "conversion_type": conversion.conversion_type,
+            "user_id": conversion.user_id,
+            "user_name": conversion.user.name if conversion.user else None,
+            "cash_amount": conversion.cash_amount,
+            "status": conversion.status,
+            "requested_at": conversion.requested_at,
+            "approved_by": conversion.approved_by,
+            "approved_by_name": conversion.approver.name if conversion.approver else None,
+            "approved_at": conversion.approved_at,
+        }
+        data = PointsConversionResponse.model_validate(conv_dict)
         return created(data=data, message="Conversion request submitted")
     except ValueError as e:
         return client_error(message=str(e))
@@ -100,7 +116,54 @@ def get_conversions(
     """Get conversion requests (User's own requests)."""
     service = StoreService(db)
     conversions = service.get_conversion_history(current_user_id)
-    data = [PointsConversionResponse.model_validate(c) for c in conversions]
+    data = []
+    for c in conversions:
+        conv_dict = {
+            "id": c.id,
+            "points_converted": c.points_converted,
+            "conversion_type": c.conversion_type,
+            "user_id": c.user_id,
+            "user_name": c.user.name if c.user else None,
+            "cash_amount": c.cash_amount,
+            "status": c.status,
+            "requested_at": c.requested_at,
+            "approved_by": c.approved_by,
+            "approved_by_name": c.approver.name if c.approver else None,
+            "approved_at": c.approved_at,
+        }
+        item = PointsConversionResponse.model_validate(conv_dict)
+        data.append(item)
+    return success(data=data)
+
+
+@router.get("/conversions/pending", response_model=List[PointsConversionResponse])
+def get_pending_conversions(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get pending conversion requests (HR only)."""
+    if getattr(current_user, "role", None) != UserRole.HR.value:
+        return forbidden("Only HR can view pending conversion requests")
+
+    service = StoreService(db)
+    conversions = service.get_pending_conversions()
+    data = []
+    for c in conversions:
+        conv_dict = {
+            "id": c.id,
+            "points_converted": c.points_converted,
+            "conversion_type": c.conversion_type,
+            "user_id": c.user_id,
+            "user_name": c.user.name if c.user else None,
+            "cash_amount": c.cash_amount,
+            "status": c.status,
+            "requested_at": c.requested_at,
+            "approved_by": c.approved_by,
+            "approved_by_name": c.approver.name if c.approver else None,
+            "approved_at": c.approved_at,
+        }
+        item = PointsConversionResponse.model_validate(conv_dict)
+        data.append(item)
     return success(data=data)
 
 
@@ -109,18 +172,48 @@ def action_conversion(
     conversion_id: int,
     request: PointsConversionActionRequest,
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Approve or reject a conversion request (Admin logic)."""
     service = StoreService(db)
     try:
+        # Only HR users can approve/reject conversions
+        if getattr(current_user, "role", None) != UserRole.HR.value:
+            return forbidden("Only HR users can approve or reject conversion requests")
         if request.action.upper() == "APPROVE":
             result = service.approve_conversion(conversion_id, current_user_id)
-            data = PointsConversionResponse.model_validate(result)
+            conv_dict = {
+                "id": result.id,
+                "points_converted": result.points_converted,
+                "conversion_type": result.conversion_type,
+                "user_id": result.user_id,
+                "user_name": result.user.name if result.user else None,
+                "cash_amount": result.cash_amount,
+                "status": result.status,
+                "requested_at": result.requested_at,
+                "approved_by": result.approved_by,
+                "approved_by_name": result.approver.name if result.approver else None,
+                "approved_at": result.approved_at,
+            }
+            data = PointsConversionResponse.model_validate(conv_dict)
             return success(data=data, message="Request approved and points deducted")
         else:
             result = service.reject_conversion(conversion_id, current_user_id)
-            data = PointsConversionResponse.model_validate(result)
+            conv_dict = {
+                "id": result.id,
+                "points_converted": result.points_converted,
+                "conversion_type": result.conversion_type,
+                "user_id": result.user_id,
+                "user_name": result.user.name if result.user else None,
+                "cash_amount": result.cash_amount,
+                "status": result.status,
+                "requested_at": result.requested_at,
+                "approved_by": result.approved_by,
+                "approved_by_name": result.approver.name if result.approver else None,
+                "approved_at": result.approved_at,
+            }
+            data = PointsConversionResponse.model_validate(conv_dict)
             return success(data=data, message="Request rejected")
     except ValueError as e:
         return client_error(message=str(e))
@@ -144,9 +237,12 @@ def get_points_rules(
 def create_points_rule(
     rule: PointsPolicyCreate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Create a new points policy rule (admin only)."""
+    """Create a new points policy rule (HR only)."""
+    if getattr(current_user, "role", None) != UserRole.HR.value:
+        return forbidden("Only HR can create points rules")
+
     service = StoreService(db)
     result = service.create_policy(rule)
     data = PointsPolicyResponse.model_validate(result)
@@ -158,9 +254,12 @@ def update_points_rule(
     rule_id: int,
     rule: PointsPolicyUpdate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Update a points policy rule (admin only)."""
+    """Update a points policy rule (HR only)."""
+    if getattr(current_user, "role", None) != UserRole.HR.value:
+        return forbidden("Only HR can update points rules")
+
     service = StoreService(db)
     try:
         result = service.update_policy(rule_id, rule)

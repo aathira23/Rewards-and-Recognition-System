@@ -22,11 +22,13 @@ class PointsConversionResponse(PointsConversionBase):
     """Schema for points conversion response."""
     id: int
     user_id: int
+    user_name: Optional[str] = None
     cash_amount: Decimal
     status: str
     requested_at: datetime
-    approved_by: Optional[int]
-    approved_at: Optional[datetime]
+    approved_by: Optional[int] = None
+    approved_by_name: Optional[str] = None
+    approved_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

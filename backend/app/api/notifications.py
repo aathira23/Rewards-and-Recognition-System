@@ -49,30 +49,26 @@ def get_unread_count(
     return success(data={"unread_count": count}, message="Unread count retrieved")
 
 
-@router.post("/{notification_id}/read")
-def mark_notification_read(
-    notification_id: int,
+@router.post("/mark-read")
+def mark_notifications_read(
+    notification_id: int = None,
+    mark_all: bool = False,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
-    """Mark a specific notification as read."""
+    """Mark notification(s) as read. Provide notification_id for single, or mark_all=true for all."""
     service = NotificationService(db)
-    updated = service.mark_as_read(notification_id, current_user_id)
-    if not updated:
-        return client_error(message="Notification not found or access denied", status_code=404)
-        
-    return success(message="Notification marked as read")
-
-
-@router.post("/read-all")
-def mark_all_read(
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Mark all unread notifications as read."""
-    service = NotificationService(db)
-    service.mark_all_as_read(current_user_id)
-    return success(message="All notifications marked as read")
+    
+    if mark_all:
+        service.mark_all_as_read(current_user_id)
+        return success(message="All notifications marked as read")
+    elif notification_id:
+        updated = service.mark_as_read(notification_id, current_user_id)
+        if not updated:
+            return client_error(message="Notification not found or access denied", status_code=404)
+        return success(message="Notification marked as read")
+    else:
+        return client_error(message="Provide either notification_id or mark_all=true", status_code=400)
 @router.post("/send-expiry-reminders")
 def send_expiry_reminders(
     days_before: int = 7,

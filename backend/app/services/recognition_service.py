@@ -34,6 +34,12 @@ class RecognitionService:
 
     def create_badge(self, name: str, description: str = None, icon_url: str = None) -> Badge:
         """Create a new badge."""
+        # Prevent creating duplicate badges by name (case-insensitive)
+        from sqlalchemy import func
+        existing = self.db.query(Badge).filter(func.lower(Badge.name) == name.lower()).first()
+        if existing:
+            raise ValueError("Badge with this name already exists")
+
         badge = Badge(name=name, description=description, icon_url=icon_url)
         self.db.add(badge)
         self.db.commit()
@@ -126,16 +132,21 @@ class RecognitionService:
 
     def get_appreciation_overview(self, user_id: int) -> Dict[str, Any]:
         """Get recognitions received and sent by a user."""
+        from app.schemas.ecards import ECardResponse
+        
         received = self.db.query(ECard).options(
             joinedload(ECard.sender),
             joinedload(ECard.badge)
         ).filter(ECard.receiver_id == user_id).order_by(ECard.created_at.desc()).all()
         
-        sent = self.db.query(ECard).options( joinedload(ECard.receiver), joinedload(ECard.badge) ).filter(ECard.sender_id == user_id).order_by(ECard.created_at.desc()).all()
+        sent = self.db.query(ECard).options(
+            joinedload(ECard.receiver),
+            joinedload(ECard.badge)
+        ).filter(ECard.sender_id == user_id).order_by(ECard.created_at.desc()).all()
 
         return {
-            "received": received,
-            "sent": sent,
+            "received": [ECardResponse.model_validate(r).model_dump() for r in received],
+            "sent": [ECardResponse.model_validate(s).model_dump() for s in sent],
             "total_received": len(received),
             "total_sent": len(sent)
         }
@@ -216,7 +227,7 @@ class RecognitionService:
         
         # Base Query
         if metric == "POINTS":
-            # Rank by total points received
+            # Rank by total points received (excluding budget allocations)
             results = self.db.query(
                 User,
                 func.sum(PointsLedger.points).label("total_score"),
@@ -225,6 +236,7 @@ class RecognitionService:
             ).join(PointsLedger, Wallet.id == PointsLedger.target_wallet_id
             ).filter(
                 PointsLedger.transaction_type == "CREDIT",
+                PointsLedger.reference_type != "BUDGET_ALLOCATION",  # Exclude HR budget allocations
                 PointsLedger.created_at >= start_date
             ).group_by(User.id).order_by(desc("total_score")).limit(limit).all()
         else:
@@ -242,9 +254,7 @@ class RecognitionService:
             leaderboard.append({
                 "user_id": user.id,
                 "name": user.name,
-                "email": user.email,
-                "department": user.department.name if user.department else None,
-                "profile_picture": getattr(user, "profile_picture", None),
+                "department_name": user.department.name if user.department else None,
                 "rank": rank,
                 "score": int(score or 0),
                 "recognitions_received": int(secondary or 0) if metric == "POINTS" else int(score or 0)

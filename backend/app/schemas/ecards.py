@@ -18,8 +18,10 @@ class ECardCreate(ECardBase):
 
 
 class UserShortResponse(BaseModel):
+    """Minimal user info for nested objects."""
     id: int
     name: str
+    department_name: Optional[str] = None
 
     class Config:
         from_attributes = True

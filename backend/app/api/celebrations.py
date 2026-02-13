@@ -46,18 +46,6 @@ def get_celebration_history(
     return success(data=data, message="Celebration history fetched")
 
 
-@router.post("/{celebration_id}/retry")
-def retry_celebration(
-    celebration_id: int,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
-):
-    """Retry a failed celebration event (admin only)."""
-    # Logic: Delete existing celebration entry if any and re-run for that user
-    # For now, just return not implemented as it requires complex logic from the job
-    return success(message="Retry logic not yet production ready", status_code=202)
-
-
 @router.post("/process-today")
 def process_today_celebrations(
     db: Session = Depends(get_db),

@@ -35,6 +35,13 @@ class WalletRewardRequest(BaseModel):
     reason: str
 
 
+class WalletRewardResponse(BaseModel):
+    batch_id: int | None
+    employee_id: int
+    points: int
+    manager_wallet_balance: int | None
+
+
 class BulkBudgetAllocationRequest(BaseModel):
     """Schema for bulk budget allocation by HR."""
     points: int
