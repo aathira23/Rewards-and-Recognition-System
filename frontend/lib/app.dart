@@ -1,20 +1,40 @@
 /// "The root widget of the application, configuring themes, localizations, and initial navigation."
 import 'package:flutter/material.dart';
-import 'core/theme/app_theme.dart';
-import 'features/auth/presentation/pages/login_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:rr_frontend/core/theme/app_theme.dart';
+import 'package:rr_frontend/features/analytics/presentation/pages/dashboard_page.dart';
+import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
+import 'package:rr_frontend/features/auth/presentation/bloc/auth_state.dart';
+import 'package:rr_frontend/features/auth/presentation/pages/login_page.dart';
+import 'package:rr_frontend/injection_container.dart';
 
 class RRApp extends StatelessWidget {
   const RRApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Rewards & Recognition',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      // TODO: Implement Routing (using GoRouter or AutoRouter)
-      home: const LoginPage(),
+    return BlocProvider(
+      create: (_) => sl<AuthBloc>()..add(AuthCheckRequested()),
+      child: MaterialApp(
+        title: 'Rewards & Recognition',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        home: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return const DashboardPage();
+            }
+            if (state is AuthLoading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            return const LoginPage();
+          },
+        ),
+      ),
     );
   }
 }
