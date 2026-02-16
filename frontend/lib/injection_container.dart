@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 
 import 'core/constants/api_constants.dart';
+import 'core/network/auth_interceptor.dart';
 import 'core/network/api_client.dart';
 import 'features/auth/data/datasources/auth_local_data_source.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
@@ -49,7 +50,9 @@ Future<void> init() async {
   );
 
   //! Core
-  sl.registerLazySingleton(() => ApiClient(dio: sl()));
+  sl.registerLazySingleton(
+      () => AuthInterceptor(tokenProvider: sl<AuthLocalDataSource>()));
+  sl.registerLazySingleton(() => ApiClient(dio: sl(), authInterceptor: sl()));
 
   //! External
   sl.registerLazySingleton(
