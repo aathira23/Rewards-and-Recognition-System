@@ -8,22 +8,21 @@ import '../errors/exceptions.dart';
 class ApiClient {
   final Dio _dio;
 
-  ApiClient({Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: ApiConstants.baseUrl,
-                connectTimeout:
-                    const Duration(milliseconds: ApiConstants.connectTimeout),
-                receiveTimeout:
-                    const Duration(milliseconds: ApiConstants.receiveTimeout),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                },
-              ),
-            ) {
+  ApiClient({Dio? dio}) : _dio = dio ?? Dio() {
+    _applyBaseOptions();
     _initializeInterceptors();
+  }
+
+  void _applyBaseOptions() {
+    _dio.options.baseUrl = ApiConstants.baseUrl;
+    _dio.options.connectTimeout =
+        const Duration(milliseconds: ApiConstants.connectTimeout);
+    _dio.options.receiveTimeout =
+        const Duration(milliseconds: ApiConstants.receiveTimeout);
+    _dio.options.headers.addAll({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    });
   }
 
   void _initializeInterceptors() {
