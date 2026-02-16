@@ -1,8 +1,8 @@
-/// "Interface for the Local Data Source responsible for secure token storage."
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/network/token_provider.dart';
 import '../../../../core/errors/exceptions.dart';
 
-abstract class AuthLocalDataSource {
+abstract class AuthLocalDataSource implements TokenProvider {
   /// Persists the JWT token to secure storage.
   Future<void> saveToken(String token);
 

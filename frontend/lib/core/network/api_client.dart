@@ -2,14 +2,19 @@
 /// "Includes centralized error handling and placeholders for authentication logic."
 
 import 'package:dio/dio.dart';
+import 'auth_interceptor.dart';
 import '../constants/api_constants.dart';
 import '../errors/exceptions.dart';
 
 class ApiClient {
   final Dio _dio;
 
-  ApiClient({Dio? dio}) : _dio = dio ?? Dio() {
+  ApiClient({Dio? dio, AuthInterceptor? authInterceptor})
+      : _dio = dio ?? Dio() {
     _applyBaseOptions();
+    if (authInterceptor != null) {
+      _dio.interceptors.add(authInterceptor);
+    }
     _initializeInterceptors();
   }
 
@@ -26,23 +31,6 @@ class ApiClient {
   }
 
   void _initializeInterceptors() {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          // TODO: Intercept requests to add Authentication Token (JWT)
-          // 1. Fetch token from secure storage (e.g., flutter_secure_storage)
-          // 2. If token exists, add to header: options.headers['Authorization'] = 'Bearer $token'
-          return handler.next(options);
-        },
-        onError: (DioException e, handler) {
-          // TODO: Handle Global Token Expiration
-          // 1. Check if e.response?.statusCode == 401
-          // 2. If unauthorized, trigger clear session and redirect to login
-          return handler.next(e);
-        },
-      ),
-    );
-
     // Optional: Add logging interceptor for development
     _dio.interceptors.add(LogInterceptor(
       requestBody: true,
