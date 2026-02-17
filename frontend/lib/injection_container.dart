@@ -14,6 +14,10 @@ import 'features/auth/domain/usecases/check_auth_status_usecase.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/profile/data/datasources/profile_remote_data_source.dart';
+import 'features/profile/data/repositories/profile_repository_impl.dart';
+import 'features/profile/domain/repositories/profile_repository.dart';
+import 'features/profile/domain/usecases/get_me_usecase.dart';
 
 final sl = GetIt.instance; // sl stands for Service Locator
 
@@ -25,6 +29,7 @@ Future<void> init() async {
       loginUseCase: sl(),
       logoutUseCase: sl(),
       checkAuthStatusUseCase: sl(),
+      getMeUseCase: sl(),
     ),
   );
 
@@ -47,6 +52,20 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<AuthLocalDataSource>(
     () => AuthLocalDataSourceImpl(secureStorage: sl()),
+  );
+
+  //! Features - Profile
+  // Use cases
+  sl.registerLazySingleton(() => GetMeUseCase(sl()));
+
+  // Repository
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<ProfileRemoteDataSource>(
+    () => ProfileRemoteDataSourceImpl(client: sl()),
   );
 
   //! Core

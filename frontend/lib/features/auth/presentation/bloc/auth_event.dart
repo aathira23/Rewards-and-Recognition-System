@@ -5,13 +5,13 @@ abstract class AuthEvent extends Equatable {
   const AuthEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
-/// Triggered on app startup to check if a user is already logged in.
+/// Event to check the current authentication status (e.g., on app start).
 class AuthCheckRequested extends AuthEvent {}
 
-/// Triggered when the user submits their login credentials.
+/// Event to log in with email and password.
 class AuthLoginRequested extends AuthEvent {
   final String email;
   final String password;
@@ -19,8 +19,11 @@ class AuthLoginRequested extends AuthEvent {
   const AuthLoginRequested({required this.email, required this.password});
 
   @override
-  List<Object> get props => [email, password];
+  List<Object?> get props => [email, password];
 }
 
-/// Triggered when the user requests to log out.
+/// Event to fetch the user profile (called after successful login).
+class AuthProfileFetchRequested extends AuthEvent {}
+
+/// Event to log out.
 class AuthLogoutRequested extends AuthEvent {}

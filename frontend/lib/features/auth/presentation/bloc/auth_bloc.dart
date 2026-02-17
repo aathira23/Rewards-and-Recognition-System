@@ -4,6 +4,7 @@ import '../../domain/entities/auth_entity.dart';
 import '../../domain/usecases/check_auth_status_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
+import '../../../profile/domain/usecases/get_me_usecase.dart';
 import '../../../../core/usecases/usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -12,14 +13,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase loginUseCase;
   final LogoutUseCase logoutUseCase;
   final CheckAuthStatusUseCase checkAuthStatusUseCase;
+  final GetMeUseCase getMeUseCase;
 
   AuthBloc({
     required this.loginUseCase,
     required this.logoutUseCase,
     required this.checkAuthStatusUseCase,
+    required this.getMeUseCase,
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
+    on<AuthProfileFetchRequested>(_onAuthProfileFetchRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
   }
 
@@ -29,9 +33,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final isAuthenticated = await checkAuthStatusUseCase();
     if (isAuthenticated) {
-      // In a real app, we might fetch the user profile here.
-      // For now, we emit Authenticated with a placeholder entity to allow session persistence.
-      emit(const AuthAuthenticated(auth: AuthEntity(token: '', userId: 0)));
+      // Logic removed: initially emit placeholder, then we'll trigger profile fetch from UI or here.
+      emit(const AuthAuthenticated(
+        auth: AuthEntity(
+          token: '',
+          userId: 0,
+        ),
+      ));
+      // Auto-trigger profile fetch if we have a token
+      add(AuthProfileFetchRequested());
     } else {
       emit(AuthUnauthenticated());
     }
@@ -48,8 +58,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthFailure(message: failure.message)),
-      (auth) => emit(AuthAuthenticated(auth: auth)),
+      (auth) {
+        emit(AuthAuthenticated(auth: auth));
+        // Immediately fetch profile after successful login
+        add(AuthProfileFetchRequested());
+      },
     );
+  }
+
+  Future<void> _onAuthProfileFetchRequested(
+    AuthProfileFetchRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is AuthAuthenticated) {
+      final currentAuth = (state as AuthAuthenticated).auth;
+      final result = await getMeUseCase(NoParams());
+
+      result.fold(
+        (failure) {
+          // If profile fetch fails, we still keep them authenticated but maybe log a warning.
+          // For now, we just keep the current state.
+        },
+        (user) {
+          emit(AuthAuthenticated(
+            auth: AuthEntity(
+              token: currentAuth.token,
+              userId: currentAuth.userId,
+              user: user,
+            ),
+          ));
+        },
+      );
+    }
   }
 
   Future<void> _onAuthLogoutRequested(
