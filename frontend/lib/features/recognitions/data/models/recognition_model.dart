@@ -18,13 +18,16 @@ class RecognitionModel extends RecognitionEntity {
   factory RecognitionModel.fromJson(Map<String, dynamic> json) {
     return RecognitionModel(
       id: json['id'],
-      senderId: json['sender_id'],
-      receiverId: json['receiver_id'],
-      badgeId: json['badge_id'],
+      // Backend feed uses 'actor_id'; eCard detail uses 'sender_id'
+      senderId: json['actor_id'] ?? json['sender_id'] ?? 0,
+      receiverId: json['receiver_id'] ?? 0,
+      // Feed uses 'source_id' as the related record id; badge_id may be absent
+      badgeId: json['badge_id'] ?? json['source_id'] ?? 0,
       message: json['message'],
       pointsAwarded: json['points_awarded'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),
-      senderName: json['sender']?['name'],
+      // Backend feed uses 'actor' object; eCard detail uses 'sender'
+      senderName: json['actor']?['name'] ?? json['sender']?['name'],
       receiverName: json['receiver']?['name'],
       badge: json['badge'] != null ? BadgeModel.fromJson(json['badge']) : null,
     );

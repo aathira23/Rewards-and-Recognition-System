@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     final isDesktop = size.width > 900;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {

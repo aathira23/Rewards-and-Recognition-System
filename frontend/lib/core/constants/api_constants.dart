@@ -27,6 +27,7 @@ class ApiConstants {
 
   // Profile
   static const String profile = 'profile/me';
+  // Backend exposes user listing under /profile/ (see backend router)
   static const String users = 'profile/';
 
   // Networking settings

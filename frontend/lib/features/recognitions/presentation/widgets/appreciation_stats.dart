@@ -28,7 +28,7 @@ class AppreciationStats extends StatelessWidget {
             itemBuilder: (context, index) {
               final badgeName = stats.badgeCounts.keys.elementAt(index);
               final count = stats.badgeCounts.values.elementAt(index);
-              return _buildStatCard(badgeName, count);
+              return _buildStatCard(context, badgeName, count);
             },
           ),
         ),
@@ -36,53 +36,44 @@ class AppreciationStats extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String badgeName, int count) {
-    return Container(
-      width: 250,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade100,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              _getBadgeIcon(badgeName),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  badgeName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+  Widget _buildStatCard(BuildContext context, String badgeName, int count) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Container(
+        width: 250,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                _getBadgeIcon(badgeName),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    badgeName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          Text(
-            count.toString(),
-            style: const TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+              ],
             ),
-          ),
-        ],
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
