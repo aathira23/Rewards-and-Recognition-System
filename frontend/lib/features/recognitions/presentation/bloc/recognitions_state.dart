@@ -39,14 +39,14 @@ class RecognitionsState extends Equatable {
       status: status ?? this.status,
       badges: badges ?? this.badges,
       feed: feed ?? this.feed,
+      users: users ?? this.users,
       stats: stats ?? this.stats,
-      errorMessage:
-          errorMessage, // Reset error on new state unless explicitly provided? No, keep logic simple.
+      errorMessage: errorMessage,
       lastSentRecognition: lastSentRecognition ?? this.lastSentRecognition,
     );
   }
 
   @override
   List<Object?> get props =>
-      [status, badges, feed, stats, errorMessage, lastSentRecognition];
+      [status, badges, feed, users, stats, errorMessage, lastSentRecognition];
 }

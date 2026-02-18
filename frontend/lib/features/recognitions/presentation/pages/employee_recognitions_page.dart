@@ -50,9 +50,9 @@ class EmployeeRecognitionsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Rewards & Recognition',
+                  'Recognitions Center',
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

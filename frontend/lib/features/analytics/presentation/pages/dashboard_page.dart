@@ -6,7 +6,7 @@ import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/employee_recognitions_page.dart';
-import 'package:rr_frontend/features/points/presentation/pages/employee_points_page.dart';
+import 'package:rr_frontend/features/points/presentation/pages/points_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
 import 'package:rr_frontend/features/nominations/presentation/pages/employee_approvals_page.dart';
 
@@ -37,7 +37,7 @@ class DashboardPage extends StatelessWidget {
             NavDestination(
               title: 'Points',
               icon: Icons.account_balance_wallet_rounded,
-              page: EmployeePointsPage(),
+              page: PointsPage(),
             ),
             NavDestination(
               title: 'Rewards',

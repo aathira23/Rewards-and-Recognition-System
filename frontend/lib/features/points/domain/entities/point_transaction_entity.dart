@@ -1,36 +1,21 @@
 import 'package:equatable/equatable.dart';
 
 class PointTransactionEntity extends Equatable {
-  final int id;
-  final int points;
-  final String transactionType; // CREDIT, DEBIT
-  final String referenceType; // ECARD, AWARD, etc.
-  final int referenceId;
-  final DateTime createdAt;
-  final int? sourceWalletId;
-  final int? targetWalletId;
-  // TODO: Add extra details like sender name if backend provides it or if we fetch it.
+  final dynamic
+      id; // Using dynamic as backend returns mixed types (int or string likes 'batch-1')
+  final String date;
+  final String description;
+  final String type; // Earned, Redeemed, Pending, Expired
+  final String points; // Formatted string like "+100" or "-50"
 
   const PointTransactionEntity({
     required this.id,
+    required this.date,
+    required this.description,
+    required this.type,
     required this.points,
-    required this.transactionType,
-    required this.referenceType,
-    required this.referenceId,
-    required this.createdAt,
-    this.sourceWalletId,
-    this.targetWalletId,
   });
 
   @override
-  List<Object?> get props => [
-        id,
-        points,
-        transactionType,
-        referenceType,
-        referenceId,
-        createdAt,
-        sourceWalletId,
-        targetWalletId,
-      ];
+  List<Object?> get props => [id, date, description, type, points];
 }
