@@ -70,31 +70,64 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                           child: Text('Error: ${state.errorMessage}'));
                     }
 
-                    return Column(
+                    return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AppreciationComposer(
-                          badges: state.badges,
-                          onBadgeSelected: (badge) {
-                            _showSendRecognitionDialog(
-                                context, badge, state.users);
-                          },
-                        ),
-                        const SizedBox(height: 32),
-                        if (state.stats != null) ...[
-                          AppreciationStats(stats: state.stats!),
-                          const SizedBox(height: 32),
-                        ],
-                        // Feed placeholder for now
-                        const Text(
-                          'Recognition Feed',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        // Left Column: Composer + Stats
+                        Expanded(
+                          flex: 65,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppreciationComposer(
+                                badges: state.badges,
+                                onBadgeSelected: (badge) {
+                                  _showSendRecognitionDialog(
+                                      context, badge, state.users);
+                                },
+                              ),
+                              const SizedBox(height: 32),
+                              if (state.stats != null) ...[
+                                AppreciationStats(stats: state.stats!),
+                              ],
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        RecognitionFeedList(feed: state.feed),
+                        const SizedBox(width: 32),
+                        // Right Column: Feed
+                        Expanded(
+                          flex: 35,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Recognition Feed',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh,
+                                        size: 20, color: Colors.grey),
+                                    onPressed: () {
+                                      context
+                                          .read<RecognitionsBloc>()
+                                          .add(GetRecognitionFeedRequested());
+                                    },
+                                    tooltip: 'Refresh Feed',
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              RecognitionFeedList(feed: state.feed),
+                            ],
+                          ),
+                        ),
                       ],
                     );
                   },

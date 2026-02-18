@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/recognition_entity.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RecognitionFeedList extends StatelessWidget {
   final List<RecognitionEntity> feed;
@@ -10,11 +11,32 @@ class RecognitionFeedList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (feed.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child:
-              Text('No recognitions yet. Be the first to appreciate someone!'),
+          padding: const EdgeInsets.all(40.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.feed_outlined, size: 48, color: Colors.grey[300]),
+              const SizedBox(height: 16),
+              Text(
+                'No recognitions yet',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Be the first to appreciate someone!',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -34,114 +56,203 @@ class RecognitionFeedList extends StatelessWidget {
     final senderName = recognition.senderName ?? 'User ${recognition.senderId}';
     final receiverName =
         recognition.receiverName ?? 'User ${recognition.receiverId}';
-    final badgeName = recognition.badge?.name ?? 'Badge';
-    final date = DateFormat.yMMMd().format(recognition.createdAt);
+    final badgeName = recognition.badge?.name ?? 'Appreciation';
+    final timeAgo = _getTimeAgo(recognition.createdAt);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    // Dynamic Badge Colors
+    final badgeStyle = _getBadgeStyle(badgeName);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Avatar
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD), // Light Blue tint
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              senderName.substring(0, 1).toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFF1565C0), // Blue 800
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  child: Text(
-                    senderName.substring(0, 1).toUpperCase(),
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
+                // Header: Sender appreciated Receiver
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      color: Colors.black87,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      RichText(
-                        text: TextSpan(
-                          style: DefaultTextStyle.of(context).style,
-                          children: [
-                            TextSpan(
-                              text: senderName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const TextSpan(text: ' recognized '),
-                            TextSpan(
-                              text: receiverName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
+                      TextSpan(
+                        text: senderName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        date,
+                      const TextSpan(
+                        text: ' appreciated ',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      TextSpan(
+                        text: receiverName,
                         style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
+                          color: Color(0xFF2962FF), // Bright Blue
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                // Badge Pill
                 if (recognition.badge != null)
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: badgeStyle.backgroundColor,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star, size: 14, color: Colors.orange),
-                        const SizedBox(width: 4),
+                        Icon(
+                          _getBadgeIcon(badgeName),
+                          size: 14,
+                          color: badgeStyle.textColor,
+                        ),
+                        const SizedBox(width: 6),
                         Text(
-                          badgeName,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange,
+                          badgeName.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: badgeStyle.textColor,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ],
                     ),
                   ),
-              ],
-            ),
-            if (recognition.message != null &&
-                recognition.message!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  recognition.message!,
+                const SizedBox(height: 12),
+                // Message
+                if (recognition.message != null &&
+                    recognition.message!.isNotEmpty)
+                  Text(
+                    '"${recognition.message}"',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF546E7A), // Blue Grey 600
+                      height: 1.4,
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                // Timestamp
+                Text(
+                  timeAgo,
                   style: TextStyle(
+                    fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.9),
+                    color: Colors.grey[400],
                   ),
                 ),
-              ),
-            ],
-          ],
-        ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  String _getTimeAgo(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 1) {
+      if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      }
+      return DateFormat.yMMMd().format(date);
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inHours >= 1) {
+      return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
+    } else if (difference.inMinutes >= 1) {
+      return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  BadgeStyle _getBadgeStyle(String badgeName) {
+    final name = badgeName.toLowerCase();
+    if (name.contains('star') || name.contains('spark')) {
+      return BadgeStyle(
+        backgroundColor: const Color(0xFFFCE4EC), // Pink 50
+        textColor: const Color(0xFFEc407A), // Pink 400
+      );
+    } else if (name.contains('help') || name.contains('assist')) {
+      return BadgeStyle(
+        backgroundColor: const Color(0xFFE8F5E9), // Green 50
+        textColor: const Color(0xFF66BB6A), // Green 400
+      );
+    } else if (name.contains('team') || name.contains('player')) {
+      return BadgeStyle(
+        backgroundColor: const Color(0xFFE3F2FD), // Blue 50
+        textColor: const Color(0xFF42A5F5), // Blue 400
+      );
+    } else {
+      // Default
+      return BadgeStyle(
+        backgroundColor: const Color(0xFFF3E5F5), // Purple 50
+        textColor: const Color(0xFFAB47BC), // Purple 400
+      );
+    }
+  }
+
+  IconData _getBadgeIcon(String badgeName) {
+    final name = badgeName.toLowerCase();
+    if (name.contains('star') || name.contains('spark')) {
+      return Icons.electric_bolt_rounded;
+    } else if (name.contains('help')) {
+      return Icons.handshake_rounded;
+    } else if (name.contains('team')) {
+      return Icons.groups_rounded;
+    }
+    return Icons.star_rounded;
+  }
+}
+
+class BadgeStyle {
+  final Color backgroundColor;
+  final Color textColor;
+
+  BadgeStyle({required this.backgroundColor, required this.textColor});
 }
