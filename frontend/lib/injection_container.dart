@@ -18,6 +18,22 @@ import 'features/profile/data/datasources/profile_remote_data_source.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
 import 'features/profile/domain/repositories/profile_repository.dart';
 import 'features/profile/domain/usecases/get_me_usecase.dart';
+import 'features/profile/domain/usecases/get_users_usecase.dart';
+import 'features/recognitions/data/datasources/recognitions_remote_data_source.dart';
+import 'features/recognitions/data/repositories/recognitions_repository_impl.dart';
+import 'features/recognitions/domain/repositories/recognitions_repository.dart';
+import 'features/recognitions/domain/usecases/get_badges_usecase.dart';
+import 'features/recognitions/domain/usecases/get_recognition_feed_usecase.dart';
+import 'features/recognitions/domain/usecases/send_recognition_usecase.dart';
+import 'features/recognitions/domain/usecases/get_appreciation_stats_usecase.dart';
+import 'features/recognitions/presentation/bloc/recognitions_bloc.dart';
+
+import 'features/points/data/datasources/points_remote_data_source.dart';
+import 'features/points/data/repositories/points_repository_impl.dart';
+import 'features/points/domain/repositories/points_repository.dart';
+import 'features/points/domain/usecases/get_points_summary_usecase.dart';
+import 'features/points/domain/usecases/get_points_history_usecase.dart';
+import 'features/points/presentation/bloc/points_bloc.dart';
 
 final sl = GetIt.instance; // sl stands for Service Locator
 
@@ -35,8 +51,16 @@ Future<void> init() async {
 
   // Use cases
   sl.registerLazySingleton(() => LoginUseCase(sl()));
+  sl.registerLazySingleton(() => GetMeUseCase(sl()));
+  sl.registerLazySingleton(() => GetUsersUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => CheckAuthStatusUseCase(sl()));
+
+  //! Features - Recognitions
+  sl.registerLazySingleton(() => GetBadgesUseCase(sl()));
+  sl.registerLazySingleton(() => GetRecognitionFeedUseCase(sl()));
+  sl.registerLazySingleton(() => SendRecognitionUseCase(sl()));
+  sl.registerLazySingleton(() => GetAppreciationStatsUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<AuthRepository>(
@@ -56,16 +80,55 @@ Future<void> init() async {
 
   //! Features - Profile
   // Use cases
-  sl.registerLazySingleton(() => GetMeUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<ProfileRepository>(
     () => ProfileRepositoryImpl(remoteDataSource: sl()),
   );
 
+  sl.registerLazySingleton<RecognitionsRepository>(
+    () => RecognitionsRepositoryImpl(remoteDataSource: sl()),
+  );
+
   // Data sources
   sl.registerLazySingleton<ProfileRemoteDataSource>(
     () => ProfileRemoteDataSourceImpl(client: sl()),
+  );
+
+  sl.registerLazySingleton<RecognitionsRemoteDataSource>(
+    () => RecognitionsRemoteDataSourceImpl(dio: sl()),
+  );
+
+  sl.registerFactory(
+    () => RecognitionsBloc(
+      getBadgesUseCase: sl(),
+      getRecognitionFeedUseCase: sl(),
+      sendRecognitionUseCase: sl(),
+      getAppreciationStatsUseCase: sl(),
+      getUsersUseCase: sl(),
+    ),
+  );
+
+  sl.registerFactory(
+    () => PointsBloc(
+      getPointsSummaryUseCase: sl(),
+      getPointsHistoryUseCase: sl(),
+    ),
+  );
+
+  //! Features - Points
+  // Use cases
+  sl.registerLazySingleton(() => GetPointsSummaryUseCase(sl()));
+  sl.registerLazySingleton(() => GetPointsHistoryUseCase(sl()));
+
+  // Repository
+  sl.registerLazySingleton<PointsRepository>(
+    () => PointsRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<PointsRemoteDataSource>(
+    () => PointsRemoteDataSourceImpl(client: sl()),
   );
 
   //! Core

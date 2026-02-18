@@ -19,7 +19,7 @@ class ApiConstants {
   static const String awardTypes = 'nominations/types';
 
   // Points & Wallets
-  static const String userPoints = 'points/aggregates';
+  static const String userPoints = 'points/balance';
   static const String pointsHistory = 'points/history';
 
   // Catalog
@@ -27,6 +27,7 @@ class ApiConstants {
 
   // Profile
   static const String profile = 'profile/me';
+  static const String users = 'users/';
 
   // Networking settings
   static const int connectTimeout = 30000; // 30 seconds
