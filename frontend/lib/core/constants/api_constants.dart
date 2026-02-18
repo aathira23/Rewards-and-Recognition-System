@@ -27,7 +27,8 @@ class ApiConstants {
 
   // Profile
   static const String profile = 'profile/me';
-  static const String users = 'users/';
+  // Backend exposes user listing under /profile/ (see backend router)
+  static const String users = 'profile/';
 
   // Networking settings
   static const int connectTimeout = 30000; // 30 seconds

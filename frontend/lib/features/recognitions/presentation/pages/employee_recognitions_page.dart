@@ -43,7 +43,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
           }
         },
         child: Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Colors.transparent,
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(

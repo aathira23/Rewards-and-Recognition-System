@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../models/badge_model.dart';
@@ -54,10 +53,18 @@ class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
 
   @override
   Future<AppreciationStatsModel> getAppreciationStats() async {
-    // TODO: Use actual endpoint once verified (using mock for now if needed, or implement endpoint constant)
-    // Assuming endpoint exists: /recognitions/stats or /recognitions/me/overview
-    // Based on previous turn: /recognitions/me/overview
-    final response = await dio.get('recognitions/me/overview');
-    return AppreciationStatsModel.fromJson(json.decode(response.data));
+    try {
+      final response = await dio.get('recognitions/me/overview');
+      // Backend wraps response in { "data": { ... } }
+      final rawData = response.data is Map
+          ? (response.data['data'] ?? response.data)
+          : response.data;
+      final Map<String, dynamic> statsMap =
+          (rawData as Map<String, dynamic>?) ?? {};
+      return AppreciationStatsModel.fromJson(statsMap);
+    } catch (_) {
+      // Return empty stats on error so the rest of the page still loads
+      return AppreciationStatsModel.empty();
+    }
   }
 }

@@ -14,4 +14,14 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       badgeCounts: Map<String, int>.from(json['badge_counts'] ?? {}),
     );
   }
+
+  /// Returns a zero-value stats object used as a safe fallback when the
+  /// API call fails (e.g. network error on web).
+  factory AppreciationStatsModel.empty() {
+    return const AppreciationStatsModel(
+      receivedCount: 0,
+      sentCount: 0,
+      badgeCounts: {},
+    );
+  }
 }

@@ -2,6 +2,8 @@
 /// "Includes centralized error handling and placeholders for authentication logic."
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:dio/browser.dart' show BrowserHttpClientAdapter;
 import 'auth_interceptor.dart';
 import '../constants/api_constants.dart';
 import '../errors/exceptions.dart';
@@ -12,6 +14,11 @@ class ApiClient {
   ApiClient({Dio? dio, AuthInterceptor? authInterceptor})
       : _dio = dio ?? Dio() {
     _applyBaseOptions();
+    // Use browser HTTP adapter when running on web
+    if (kIsWeb) {
+      _dio.httpClientAdapter = BrowserHttpClientAdapter();
+    }
+
     if (authInterceptor != null) {
       _dio.interceptors.add(authInterceptor);
     }
