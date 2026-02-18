@@ -8,8 +8,8 @@ import '../bloc/points_state.dart';
 import '../widgets/points_summary_card.dart';
 import '../../domain/entities/point_transaction_entity.dart';
 
-class EmployeePointsPage extends StatelessWidget {
-  const EmployeePointsPage({super.key});
+class PointsPage extends StatelessWidget {
+  const PointsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +21,9 @@ class EmployeePointsPage extends StatelessWidget {
         backgroundColor: Colors.grey.shade50,
         body: SafeArea(
           child: SingleChildScrollView(
+            // Add scroll view here? Or stick to list structure?
+            // Actually, we want the summary at top and list below
+            // A CustomScrollView is best
             child: BlocBuilder<PointsBloc, PointsState>(
               builder: (context, state) {
                 if (state.status == PointsStatus.loading &&
@@ -68,7 +71,8 @@ class EmployeePointsPage extends StatelessWidget {
                       else
                         ListView.builder(
                           shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
+                          physics:
+                              const NeverScrollableScrollPhysics(), // Scroll handled by SingleScrollView
                           itemCount: state.history.length,
                           itemBuilder: (context, index) {
                             return _buildTransactionItem(state.history[index]);
@@ -146,7 +150,7 @@ class EmployeePointsPage extends StatelessWidget {
   }
 
   String _formatReferenceType(String type) {
-    if (type.isEmpty) return type;
+    // Basic formatting
     return type.substring(0, 1).toUpperCase() + type.substring(1).toLowerCase();
   }
 }
