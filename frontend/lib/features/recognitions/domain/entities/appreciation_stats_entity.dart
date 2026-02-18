@@ -1,16 +1,20 @@
 import 'package:equatable/equatable.dart';
+import 'recognition_entity.dart';
 
 class AppreciationStatsEntity extends Equatable {
   final int receivedCount;
   final int sentCount;
   final Map<String, int> badgeCounts;
+  final List<RecognitionEntity>? sentRecognitions;
 
   const AppreciationStatsEntity({
     required this.receivedCount,
     required this.sentCount,
     required this.badgeCounts,
+    this.sentRecognitions = const [],
   });
 
   @override
-  List<Object?> get props => [receivedCount, sentCount, badgeCounts];
+  List<Object?> get props =>
+      [receivedCount, sentCount, badgeCounts, sentRecognitions];
 }

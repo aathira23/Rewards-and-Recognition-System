@@ -1,10 +1,12 @@
 import '../../domain/entities/appreciation_stats_entity.dart';
+import 'recognition_model.dart';
 
 class AppreciationStatsModel extends AppreciationStatsEntity {
   const AppreciationStatsModel({
     required super.receivedCount,
     required super.sentCount,
     required super.badgeCounts,
+    super.sentRecognitions,
   });
 
   factory AppreciationStatsModel.fromJson(Map<String, dynamic> json) {
@@ -25,10 +27,15 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       badgeCounts[badgeName] = (badgeCounts[badgeName] ?? 0) + 1;
     }
 
+    final List sentList = json['sent'] as List? ?? [];
+    final sentRecognitions =
+        sentList.map((e) => RecognitionModel.fromJson(e)).toList();
+
     return AppreciationStatsModel(
       receivedCount: receivedCount,
       sentCount: sentCount,
       badgeCounts: badgeCounts,
+      sentRecognitions: sentRecognitions,
     );
   }
 
@@ -39,6 +46,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       receivedCount: 0,
       sentCount: 0,
       badgeCounts: {},
+      sentRecognitions: [],
     );
   }
 }
