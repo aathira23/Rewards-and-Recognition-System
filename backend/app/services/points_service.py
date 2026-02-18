@@ -268,9 +268,10 @@ class PointsService:
                 PointsConversion.status == "PENDING"
             )
             for p in pending_q.all():
+                req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
                 items.insert(0, {
                     "id": f"conv-{p.id}",
-                    "date": p.requested_at.strftime("%d/%m/%Y"),
+                    "date": req_date,
                     "description": f"Conversion Request: {p.conversion_type}",
                     "type": "Pending",
                     "points": f"-{int(p.points_converted)}"
@@ -305,7 +306,7 @@ class PointsService:
             if ecard:
                 sender = self.db.query(User).filter(User.id == ecard.sender_id).first()
                 badge = self.db.query(Badge).filter(Badge.id == ecard.badge_id).first()
-                badge_title = f"'{badge.title}'" if badge else "Recognition"
+                badge_title = f"'{badge.name}'" if badge else "Recognition"
                 sender_name = sender.name if sender else "a Peer"
                 return f"{badge_title} Appreciation\nFrom: {sender_name}", "Earned"
             return "Recognition Reward", "Earned"

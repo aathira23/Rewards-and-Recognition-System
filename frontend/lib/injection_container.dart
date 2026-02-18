@@ -33,6 +33,7 @@ import 'features/points/data/repositories/points_repository_impl.dart';
 import 'features/points/domain/repositories/points_repository.dart';
 import 'features/points/domain/usecases/get_points_summary_usecase.dart';
 import 'features/points/domain/usecases/get_points_history_usecase.dart';
+import 'features/points/domain/usecases/get_leaderboard_usecase.dart';
 import 'features/points/presentation/bloc/points_bloc.dart';
 
 final sl = GetIt.instance; // sl stands for Service Locator
@@ -113,6 +114,7 @@ Future<void> init() async {
     () => PointsBloc(
       getPointsSummaryUseCase: sl(),
       getPointsHistoryUseCase: sl(),
+      getLeaderboardUseCase: sl(),
     ),
   );
 
@@ -120,6 +122,7 @@ Future<void> init() async {
   // Use cases
   sl.registerLazySingleton(() => GetPointsSummaryUseCase(sl()));
   sl.registerLazySingleton(() => GetPointsHistoryUseCase(sl()));
+  sl.registerLazySingleton(() => GetLeaderboardUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<PointsRepository>(

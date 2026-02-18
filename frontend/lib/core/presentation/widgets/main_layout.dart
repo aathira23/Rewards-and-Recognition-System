@@ -211,9 +211,9 @@ class _MainLayoutState extends State<MainLayout> {
                           },
                         ),
                       Text(
-                        widget.destinations[_selectedIndex].title,
+                        'Rewards & Recognition',
                         style: GoogleFonts.outfit(
-                          fontSize: 20,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),

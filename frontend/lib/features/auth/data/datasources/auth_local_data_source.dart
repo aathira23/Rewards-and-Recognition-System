@@ -36,7 +36,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<String?> getToken() async {
     try {
-      return await secureStorage.read(key: _tokenKey);
+      return (await secureStorage.read(key: _tokenKey))?.trim();
     } catch (e) {
       throw CacheException();
     }

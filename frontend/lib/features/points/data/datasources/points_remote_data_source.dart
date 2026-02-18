@@ -6,6 +6,8 @@ import '../models/point_transaction_model.dart';
 abstract class PointsRemoteDataSource {
   Future<PointsSummaryModel> getPointsSummary();
   Future<List<PointTransactionModel>> getPointsHistory({int page = 1});
+  Future<List<Map<String, dynamic>>> getLeaderboard(
+      {String period = 'MONTHLY'});
 }
 
 class PointsRemoteDataSourceImpl implements PointsRemoteDataSource {
@@ -45,6 +47,21 @@ class PointsRemoteDataSourceImpl implements PointsRemoteDataSource {
           .toList();
     } else {
       throw Exception('Failed to fetch points history: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getLeaderboard(
+      {String period = 'MONTHLY'}) async {
+    final response = await client.get(
+      ApiConstants.leaderboard,
+      queryParameters: {'period': period, 'metric': 'POINTS', 'limit': 10},
+    );
+    if (response.statusCode == 200) {
+      final List entries = response.data['data'];
+      return entries.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to fetch leaderboard: ${response.statusCode}');
     }
   }
 }

@@ -9,70 +9,84 @@ class PointsSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.indigo.shade600, Colors.indigo.shade400],
+          colors: [Colors.blue.shade700, Colors.blue.shade500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.blue.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Current Balance',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                summary.balance.toString(),
-                style: const TextStyle(
-                  fontSize: 48,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  height: 1.0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  'PTS',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatItem(
-                  'Earned', summary.totalEarned, Icons.arrow_downward),
-              _buildStatItem(
-                  'Redeemed', summary.totalRedeemed, Icons.arrow_upward),
-              _buildStatItem(
-                  'Pending', summary.pendingCount, Icons.hourglass_empty),
+              const Text(
+                'Points Wallet',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Icon(Icons.account_balance_wallet_outlined,
+                  color: Colors.white, size: 28),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            summary.balance.toString(),
+            style: const TextStyle(
+              fontSize: 42,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Text(
+            'Total Points',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Divider(color: Colors.white24, height: 1),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSecondaryStat(
+                  'Total Earned',
+                  summary.totalEarned.toString(),
+                  Icons.trending_up,
+                ),
+              ),
+              Expanded(
+                child: _buildSecondaryStat(
+                  'Total Redeemed',
+                  summary.totalRedeemed.toString(),
+                  Icons.shopping_bag_outlined,
+                ),
+              ),
+              Expanded(
+                child: _buildSecondaryStat(
+                  'Expiring Soon',
+                  summary.pendingCount.toString(),
+                  Icons.info_outline,
+                  subLabel: 'by Mar 30, 2026',
+                ),
+              ),
             ],
           ),
         ],
@@ -80,13 +94,14 @@ class PointsSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, int value, IconData icon) {
+  Widget _buildSecondaryStat(String label, String value, IconData icon,
+      {String? subLabel}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 16, color: Colors.white70),
+            Icon(icon, size: 14, color: Colors.white70),
             const SizedBox(width: 4),
             Text(
               label,
@@ -99,13 +114,21 @@ class PointsSummaryCard extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          value.toString(),
+          value,
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: 18,
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
+        if (subLabel != null)
+          Text(
+            subLabel,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.white54,
+            ),
+          ),
       ],
     );
   }
