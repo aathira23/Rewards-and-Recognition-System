@@ -1,91 +1,255 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../injection_container.dart';
 import '../../domain/entities/points_summary_entity.dart';
 
-class PointsSummaryCard extends StatelessWidget {
+/// Wallet card with a toggle between "My Points" and "Manager Wallet".
+/// The toggle only appears for MANAGER / DEPT_HEAD / HR roles.
+class PointsSummaryCard extends StatefulWidget {
   final PointsSummaryEntity summary;
+  final String userRole;
 
-  const PointsSummaryCard({super.key, required this.summary});
+  const PointsSummaryCard({
+    super.key,
+    required this.summary,
+    this.userRole = 'EMPLOYEE',
+  });
+
+  @override
+  State<PointsSummaryCard> createState() => _PointsSummaryCardState();
+}
+
+class _PointsSummaryCardState extends State<PointsSummaryCard> {
+  bool _showManagerWallet = false;
+  bool _loadingManager = false;
+  Map<String, dynamic>? _managerWallet;
+  String? _managerError;
+
+  bool get _canToggle {
+    final r = widget.userRole.toUpperCase();
+    return r == 'MANAGER' || r == 'DEPT_HEAD' || r == 'HR';
+  }
+
+  Future<void> _loadManagerWallet() async {
+    if (_managerWallet != null) return; // already loaded
+    setState(() => _loadingManager = true);
+    try {
+      final client = sl<ApiClient>();
+      final res = await client.get(ApiConstants.managerWallet);
+      if (res.statusCode == 200) {
+        setState(() {
+          _managerWallet = res.data['data'];
+          _loadingManager = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _managerError = e.toString();
+        _loadingManager = false;
+      });
+    }
+  }
+
+  void _toggle(bool toManager) {
+    if (toManager && _managerWallet == null && _managerError == null) {
+      _loadManagerWallet();
+    }
+    setState(() => _showManagerWallet = toManager);
+  }
+
+  // ─── Colours per wallet ───
+
+  static const _personalGrad = [Color(0xFF1E56BD), Color(0xFF3B7BF2)];
+  static const _managerGrad = [Color(0xFF0F7B5F), Color(0xFF2ABB8B)];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final isManager = _showManagerWallet;
+    final grad = isManager ? _managerGrad : _personalGrad;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade700, Colors.blue.shade500],
+          colors: grad,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: grad.first.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── Header row: title + toggle ───
+            Row(
+              children: [
+                Icon(
+                  isManager
+                      ? Icons.savings_rounded
+                      : Icons.account_balance_wallet_outlined,
+                  color: Colors.white,
+                  size: 26,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isManager ? 'Manager Wallet' : 'Points Wallet',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                if (_canToggle) _buildToggle(isManager),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // ─── Animated switcher between wallet contents ───
+            // Fixed height prevents the card from resizing during transition.
+            SizedBox(
+              height: 168,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.04, 0),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: isManager
+                    ? _managerContent(key: const ValueKey('mgr'))
+                    : _personalContent(key: const ValueKey('personal')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Toggle pill ───
+
+  Widget _buildToggle(bool isManager) {
+    return Container(
+      height: 34,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(17),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _toggleChip(
+            label: 'Personal',
+            active: !isManager,
+            onTap: () => _toggle(false),
+          ),
+          _toggleChip(
+            label: 'Budget',
+            active: isManager,
+            onTap: () => _toggle(true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggleChip({
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.ease,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(17),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: active ? const Color(0xFF1E56BD) : Colors.white70,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Personal wallet content ───
+
+  Widget _personalContent({Key? key}) {
+    final s = widget.summary;
+    return SizedBox(
+      key: key,
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Points Wallet',
-                style: TextStyle(
-                  fontSize: 16,
+              Text(
+                s.balance.toString(),
+                style: GoogleFonts.outfit(
+                  fontSize: 42,
+                  fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const Icon(Icons.account_balance_wallet_outlined,
-                  color: Colors.white, size: 28),
+              Text(
+                'Available Points',
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            summary.balance.toString(),
-            style: const TextStyle(
-              fontSize: 42,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Text(
-            'Total Points',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 16),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildSecondaryStat(
-                  'Total Earned',
-                  summary.totalEarned.toString(),
-                  Icons.trending_up,
-                ),
-              ),
-              Expanded(
-                child: _buildSecondaryStat(
-                  'Total Redeemed',
-                  summary.totalRedeemed.toString(),
-                  Icons.shopping_bag_outlined,
-                ),
-              ),
-              Expanded(
-                child: _buildSecondaryStat(
-                  'Expiring Soon',
-                  summary.pendingCount.toString(),
-                  Icons.info_outline,
-                  subLabel: 'by Mar 30, 2026',
-                ),
+              const Divider(color: Colors.white24, height: 1),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: _stat('Total Earned', s.totalEarned.toString(),
+                        Icons.trending_up),
+                  ),
+                  Expanded(
+                    child: _stat('Redeemed', s.totalRedeemed.toString(),
+                        Icons.shopping_bag_outlined),
+                  ),
+                  Expanded(
+                    child: _stat('Expiring Soon', s.pendingCount.toString(),
+                        Icons.timer_outlined,
+                        sub: 'this quarter'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -94,8 +258,232 @@ class PointsSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSecondaryStat(String label, String value, IconData icon,
-      {String? subLabel}) {
+  // ─── Manager wallet content ───
+
+  Widget _managerContent({Key? key}) {
+    if (_loadingManager) {
+      return SizedBox(
+        key: key,
+        width: double.infinity,
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (_managerError != null) {
+      return SizedBox(
+        key: key,
+        width: double.infinity,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white60, size: 28),
+              const SizedBox(height: 8),
+              Text('Could not load budget',
+                  style:
+                      GoogleFonts.inter(fontSize: 13, color: Colors.white60)),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  _managerError = null;
+                  _managerWallet = null;
+                  _loadManagerWallet();
+                },
+                child: Text('Tap to retry',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
+                    )),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final w = _managerWallet ?? {};
+    final balance = w['balance'] ?? 0;
+
+    return SizedBox(
+      key: key,
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    balance.toString(),
+                    style: GoogleFonts.outfit(
+                      fontSize: 42,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'pts available to reward',
+                    style:
+                        GoogleFonts.inter(fontSize: 13, color: Colors.white70),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              _rewardButton(),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Divider(color: Colors.white24, height: 1),
+              const SizedBox(height: 10),
+              Text(
+                'Use your budget to reward team members directly from this wallet.',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Reward employee quick-action ───
+
+  Widget _rewardButton() {
+    return GestureDetector(
+      onTap: () => _showRewardDialog(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.card_giftcard_rounded,
+                color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'Reward Employee',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRewardDialog(BuildContext context) {
+    final employeeIdCtl = TextEditingController();
+    final pointsCtl = TextEditingController();
+    final reasonCtl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.card_giftcard_rounded,
+                color: Theme.of(context).colorScheme.primary, size: 22),
+            const SizedBox(width: 10),
+            const Text('Reward Employee'),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: employeeIdCtl,
+                  decoration:
+                      const InputDecoration(labelText: 'Employee User ID'),
+                  keyboardType: TextInputType.number,
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: pointsCtl,
+                  decoration: const InputDecoration(labelText: 'Points'),
+                  keyboardType: TextInputType.number,
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: reasonCtl,
+                  decoration: const InputDecoration(labelText: 'Reason'),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(ctx);
+              try {
+                final client = sl<ApiClient>();
+                await client.post(ApiConstants.managerReward, data: {
+                  'employee_id': int.tryParse(employeeIdCtl.text) ?? 0,
+                  'points': int.tryParse(pointsCtl.text) ?? 0,
+                  'reason': reasonCtl.text,
+                });
+                // Refresh manager wallet
+                _managerWallet = null;
+                _loadManagerWallet();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Employee rewarded successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            child: const Text('Send Reward'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Stat helper ───
+
+  Widget _stat(String label, String value, IconData icon, {String? sub}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -103,32 +491,22 @@ class PointsSummaryCard extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: Colors.white70),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.white70,
-              ),
-            ),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
           ],
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: GoogleFonts.outfit(
             fontSize: 18,
-            color: Colors.white,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
-        if (subLabel != null)
-          Text(
-            subLabel,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.white54,
-            ),
-          ),
+        if (sub != null)
+          Text(sub,
+              style: GoogleFonts.inter(fontSize: 10, color: Colors.white54)),
       ],
     );
   }

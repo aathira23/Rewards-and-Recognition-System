@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
+import 'package:rr_frontend/features/notifications/presentation/widgets/notification_bell.dart';
 
 class MainLayout extends StatefulWidget {
   final List<NavDestination> destinations;
@@ -30,6 +31,15 @@ class _MainLayoutState extends State<MainLayout> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+  }
+
+  @override
+  void didUpdateWidget(MainLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the destinations list shrinks (e.g. role loaded after auth), clamp the index.
+    if (_selectedIndex >= widget.destinations.length) {
+      _selectedIndex = 0;
+    }
   }
 
   @override
@@ -220,11 +230,7 @@ class _MainLayoutState extends State<MainLayout> {
                         ),
                       ),
                       const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.notifications_none_outlined,
-                            size: 24),
-                        onPressed: () {},
-                      ),
+                      const NotificationBell(),
                       if (widget.onLogout != null)
                         IconButton(
                           icon: const Icon(Icons.logout_rounded, size: 24),

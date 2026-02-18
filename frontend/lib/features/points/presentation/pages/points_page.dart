@@ -9,7 +9,8 @@ import '../widgets/leaderboard_panel.dart';
 import '../../domain/entities/point_transaction_entity.dart';
 
 class PointsPage extends StatefulWidget {
-  const PointsPage({super.key});
+  final String userRole;
+  const PointsPage({super.key, this.userRole = 'EMPLOYEE'});
 
   @override
   State<PointsPage> createState() => _PointsPageState();
@@ -79,7 +80,10 @@ class _PointsPageState extends State<PointsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (state.summary != null) ...[
-                                PointsSummaryCard(summary: state.summary!),
+                                PointsSummaryCard(
+                                  summary: state.summary!,
+                                  userRole: widget.userRole,
+                                ),
                                 const SizedBox(height: 32),
                               ],
                               const Text(
