@@ -73,14 +73,15 @@ def get_my_appreciation_overview(
     """Get recognitions received and sent by current user."""
     service = RecognitionService(db)
     overview = service.get_appreciation_overview(user_id=current_user_id)
-    
-    # Explicitly serialize using Pydantic models to avoid raw SQLAlchemy object issues
-    return success(data={
-        "received": [ECardResponse.model_validate(e) for e in overview["received"]],
-        "sent": [ECardResponse.model_validate(e) for e in overview["sent"]],
+
+    # Serialize ORM ECard objects to JSON-safe dicts using ECardResponse schema
+    data = {
+        "received": [ECardResponse.model_validate(e).model_dump() for e in overview["received"]],
+        "sent": [ECardResponse.model_validate(e).model_dump() for e in overview["sent"]],
         "total_received": overview["total_received"],
-        "total_sent": overview["total_sent"]
-    }, message="Overview retrieved")
+        "total_sent": overview["total_sent"],
+    }
+    return success(data=data, message="Overview retrieved")
 
 
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])

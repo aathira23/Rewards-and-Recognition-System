@@ -58,6 +58,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 'Your reward is being processed.');
             context.read<PointsBloc>().add(GetPointsSummaryRequested());
             context.read<CatalogBloc>().add(GetHistoryRequested());
+            context.read<CatalogBloc>().add(GetCatalogItemsRequested());
           }
           if (state.conversionSuccess == true) {
             _showSuccessOverlay(context, 'Request Submitted!',
@@ -66,15 +67,21 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
           }
           if (state.status == CatalogStatus.failure &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: Colors.redAccent,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            );
+            final msg = state.errorMessage!;
+            if (msg.toLowerCase().contains('insufficient points') ||
+                msg.toLowerCase().contains('insufficient balance')) {
+              _showInsufficientPointsDialog(context, msg);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(msg),
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              );
+            }
           }
         },
         child: Scaffold(
@@ -153,6 +160,82 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     );
   }
 
+  void _showInsufficientPointsDialog(BuildContext context, String rawMessage) {
+    // Extract numbers from the message for a friendlier display
+    // e.g. "Insufficient points. Balance: 200, Requested: 500"
+    final balanceMatch =
+        RegExp(r'(?:Balance|Available):\s*(\d+)').firstMatch(rawMessage);
+    final requestedMatch = RegExp(r'Requested:\s*(\d+)').firstMatch(rawMessage);
+    final int? have =
+        balanceMatch != null ? int.tryParse(balanceMatch.group(1)!) : null;
+    final int? need =
+        requestedMatch != null ? int.tryParse(requestedMatch.group(1)!) : null;
+    final int? shortfall = (have != null && need != null) ? need - have : null;
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.orange.withValues(alpha: 0.12),
+                  child: const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Not Enough Points',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  shortfall != null
+                      ? 'You need $shortfall more points.'
+                      : "You don't have enough points for this.",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                if (have != null && need != null)
+                  Text(
+                    '$have / $need',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 14),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 38,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Got it',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showSuccessOverlay(BuildContext context, String title, String message) {
     showDialog(
       context: context,
@@ -200,26 +283,52 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     return BlocBuilder<CatalogBloc, CatalogState>(
       builder: (context, state) {
         if (state.status == CatalogStatus.loading &&
-            state.redemptions.isEmpty) {
+            state.redemptions.isEmpty &&
+            state.conversions.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
         final redemptions = state.redemptions;
-        if (redemptions.isEmpty) {
+        final conversions = state.conversions;
+
+        if (redemptions.isEmpty && conversions.isEmpty) {
           return _buildEmptyState(
             context,
             Icons.history_edu_rounded,
-            'No Redemptions Yet',
-            'Your redemption history will appear here once you claim rewards.',
+            'No Activities Yet',
+            'Your redemption and conversion history will appear here once you perform actions.',
           );
         }
+
+        // Merge and sort by date
+        final allActivities = [
+          ...redemptions.map((e) => _HistoryItem(
+                title: e.rewardName,
+                subtitle: e.rewardCategory,
+                points: e.pointsSpent,
+                date: e.createdAt,
+                status: e.status,
+                isConversion: false,
+              )),
+          ...conversions.map((e) => _HistoryItem(
+                title: '${e.pointsConverted} Points converted',
+                subtitle: 'To ${e.conversionType}',
+                points: e.pointsConverted,
+                date: e.createdAt,
+                status: e.status,
+                isConversion: true,
+                cashAmount: e.cashAmount,
+              )),
+        ];
+
+        allActivities.sort((a, b) => b.date.compareTo(a.date));
 
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: redemptions.length,
+          itemCount: allActivities.length,
           itemBuilder: (context, index) {
-            final item = redemptions[index];
+            final item = allActivities[index];
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
@@ -235,21 +344,27 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 leading: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
+                    color: (item.isConversion
+                            ? Colors.green
+                            : Theme.of(context).colorScheme.primary)
                         .withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.shopping_bag_rounded,
-                      color: Theme.of(context).colorScheme.primary),
+                  child: Icon(
+                    item.isConversion
+                        ? Icons.currency_exchange_rounded
+                        : Icons.shopping_bag_rounded,
+                    color: item.isConversion
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 title: Text(
-                  item.rewardName,
+                  item.title,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
-                  '${item.rewardCategory} • ${_formatDate(item.createdAt)}',
+                  '${item.subtitle} • ${_formatDate(item.date)}',
                   style: TextStyle(color: Theme.of(context).hintColor),
                 ),
                 trailing: Column(
@@ -257,9 +372,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '-${item.pointsSpent} pts',
-                      style: const TextStyle(
-                        color: Colors.redAccent,
+                      '-${item.points} pts',
+                      style: TextStyle(
+                        color:
+                            item.isConversion ? Colors.green : Colors.redAccent,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -588,6 +704,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       child: Padding(
         padding: const EdgeInsets.all(48.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 64, color: Theme.of(context).hintColor),
             const SizedBox(height: 16),
@@ -610,7 +727,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Search and Filters (Image 2 Mix)
+        // Search and Filters
         Row(
           children: [
             Expanded(
@@ -656,12 +773,37 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         // Rewards Grid
         BlocBuilder<CatalogBloc, CatalogState>(
           builder: (context, catalogState) {
-            if (catalogState.status == CatalogStatus.loading) {
+            if (catalogState.status == CatalogStatus.loading &&
+                catalogState.items.isEmpty) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (catalogState.status == CatalogStatus.failure) {
-              return Center(child: Text('Error: ${catalogState.errorMessage}'));
+            // Only show full-screen error on initial load failure.
+            // Action errors (redeem/convert) are shown as snackbars via BlocListener.
+            if (catalogState.status == CatalogStatus.failure &&
+                catalogState.items.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        size: 48, color: Colors.redAccent),
+                    const SizedBox(height: 12),
+                    Text(
+                      catalogState.errorMessage ?? 'Failed to load catalog',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => context
+                          .read<CatalogBloc>()
+                          .add(GetCatalogItemsRequested()),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             final items = catalogState.items.where((item) {
@@ -669,9 +811,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
               final matchesQuery = item.name.toLowerCase().contains(query) ||
                   item.description.toLowerCase().contains(query);
 
-              // Category logic
-              final selectedCategory =
-                  'All Categories'; // TODO: add state for this
+              final selectedCategory = 'All Categories';
               final matchesCategory = selectedCategory == 'All Categories' ||
                   item.category == selectedCategory;
 
@@ -695,8 +835,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:
-                        2, // Changed to 2 for better layout on common screens
+                    crossAxisCount: 2,
                     crossAxisSpacing: 20,
                     mainAxisSpacing: 20,
                     childAspectRatio: 0.85,
@@ -737,7 +876,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             onPressed: () {
               context.read<CatalogBloc>().add(RedeemItemRequested(reward.id));
               Navigator.pop(dialogContext);
-              // Show notification on success via BlocListener if we added one
             },
             child: const Text('Confirm'),
           ),
@@ -745,4 +883,24 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       ),
     );
   }
+}
+
+class _HistoryItem {
+  final String title;
+  final String subtitle;
+  final int points;
+  final DateTime date;
+  final String status;
+  final bool isConversion;
+  final double? cashAmount;
+
+  _HistoryItem({
+    required this.title,
+    required this.subtitle,
+    required this.points,
+    required this.date,
+    required this.status,
+    required this.isConversion,
+    this.cashAmount,
+  });
 }

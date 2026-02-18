@@ -2,7 +2,7 @@
 class ApiConstants {
   // Use http://localhost:8000/api/v1 for Chrome Web development
   // Use http://10.0.2.2:8000/api/v1 for Android Emulator
-  static const String baseUrl = 'http://localhost:8000/';
+  static const String baseUrl = 'http://127.0.0.1:8000/';
 
   // Auth Endpoints
   static const String login = 'auth/login';
@@ -13,6 +13,7 @@ class ApiConstants {
   static const String sendRecognition = 'recognitions/';
   static const String badges = 'recognitions/badges';
   static const String leaderboard = 'recognitions/leaderboard';
+  static const String recognitionOverview = 'recognitions/me/overview';
 
   // Nominations Endpoints
   static const String nominations = 'nominations/';
@@ -24,6 +25,11 @@ class ApiConstants {
 
   // Catalog
   static const String catalog = 'catalog/';
+  static const String catalogItems = 'catalog/items';
+  static const String catalogRedeem = 'catalog/redeem';
+  static const String catalogHistory = 'catalog/history';
+  static const String pointsConvert = 'points/convert';
+  static const String pointsRules = 'points/rules';
 
   // Profile
   static const String profile = 'profile/me';

@@ -13,13 +13,23 @@ class PointsConversionModel extends PointsConversionEntity {
 
   factory PointsConversionModel.fromJson(Map<String, dynamic> json) {
     return PointsConversionModel(
-      id: json['id'],
-      userId: json['user_id'],
-      pointsConverted: json['points_converted'],
-      conversionType: json['conversion_type'],
-      cashAmount: (json['cash_amount'] as num).toDouble(),
-      status: json['status'],
-      createdAt: DateTime.parse(json['created_at']),
+      id: (json['id'] as num).toInt(),
+      userId: (json['user_id'] as num).toInt(),
+      pointsConverted: (json['points_converted'] ?? 0) as int,
+      conversionType: json['conversion_type']?.toString() ?? 'PAYROLL',
+      cashAmount: double.tryParse(json['cash_amount'].toString()) ?? 0.0,
+      status: json['status']?.toString() ?? 'PENDING',
+      createdAt: _parseDateTime(json['requested_at'] ?? json['created_at']),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic date) {
+    if (date == null) return DateTime.now();
+    try {
+      return DateTime.parse(date.toString());
+    } catch (_) {
+      final cleaned = date.toString().split('.')[0];
+      return DateTime.tryParse(cleaned) ?? DateTime.now();
+    }
   }
 }

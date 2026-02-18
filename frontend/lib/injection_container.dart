@@ -115,7 +115,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<RecognitionsRemoteDataSource>(
-    () => RecognitionsRemoteDataSourceImpl(dio: sl()),
+    () => RecognitionsRemoteDataSourceImpl(client: sl()),
   );
 
   sl.registerFactory(
@@ -162,7 +162,7 @@ Future<void> init() async {
 
   // Data sources
   sl.registerLazySingleton<CatalogRemoteDataSource>(
-    () => CatalogRemoteDataSourceImpl(dio: sl()),
+    () => CatalogRemoteDataSourceImpl(client: sl()),
   );
 
   //! Features - Points

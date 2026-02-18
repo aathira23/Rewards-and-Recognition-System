@@ -2,7 +2,7 @@
 /// "Includes centralized error handling and placeholders for authentication logic."
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:dio/browser.dart' show BrowserHttpClientAdapter;
 import 'auth_interceptor.dart';
 import '../constants/api_constants.dart';
@@ -14,9 +14,11 @@ class ApiClient {
   ApiClient({Dio? dio, AuthInterceptor? authInterceptor})
       : _dio = dio ?? Dio() {
     _applyBaseOptions();
-    // Use browser HTTP adapter when running on web
+    // Use browser HTTP adapter when running on web.
+    // withCredentials:true is required because the backend sends
+    // Access-Control-Allow-Credentials:true with a specific origin.
     if (kIsWeb) {
-      _dio.httpClientAdapter = BrowserHttpClientAdapter();
+      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: true);
     }
 
     if (authInterceptor != null) {
@@ -38,11 +40,14 @@ class ApiClient {
   }
 
   void _initializeInterceptors() {
-    // Optional: Add logging interceptor for development
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-    ));
+    // Only log in debug mode to avoid noisy connection errors in production.
+    if (kDebugMode) {
+      _dio.interceptors.add(LogInterceptor(
+        requestBody: false,
+        responseBody: false,
+        error: true,
+      ));
+    }
   }
 
   /// REST GET Method

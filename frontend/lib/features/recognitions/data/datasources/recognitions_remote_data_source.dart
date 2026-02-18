@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../models/badge_model.dart';
 import '../models/recognition_model.dart';
@@ -16,20 +16,20 @@ abstract class RecognitionsRemoteDataSource {
 }
 
 class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
-  final Dio dio;
+  final ApiClient client;
 
-  RecognitionsRemoteDataSourceImpl({required this.dio});
+  RecognitionsRemoteDataSourceImpl({required this.client});
 
   @override
   Future<List<BadgeModel>> getBadges() async {
-    final response = await dio.get(ApiConstants.badges);
+    final response = await client.get(ApiConstants.badges);
     final List data = response.data['data'];
     return data.map((json) => BadgeModel.fromJson(json)).toList();
   }
 
   @override
   Future<List<RecognitionModel>> getRecognitionFeed() async {
-    final response = await dio.get(ApiConstants.recognitionFeed);
+    final response = await client.get(ApiConstants.recognitionFeed);
     final List data = response.data['data'];
     return data.map((json) => RecognitionModel.fromJson(json)).toList();
   }
@@ -40,7 +40,7 @@ class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
     required int badgeId,
     String? message,
   }) async {
-    final response = await dio.post(
+    final response = await client.post(
       ApiConstants.sendRecognition,
       data: {
         'receiver_id': receiverId,
@@ -54,7 +54,7 @@ class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
   @override
   Future<AppreciationStatsModel> getAppreciationStats() async {
     try {
-      final response = await dio.get('recognitions/me/overview');
+      final response = await client.get(ApiConstants.recognitionOverview);
       // Backend wraps response in { "data": { ... } }
       final rawData = response.data is Map
           ? (response.data['data'] ?? response.data)

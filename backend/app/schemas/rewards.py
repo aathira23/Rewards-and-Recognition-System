@@ -32,8 +32,9 @@ class RewardUpdate(BaseModel):
 class RewardResponse(RewardBase):
     """Schema for reward response."""
     id: int
+    stock_quantity: Optional[int] = None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

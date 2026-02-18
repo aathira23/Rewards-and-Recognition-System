@@ -1,4 +1,5 @@
-import 'package:dio/dio.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../models/reward_model.dart';
 import '../models/redemption_model.dart';
 import '../models/points_conversion_model.dart';
@@ -12,13 +13,13 @@ abstract class CatalogRemoteDataSource {
 }
 
 class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
-  final Dio dio;
+  final ApiClient client;
 
-  CatalogRemoteDataSourceImpl({required this.dio});
+  CatalogRemoteDataSourceImpl({required this.client});
 
   @override
   Future<List<RewardModel>> getCatalogItems() async {
-    final response = await dio.get('/catalog/items');
+    final response = await client.get(ApiConstants.catalogItems);
     if (response.statusCode == 200) {
       final List dataList = response.data['data'];
       return dataList.map((json) => RewardModel.fromJson(json)).toList();
@@ -29,7 +30,7 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
 
   @override
   Future<bool> redeemItem(int rewardId) async {
-    final response = await dio.post('/catalog/redeem', data: {
+    final response = await client.post(ApiConstants.catalogRedeem, data: {
       'reward_id': rewardId,
     });
     return response.statusCode == 201 || response.statusCode == 200;
@@ -37,36 +38,28 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
 
   @override
   Future<Map<String, List>> getHistory() async {
-    try {
-      final response = await dio.get('/catalog/history');
-      if (response.statusCode == 200) {
-        final rawData = response.data['data'];
-        // Backend may return a flat list of redemptions OR a map with both
-        // lists. Handle both shapes defensively.
-        final List redemptions =
-            (rawData is Map ? rawData['redemptions'] : rawData) as List? ?? [];
-        final List conversions =
-            (rawData is Map ? rawData['conversions'] : []) as List? ?? [];
+    final response = await client.get(ApiConstants.catalogHistory);
+    if (response.statusCode == 200) {
+      final rawData = response.data['data'];
+      final List redemptions =
+          (rawData is Map ? rawData['redemptions'] : rawData) as List? ?? [];
+      final List conversions =
+          (rawData is Map ? rawData['conversions'] : []) as List? ?? [];
 
-        return {
-          'redemptions':
-              redemptions.map((e) => RedemptionModel.fromJson(e)).toList(),
-          'conversions': conversions
-              .map((e) => PointsConversionModel.fromJson(e))
-              .toList(),
-        };
-      } else {
-        throw Exception('Failed to load history (${response.statusCode})');
-      }
-    } catch (_) {
-      // On any network / parse error return empty history instead of crashing
-      return {'redemptions': [], 'conversions': []};
+      return {
+        'redemptions':
+            redemptions.map((e) => RedemptionModel.fromJson(e)).toList(),
+        'conversions':
+            conversions.map((e) => PointsConversionModel.fromJson(e)).toList(),
+      };
+    } else {
+      throw Exception('Failed to load history (${response.statusCode})');
     }
   }
 
   @override
   Future<bool> submitConversionRequest(int points, String type) async {
-    final response = await dio.post('/points/convert', data: {
+    final response = await client.post(ApiConstants.pointsConvert, data: {
       'points_converted': points,
       'conversion_type': type,
     });
@@ -75,7 +68,7 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
 
   @override
   Future<List<Map<String, dynamic>>> getPointsRules() async {
-    final response = await dio.get('/points/rules');
+    final response = await client.get(ApiConstants.pointsRules);
     if (response.statusCode == 200) {
       final List data = response.data['data'];
       return List<Map<String, dynamic>>.from(data);
