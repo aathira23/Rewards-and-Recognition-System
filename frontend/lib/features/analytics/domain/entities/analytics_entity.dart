@@ -2,26 +2,31 @@ import 'package:equatable/equatable.dart';
 
 class AnalyticsEntity extends Equatable {
   final int totalRecognitions;
-  final int totalPointsAwarded;
-  final int activeUsers;
-  final double budgetUtilization;
-  final List<Map<String, dynamic>> topPerformers;
-  final List<Map<String, dynamic>> departmentBreakdown;
+  final int totalPointsDistributed;
+  final double engagementRate;
+  final int userCount;
+  final String scope;
+  final List<Map<String, dynamic>> topRecognizers;
+  final List<Map<String, dynamic>> topRecognized;
+  final List<Map<String, dynamic>> trends;
 
   const AnalyticsEntity({
     required this.totalRecognitions,
-    required this.totalPointsAwarded,
-    required this.activeUsers,
-    required this.budgetUtilization,
-    required this.topPerformers,
-    required this.departmentBreakdown,
+    required this.totalPointsDistributed,
+    required this.engagementRate,
+    required this.userCount,
+    required this.scope,
+    required this.topRecognizers,
+    required this.topRecognized,
+    required this.trends,
   });
 
   @override
   List<Object?> get props => [
         totalRecognitions,
-        totalPointsAwarded,
-        activeUsers,
-        budgetUtilization,
+        totalPointsDistributed,
+        engagementRate,
+        userCount,
+        scope,
       ];
 }

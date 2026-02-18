@@ -15,6 +15,8 @@ import 'package:rr_frontend/features/profile/presentation/pages/user_management_
 import 'package:rr_frontend/features/departments/presentation/pages/department_management_page.dart';
 import 'package:rr_frontend/features/config/presentation/pages/system_config_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/conversions_management_page.dart';
+import 'package:rr_frontend/features/reports/presentation/pages/reports_page.dart';
+import 'package:rr_frontend/features/reports/presentation/pages/payroll_encashment_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -114,9 +116,19 @@ class DashboardPage extends StatelessWidget {
           page: EmployeeRewardsPage(),
         ),
         const NavDestination(
-          title: 'System Config',
-          icon: Icons.settings_rounded,
+          title: 'Configuration',
+          icon: Icons.tune_rounded,
           page: SystemConfigPage(),
+        ),
+        const NavDestination(
+          title: 'Reports',
+          icon: Icons.summarize_rounded,
+          page: ReportsPage(),
+        ),
+        const NavDestination(
+          title: 'Payroll Encashment',
+          icon: Icons.receipt_long_rounded,
+          page: PayrollEncashmentPage(),
         ),
       ];
     }

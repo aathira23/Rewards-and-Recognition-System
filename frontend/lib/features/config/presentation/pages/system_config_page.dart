@@ -13,27 +13,38 @@ class SystemConfigPage extends StatefulWidget {
 
 class _SystemConfigPageState extends State<SystemConfigPage> {
   List<Map<String, dynamic>> _configs = [];
+  List<Map<String, dynamic>> _rules = [];
   bool _isLoading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadConfigs();
+    _loadAll();
   }
 
-  Future<void> _loadConfigs() async {
+  Future<void> _loadAll() async {
     setState(() => _isLoading = true);
     try {
       final client = sl<ApiClient>();
-      final response = await client.get(ApiConstants.systemConfig);
-      if (response.statusCode == 200) {
-        final List data = response.data['data'] ?? [];
-        setState(() {
-          _configs = data.cast<Map<String, dynamic>>();
-          _isLoading = false;
-        });
-      }
+      // Load configs and rules in parallel
+      final results = await Future.wait([
+        client.get(ApiConstants.systemConfig),
+        client.get('${ApiConstants.pointsRules}'),
+      ]);
+
+      final configData = results[0].data['data'] ?? [];
+      final rulesData = results[1].data['data'] ?? results[1].data ?? [];
+
+      setState(() {
+        _configs = (configData is List)
+            ? configData.cast<Map<String, dynamic>>()
+            : <Map<String, dynamic>>[];
+        _rules = (rulesData is List)
+            ? rulesData.cast<Map<String, dynamic>>()
+            : <Map<String, dynamic>>[];
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -56,16 +67,22 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('System Configuration',
-                    style: GoogleFonts.outfit(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Configuration',
+                        style: GoogleFonts.outfit(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Manage system settings and point rules',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade500)),
+                  ],
+                ),
                 IconButton(
-                    icon: const Icon(Icons.refresh), onPressed: _loadConfigs),
+                    icon: const Icon(Icons.refresh), onPressed: _loadAll),
               ],
             ),
-            const SizedBox(height: 8),
-            Text('Manage system-wide settings and parameters',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
             const SizedBox(height: 24),
             if (_isLoading)
               const Center(
@@ -76,36 +93,130 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               Center(
                   child: Text('Error: $_error',
                       style: TextStyle(color: Colors.red.shade700))),
-            if (!_isLoading && _configs.isNotEmpty)
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Column(
-                  children: _configs.map((config) {
-                    return _buildConfigTile(context, config, theme);
-                  }).toList(),
-                ),
-              ),
-            if (!_isLoading && _configs.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(48.0),
+            if (!_isLoading && _error == null) ...[
+              // ── System Configuration Section ──
+              _buildSectionHeader('System Configuration',
+                  'Global settings and parameters', Icons.settings_rounded),
+              const SizedBox(height: 12),
+              if (_configs.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
                   child: Column(
-                    children: [
-                      Icon(Icons.settings_outlined,
-                          size: 48, color: Colors.grey.shade400),
-                      const SizedBox(height: 12),
-                      Text('No configuration entries',
-                          style: TextStyle(color: Colors.grey.shade500)),
-                    ],
+                    children: _configs.map((config) {
+                      return _buildConfigTile(context, config, theme);
+                    }).toList(),
                   ),
                 ),
-              ),
+              if (_configs.isEmpty)
+                _buildEmptyState(
+                    Icons.settings_outlined, 'No configuration entries'),
+              const SizedBox(height: 32),
+
+              // ── Point Rules & Eligibility Section ──
+              _buildSectionHeader(
+                  'Point Rules & Eligibility',
+                  'Define point values for different actions',
+                  Icons.rule_rounded),
+              const SizedBox(height: 12),
+              if (_rules.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    children: _rules.map((rule) {
+                      return _buildRuleTile(rule, theme);
+                    }).toList(),
+                  ),
+                ),
+              if (_rules.isEmpty)
+                _buildEmptyState(
+                    Icons.rule_rounded, 'No point rules configured'),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String subtitle, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: GoogleFonts.inter(
+                    fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(subtitle,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(IconData icon, String text) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48.0),
+        child: Column(
+          children: [
+            Icon(icon, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            Text(text, style: TextStyle(color: Colors.grey.shade500)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRuleTile(Map<String, dynamic> rule, ThemeData theme) {
+    final name = rule['rule_name'] ?? rule['name'] ?? '';
+    final description = rule['description'] ?? '';
+    final points = rule['points_value'] ?? rule['points'] ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name.toString(),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14)),
+                if (description.toString().isNotEmpty)
+                  Text(description.toString(),
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Text('$points',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          ),
+        ],
       ),
     );
   }
@@ -203,7 +314,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
                 await client.patch(
                     '${ApiConstants.systemConfig}${config['key']}',
                     data: {'value': controller.text});
-                _loadConfigs();
+                _loadAll();
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
