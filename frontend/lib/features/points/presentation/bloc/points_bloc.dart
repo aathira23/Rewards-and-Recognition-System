@@ -70,9 +70,9 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
       },
       (newHistory) {
         print('PointsBloc: History Success, count=${newHistory.length}');
-        final mergedHistory =
-            event.page == 1 ? newHistory : List.of(state.history)
-              ..addAll(newHistory);
+        final mergedHistory = event.page == 1
+            ? newHistory
+            : (List.of(state.history)..addAll(newHistory));
 
         emit(state.copyWith(
           status: PointsStatus.success,
