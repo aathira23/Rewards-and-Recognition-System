@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../injection_container.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
@@ -149,16 +150,35 @@ class EmployeeRecognitionsPage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text('Send ${badge.name}'),
+        return AppDialog(
+          title: 'Send ${badge.name}',
+          maxWidth: 500,
           content: Form(
             key: formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Text(
+                  'To',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  decoration:
-                      const InputDecoration(labelText: 'Select Colleague'),
+                  decoration: InputDecoration(
+                    hintText: 'Search employee name...',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
                   items: users.map((user) {
                     return DropdownMenuItem<int>(
                       value: user.id,
@@ -169,52 +189,80 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                   validator: (value) =>
                       value == null ? 'Please select a colleague' : null,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Message (Optional)',
-                    alignLabelWithHint: true,
+                const SizedBox(height: 24),
+                const Text(
+                  'Message',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                  maxLines: 3,
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  decoration: InputDecoration(
+                    hintText:
+                        'Write a personalized message explaining why you\'re recognizing this person...',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  maxLines: 4,
                   onChanged: (value) => message = value,
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: Colors.grey[300]!),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  // Use the context from the build method (the one with BlocProvider)
-                  // BUT showDialog creates a new context branch.
-                  // We can't access the BlocProvider from dialogContext if it's above the Navigator?
-                  // Actually, showDialog pushes a new route. The context passed to showDialog (context)
-                  // should be able to provide the Bloc if the BlocProvider is above the Navigator (MaterialApp).
-                  // Here BlocProvider is local to EmployeeRecognitionsPage.
-                  // So we must capture the bloc before showing dialog or use BlocProvider.value if we were navigating.
-                  // Since showDialog context is different, we should pass the bloc callback or use the parent context
-                  // to find the bloc *before* the dialog, or capture it.
-
-                  // Simple fix: Invoke the event using the parent 'context' (from build)
-                  // but we are in a stateless widget, so 'context' is available in the method scope variables if passed.
-                  // Yes, we passed 'context' to _showSendRecognitionDialog.
-
-                  // Wait, accessing Provider via 'context' inside the callback might be unsafe if the widget is rebuilt?
-                  // But 'context' here is the one from build().
-
-                  context.read<RecognitionsBloc>().add(SendRecognitionRequested(
-                        receiverId: selectedReceiverId!,
-                        badgeId: badge.id,
-                        message: message,
-                      ));
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Send'),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    context
+                        .read<RecognitionsBloc>()
+                        .add(SendRecognitionRequested(
+                          receiverId: selectedReceiverId!,
+                          badgeId: badge.id,
+                          message: message,
+                        ));
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+                icon: const Icon(Icons.send_outlined, size: 18),
+                label: const Text('Send Recognition'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A60FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
             ),
           ],
         );

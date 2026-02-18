@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_state.dart';
@@ -104,51 +105,13 @@ class AppreciationComposer extends StatelessWidget {
       context: context,
       builder: (_) => BlocProvider.value(
         value: bloc,
-        child: Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: 600,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Appreciations Sent',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const CircleAvatar(
-                        backgroundColor: Colors.black12,
-                        child:
-                            Icon(Icons.close, size: 20, color: Colors.black87),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                Expanded(
-                  child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
-                    builder: (context, state) {
-                      final recognitions = state.stats?.sentRecognitions ?? [];
-                      return SingleChildScrollView(
-                        child: SentRecognitionsList(recognitions: recognitions),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+        child: AppDialog(
+          title: 'Appreciations Sent',
+          content: BlocBuilder<RecognitionsBloc, RecognitionsState>(
+            builder: (context, state) {
+              final recognitions = state.stats?.sentRecognitions ?? [];
+              return SentRecognitionsList(recognitions: recognitions);
+            },
           ),
         ),
       ),
