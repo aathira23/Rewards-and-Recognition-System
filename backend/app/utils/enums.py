@@ -10,6 +10,7 @@ class UserRole(str, Enum):
     MANAGER = "MANAGER"
     DEPT_HEAD = "DEPT_HEAD"
     HR = "HR"
+    ADMIN = "ADMIN"
 
 
 class WalletType(str, Enum):

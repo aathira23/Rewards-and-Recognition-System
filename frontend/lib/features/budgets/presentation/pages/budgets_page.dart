@@ -19,7 +19,7 @@ class _BudgetsPageState extends State<BudgetsPage>
   bool _isLoading = true;
   String? _error;
 
-  bool get isHR => widget.userRole.toUpperCase() == 'HR';
+  bool get isHR => widget.userRole.toUpperCase() == 'HR' || widget.userRole.toUpperCase() == 'ADMIN';
 
   @override
   void initState() {

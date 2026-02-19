@@ -29,7 +29,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
 
   bool get _canToggle {
     final r = widget.userRole.toUpperCase();
-    return r == 'MANAGER' || r == 'DEPT_HEAD' || r == 'HR';
+    return r == 'MANAGER' || r == 'DEPT_HEAD' || r == 'HR' || r == 'ADMIN';
   }
 
   Future<void> _loadManagerWallet() async {

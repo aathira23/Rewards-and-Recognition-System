@@ -50,6 +50,8 @@ class DashboardPage extends StatelessWidget {
   /// Returns a human-readable role label for the sidebar.
   String _displayRole(String role) {
     switch (role.toUpperCase()) {
+      case 'ADMIN':
+        return 'Admin';
       case 'HR':
         return 'HR Admin';
       case 'DEPT_HEAD':
@@ -73,7 +75,7 @@ class DashboardPage extends StatelessWidget {
   List<NavDestination> _buildDestinations(String role) {
     final r = role.toUpperCase();
 
-    if (r == 'HR') {
+    if (r == 'HR' || r == 'ADMIN') {
       return [
         NavDestination(
           title: 'Analytics',

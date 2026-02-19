@@ -95,7 +95,7 @@ class AwardsService:
         
         current_approvals = [] # Keep track of approvals added in this step
         
-        if nominator.role == UserRole.HR.value:
+        if nominator.role in (UserRole.HR.value, UserRole.ADMIN.value):
             # HR nominations are fully auto-approved
             award.status = AwardStatus.APPROVED.value
             required_levels = self._get_required_approval_levels(award_type)
@@ -325,7 +325,7 @@ class AwardsService:
         
         # By default, only HR (and optionally Dept Head) may view all nominations.
         # Other roles (Employee, Manager) see only nominations they are part of (nominator or nominee).
-        if role in [UserRole.HR.value, UserRole.DEPT_HEAD.value]:
+        if role in [UserRole.HR.value, UserRole.ADMIN.value, UserRole.DEPT_HEAD.value]:
             # HR and Dept Head can see all nominations
             pass
         else:

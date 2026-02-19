@@ -116,8 +116,8 @@ def get_conversions(
 ):
     """Get conversion requests: HR sees all requests; users see only their own."""
     service = StoreService(db)
-    # HR can view all conversions
-    if getattr(current_user, "role", None) == UserRole.HR.value:
+    # HR/Admin can view all conversions
+    if getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value):
         conversions = service.get_all_conversion_history()
     else:
         conversions = service.get_conversion_history(current_user_id)
@@ -148,8 +148,8 @@ def get_pending_conversions(
     current_user = Depends(get_current_user)
 ):
     """Get pending conversion requests (HR only)."""
-    if getattr(current_user, "role", None) != UserRole.HR.value:
-        return forbidden("Only HR can view pending conversion requests")
+    if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only HR/Admin can view pending conversion requests")
 
     service = StoreService(db)
     conversions = service.get_pending_conversions()
@@ -184,9 +184,9 @@ def action_conversion(
     """Approve or reject a conversion request (Admin logic)."""
     service = StoreService(db)
     try:
-        # Only HR users can approve/reject conversions
-        if getattr(current_user, "role", None) != UserRole.HR.value:
-            return forbidden("Only HR users can approve or reject conversion requests")
+        # Only HR/Admin users can approve/reject conversions
+        if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+            return forbidden("Only HR/Admin users can approve or reject conversion requests")
         # Strictly validate action
         action = (request.action or "").strip().upper()
         if action not in ("APPROVE", "REJECT"):
@@ -251,8 +251,8 @@ def create_points_rule(
     current_user = Depends(get_current_user)
 ):
     """Create a new points policy rule (HR only)."""
-    if getattr(current_user, "role", None) != UserRole.HR.value:
-        return forbidden("Only HR can create points rules")
+    if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only HR/Admin can create points rules")
 
     service = StoreService(db)
     result = service.create_policy(rule)
@@ -268,8 +268,8 @@ def update_points_rule(
     current_user = Depends(get_current_user)
 ):
     """Update a points policy rule (HR only)."""
-    if getattr(current_user, "role", None) != UserRole.HR.value:
-        return forbidden("Only HR can update points rules")
+    if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only HR/Admin can update points rules")
 
     service = StoreService(db)
     try:

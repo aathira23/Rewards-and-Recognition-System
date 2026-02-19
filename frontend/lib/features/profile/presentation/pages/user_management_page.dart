@@ -147,6 +147,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
   Widget _buildRoleBadge(String role) {
     Color color;
     switch (role.toUpperCase()) {
+      case 'ADMIN':
+        color = Colors.purple;
+        break;
       case 'HR':
         color = Colors.purple;
         break;
@@ -208,7 +211,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: 'Role'),
                   initialValue: role,
-                  items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR']
+                  items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
                       .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                       .toList(),
                   onChanged: (v) => role = v ?? 'EMPLOYEE',
@@ -287,7 +290,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: 'Role'),
                   initialValue: role,
-                  items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR']
+                  items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
                       .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                       .toList(),
                   onChanged: (v) => role = v ?? role,

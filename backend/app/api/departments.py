@@ -35,8 +35,8 @@ def create_department(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new department (HR only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Access denied. Only HR can create departments.", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Access denied. Only HR/Admin can create departments.", status_code=403)
         
     service = DepartmentService(db)
     try:
@@ -54,8 +54,8 @@ def update_department(
     current_user: User = Depends(get_current_user)
 ):
     """Update a department (HR only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Access denied. Only HR can update departments.", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Access denied. Only HR/Admin can update departments.", status_code=403)
         
     service = DepartmentService(db)
     try:
@@ -74,8 +74,8 @@ def delete_department(
     current_user: User = Depends(get_current_user)
 ):
     """Delete a department (HR only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Access denied. Only HR can delete departments.", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Access denied. Only HR/Admin can delete departments.", status_code=403)
         
     service = DepartmentService(db)
     # Note: In a real system, we'd check if users belong to this department before deleting.

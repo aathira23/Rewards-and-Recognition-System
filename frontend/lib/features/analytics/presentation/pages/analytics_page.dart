@@ -14,6 +14,7 @@ class AnalyticsPage extends StatelessWidget {
   String get _scope {
     switch (userRole.toUpperCase()) {
       case 'HR':
+      case 'ADMIN':
         return 'ORG';
       case 'DEPT_HEAD':
         return 'DEPARTMENT';

@@ -35,8 +35,8 @@ def create_store_item(
     current_user = Depends(get_current_user)
 ):
     """Create a new item in the store catalog (HR/Admin only)."""
-    # Check if user has HR role
-    if current_user.role != UserRole.HR.value:
+    # Check if user has HR/Admin role
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only HR can create store items"
@@ -61,8 +61,8 @@ def update_store_item(
     current_user = Depends(get_current_user)
 ):
     """Update a store item including stock quantity and active status (HR/Admin only)."""
-    # Check if user has HR role
-    if current_user.role != UserRole.HR.value:
+    # Check if user has HR/Admin role
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only HR can update store items"

@@ -32,7 +32,7 @@ def list_users(
     current_user = Depends(get_current_user)
 ):
     """List all users. HR users see full details; others see public profiles."""
-    is_hr = getattr(current_user, "role", None) == UserRole.HR.value
+    is_hr = getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value)
     
     users = users_service.list_users(db, skip=skip, limit=limit)
     return success(
@@ -54,8 +54,8 @@ def create_user(
     # If there are existing users, only HR may create new users
     total = get_user_count(db)
     if total > 0:
-        if current_user is None or getattr(current_user, "role", None) != UserRole.HR.value:
-            return forbidden("Only HR users can create new users")
+        if current_user is None or getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+            return forbidden("Only HR/Admin users can create new users")
 
     try:
         created_user = users_service.create_user(db, user)
@@ -74,7 +74,7 @@ def update_user(
 ):
     """Update user profile (self or HR)."""
     # Only HR or the user themself may update the profile
-    if not (getattr(current_user, "role", None) == UserRole.HR.value or getattr(current_user, "id", None) == user_id):
+    if not (getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value) or getattr(current_user, "id", None) == user_id):
         return forbidden("You do not have permission to update this user")
 
     try:

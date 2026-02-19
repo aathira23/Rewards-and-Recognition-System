@@ -23,9 +23,9 @@ def get_manager_wallet(
 ):
     """Get manager wallet balance and details."""
     service = WalletsService(db)
-    # Only managers may view their own manager wallet
-    if getattr(current_user, "role", None) != UserRole.MANAGER.value:
-        return forbidden("Only managers may view their manager wallet")
+    # Managers or HR/Admin may view manager wallet (HR/Admin see manager/system wallets)
+    if getattr(current_user, "role", None) not in (UserRole.MANAGER.value, UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only managers or HR/Admin may view manager wallets")
 
     wallet = service.get_manager_wallet(current_user.id)
     if not wallet:
@@ -44,9 +44,9 @@ def allocate_manager_budget(
     current_user = Depends(get_current_user)
 ):
     """HR allocates budget to manager wallet."""
-    # HR only
-    if getattr(current_user, "role", None) != UserRole.HR.value:
-        return forbidden("Only HR can allocate budget")
+    # HR/Admin only
+    if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only HR/Admin can allocate budget")
     
     service = WalletsService(db)
     try:
@@ -101,8 +101,8 @@ def bulk_allocate_budget(
     current_user = Depends(get_current_user)
 ):
     """HR bulk allocates budget to multiple managers."""
-    if getattr(current_user, "role", None) != UserRole.HR.value:
-        return forbidden("Only HR can bulk allocate budget")
+    if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only HR/Admin can bulk allocate budget")
         
     service = WalletsService(db)
     count = service.bulk_allocate_budget(
