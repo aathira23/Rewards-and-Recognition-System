@@ -31,14 +31,14 @@ def list_users(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """List all users (HR only)."""
-    # Only HR role may list users
-    if getattr(current_user, "role", None) != UserRole.HR.value:
-        return forbidden("Only HR users can list all users")
-
-    # HR sees full details
+    """List all users. HR users see full details; others see public profiles."""
+    is_hr = getattr(current_user, "role", None) == UserRole.HR.value
+    
     users = users_service.list_users(db, skip=skip, limit=limit)
-    return success(data=[users_service.serialize_user(u, include_sensitive=True) for u in users], message="User list fetched")
+    return success(
+        data=[users_service.serialize_user(u, include_sensitive=is_hr) for u in users], 
+        message="User list fetched"
+    )
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
