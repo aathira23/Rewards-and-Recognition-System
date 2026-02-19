@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -57,8 +57,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('User Management',
-                    style: GoogleFonts.outfit(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: AppTextStyles.pageTitle()),
                 Row(
                   children: [
                     IconButton(
@@ -117,13 +116,13 @@ class _UserManagementPageState extends State<UserManagementPage> {
                               style: const TextStyle(
                                   fontWeight: FontWeight.w500))),
                           DataCell(Text(user['email'] ?? '',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.grey.shade600))),
+                              style: AppTextStyles.body(
+                                  color: Colors.grey.shade600))),
                           DataCell(_buildRoleBadge(user['role'] ?? '')),
                           DataCell(Text(
                               user['department']?['name'] ?? 'Unassigned',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.grey.shade600))),
+                              style: AppTextStyles.body(
+                                  color: Colors.grey.shade600))),
                           DataCell(
                             IconButton(
                               icon: Icon(Icons.edit,
@@ -169,8 +168,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(role,
-          style: TextStyle(
-              fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+          style: AppTextStyles.captionBold(color: color)),
     );
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/features/notifications/presentation/widgets/notification_bell.dart';
 
@@ -74,9 +74,7 @@ class _MainLayoutState extends State<MainLayout> {
                         const SizedBox(width: 12),
                         Text(
                           'engage',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                          style: AppTextStyles.headline1(
                             color: theme.colorScheme.primary,
                           ),
                         ),
@@ -124,11 +122,8 @@ class _MainLayoutState extends State<MainLayout> {
                                   const SizedBox(width: 16),
                                   Text(
                                     destination.title,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
+                                    style: AppTextStyles.navItem(
+                                      isSelected: isSelected,
                                       color: isSelected
                                           ? theme.colorScheme.primary
                                           : Colors.grey[600],
@@ -155,10 +150,8 @@ class _MainLayoutState extends State<MainLayout> {
                             widget.userName.isNotEmpty
                                 ? widget.userName[0].toUpperCase()
                                 : 'U',
-                            style: TextStyle(
+                            style: AppTextStyles.smallBold(
                               color: theme.colorScheme.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -168,15 +161,11 @@ class _MainLayoutState extends State<MainLayout> {
                           children: [
                             Text(
                               widget.userName,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: AppTextStyles.bodyBold(),
                             ),
                             Text(
                               widget.userRole,
-                              style: const TextStyle(
-                                fontSize: 11,
+                              style: AppTextStyles.caption(
                                 color: Colors.grey,
                               ),
                             ),
@@ -223,9 +212,7 @@ class _MainLayoutState extends State<MainLayout> {
                         ),
                       Text(
                         'Rewards & Recognition',
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                        style: AppTextStyles.headline1(
                           color: theme.colorScheme.onSurface,
                         ),
                       ),

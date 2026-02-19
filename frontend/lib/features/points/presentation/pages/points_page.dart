@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import 'package:intl/intl.dart';
 import '../../../../injection_container.dart';
 import '../bloc/points_bloc.dart';
@@ -47,8 +47,9 @@ class _PointsPageState extends State<PointsPage> {
     _bloc.add(GetPointsHistoryRequested(
       page: page,
       category: _category,
-      startDate:
-          _startDate != null ? DateFormat('yyyy-MM-dd').format(_startDate!) : null,
+      startDate: _startDate != null
+          ? DateFormat('yyyy-MM-dd').format(_startDate!)
+          : null,
       endDate:
           _endDate != null ? DateFormat('yyyy-MM-dd').format(_endDate!) : null,
     ));
@@ -75,10 +76,9 @@ class _PointsPageState extends State<PointsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Points Overview',
-                      style: TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
+                      style: AppTextStyles.pageTitle(),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -110,8 +110,8 @@ class _PointsPageState extends State<PointsPage> {
                             currentPeriod: _currentPeriod,
                             onPeriodChanged: (period) {
                               setState(() => _currentPeriod = period);
-                              _bloc.add(
-                                  GetLeaderboardRequested(period: period));
+                              _bloc
+                                  .add(GetLeaderboardRequested(period: period));
                             },
                           ),
                         ),
@@ -153,14 +153,13 @@ class _PointsPageState extends State<PointsPage> {
               child: Center(
                 child: Text(
                   'No transactions found',
-                  style:
-                      TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  style: AppTextStyles.body(color: Colors.grey.shade500),
                 ),
               ),
             )
           else
-            ...state.history.asMap().entries.map((e) =>
-                _buildRow(e.value, e.key == state.history.length - 1)),
+            ...state.history.asMap().entries.map(
+                (e) => _buildRow(e.value, e.key == state.history.length - 1)),
           _buildFooter(state),
         ],
       ),
@@ -174,8 +173,7 @@ class _PointsPageState extends State<PointsPage> {
         children: [
           Text(
             'Points History',
-            style: GoogleFonts.inter(
-                fontSize: 16, fontWeight: FontWeight.w700),
+            style: AppTextStyles.sectionTitle(),
           ),
           const Spacer(),
           // From date
@@ -206,8 +204,7 @@ class _PointsPageState extends State<PointsPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Text('to',
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                style: AppTextStyles.small(color: Colors.grey.shade500)),
           ),
           // To date
           _DateChip(
@@ -266,10 +263,7 @@ class _PointsPageState extends State<PointsPage> {
 
   Widget _hdr(String label) => Text(
         label,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+        style: AppTextStyles.captionStrong(
           color: Colors.grey.shade500,
         ),
       );
@@ -292,15 +286,14 @@ class _PointsPageState extends State<PointsPage> {
             flex: 2,
             child: Text(
               tx.date,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              style: AppTextStyles.smallMedium(),
             ),
           ),
           Expanded(
             flex: 4,
             child: Text(
               tx.description,
-              style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600),
+              style: AppTextStyles.bodyBold(),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -315,9 +308,7 @@ class _PointsPageState extends State<PointsPage> {
             flex: 2,
             child: Text(
               tx.points,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+              style: AppTextStyles.bodyBold(
                 color: ptColor,
               ),
             ),
@@ -325,11 +316,10 @@ class _PointsPageState extends State<PointsPage> {
           SizedBox(
             width: 28,
             child: PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert,
-                  size: 18, color: Colors.grey.shade400),
+              icon:
+                  Icon(Icons.more_vert, size: 18, color: Colors.grey.shade400),
               itemBuilder: (_) => const [
-                PopupMenuItem(
-                    value: 'details', child: Text('View Details')),
+                PopupMenuItem(value: 'details', child: Text('View Details')),
               ],
               onSelected: (_) {},
             ),
@@ -357,29 +347,25 @@ class _PointsPageState extends State<PointsPage> {
           if (total > 0)
             Text(
               'Showing $start\u2013$end of $total records',
-              style:
-                  TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              style: AppTextStyles.caption(color: Colors.grey.shade500),
             )
           else
             Text(
               '$showing record${showing == 1 ? '' : 's'}',
-              style:
-                  TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              style: AppTextStyles.caption(color: Colors.grey.shade500),
             ),
           const Spacer(),
           if (total > _perPage) ...[
             _PageBtn(
               icon: Icons.chevron_left,
               enabled: hasPrev,
-              onTap:
-                  hasPrev ? () => _fetchHistory(page: _page - 1) : null,
+              onTap: hasPrev ? () => _fetchHistory(page: _page - 1) : null,
             ),
             const SizedBox(width: 6),
             _PageBtn(
               icon: Icons.chevron_right,
               enabled: hasNext,
-              onTap:
-                  hasNext ? () => _fetchHistory(page: _page + 1) : null,
+              onTap: hasNext ? () => _fetchHistory(page: _page + 1) : null,
             ),
           ],
         ],
@@ -423,8 +409,7 @@ class _TypeBadge extends StatelessWidget {
       ),
       child: Text(
         type,
-        style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+        style: AppTextStyles.captionBold(color: fg),
       ),
     );
   }
@@ -462,16 +447,14 @@ class _DateChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                  fontSize: 12,
+              style: AppTextStyles.small(
                   color: isSet ? Colors.black87 : Colors.grey.shade500),
             ),
             if (isSet && onClear != null) ...[
               const SizedBox(width: 4),
               GestureDetector(
                 onTap: onClear,
-                child: Icon(Icons.close,
-                    size: 13, color: Colors.grey.shade500),
+                child: Icon(Icons.close, size: 13, color: Colors.grey.shade500),
               ),
             ],
           ],
@@ -498,20 +481,15 @@ class _TypeDropdown extends StatelessWidget {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String?>(
           value: value,
-          style:
-              const TextStyle(fontSize: 12, color: Colors.black87),
+          style: AppTextStyles.small(color: Colors.black87),
           icon: Icon(Icons.keyboard_arrow_down,
               size: 16, color: Colors.grey.shade500),
           items: const [
             DropdownMenuItem(value: null, child: Text('All Types')),
-            DropdownMenuItem(
-                value: 'received', child: Text('Earned')),
-            DropdownMenuItem(
-                value: 'spent', child: Text('Redeemed')),
-            DropdownMenuItem(
-                value: 'pending', child: Text('Pending')),
-            DropdownMenuItem(
-                value: 'expired', child: Text('Expired')),
+            DropdownMenuItem(value: 'received', child: Text('Earned')),
+            DropdownMenuItem(value: 'spent', child: Text('Redeemed')),
+            DropdownMenuItem(value: 'pending', child: Text('Pending')),
+            DropdownMenuItem(value: 'expired', child: Text('Expired')),
           ],
           onChanged: onChanged,
         ),
@@ -524,8 +502,7 @@ class _PageBtn extends StatelessWidget {
   final IconData icon;
   final bool enabled;
   final VoidCallback? onTap;
-  const _PageBtn(
-      {required this.icon, required this.enabled, this.onTap});
+  const _PageBtn({required this.icon, required this.enabled, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -541,9 +518,7 @@ class _PageBtn extends StatelessWidget {
         ),
         child: Icon(icon,
             size: 18,
-            color: enabled
-                ? Colors.grey.shade700
-                : Colors.grey.shade300),
+            color: enabled ? Colors.grey.shade700 : Colors.grey.shade300),
       ),
     );
   }

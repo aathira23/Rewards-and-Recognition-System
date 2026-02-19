@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
 import '../../../points/presentation/bloc/points_bloc.dart';
 import '../../../points/presentation/bloc/points_event.dart';
@@ -101,19 +102,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                         children: [
                           Text(
                             'Rewards Store',
-                            style: Theme.of(innerContext)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                ),
+                            style: AppTextStyles.pageTitle(),
                           ),
                           Text(
                             'Redeem your hard-earned points',
-                            style: TextStyle(
+                            style: AppTextStyles.cardTitle(
                               color: Theme.of(innerContext).hintColor,
-                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -194,9 +188,9 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Not Enough Points',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: AppTextStyles.sectionTitle(),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -204,14 +198,13 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       ? 'You need $shortfall more points.'
                       : "You don't have enough points for this.",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  style: AppTextStyles.body(color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
                 if (have != null && need != null)
                   Text(
                     '$have / $need',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 14),
+                    style: AppTextStyles.cardTitle(),
                   ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -223,9 +216,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Got it',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold)),
+                    child: Text('Got it', style: AppTextStyles.cardTitle()),
                   ),
                 ),
               ],
@@ -247,9 +238,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             const Icon(Icons.check_circle_outline_rounded,
                 color: Colors.green, size: 80),
             const SizedBox(height: 16),
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(title, style: AppTextStyles.pageTitle()),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 24),
@@ -361,11 +350,13 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 ),
                 title: Text(
                   item.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.bodyBold(),
                 ),
                 subtitle: Text(
                   '${item.subtitle} • ${_formatDate(item.date)}',
-                  style: TextStyle(color: Theme.of(context).hintColor),
+                  style: AppTextStyles.small(
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -373,11 +364,9 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   children: [
                     Text(
                       '-${item.points} pts',
-                      style: TextStyle(
+                      style: AppTextStyles.sectionTitle(
                         color:
                             item.isConversion ? Colors.green : Colors.redAccent,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
                       ),
                     ),
                     _buildStatusBadge(context, item.status),
@@ -440,8 +429,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       ),
       child: Text(
         status,
-        style:
-            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style: AppTextStyles.tiny(color: color),
       ),
     );
   }
@@ -480,19 +468,16 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   const Icon(Icons.swap_horizontal_circle_outlined,
                       size: 48, color: Colors.indigo),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Convert Points to Cash',
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo),
+                    style: AppTextStyles.pageTitle(color: Colors.indigo),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Current rate: 100 pts = \$${(100 * _currentRate).toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        color: Colors.indigoAccent,
-                        fontWeight: FontWeight.w600),
+                    style: AppTextStyles.bodyBold(
+                      color: Colors.indigoAccent,
+                    ),
                   ),
                 ],
               ),
@@ -513,9 +498,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Conversion Details',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Conversion Details',
+                        style: AppTextStyles.sectionTitle()),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _pointsController,
@@ -568,17 +552,14 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'You will receive:',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.green),
+                              style:
+                                  AppTextStyles.bodyMedium(color: Colors.green),
                             ),
                             Text(
                               '\$${((int.tryParse(_pointsController.text) ?? 0) * _currentRate).toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
+                              style: AppTextStyles.headline1(
                                 color: Colors.green,
                               ),
                             ),
@@ -595,14 +576,13 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.bolt_rounded),
-                            SizedBox(width: 8),
+                            const Icon(Icons.bolt_rounded),
+                            const SizedBox(width: 8),
                             Text('Confirm & Convert',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                                style: AppTextStyles.sectionTitle()),
                           ],
                         ),
                       ),
@@ -616,9 +596,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Recent Requests',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Recent Requests', style: AppTextStyles.sectionHeader()),
                 TextButton(
                   onPressed: () =>
                       context.read<CatalogBloc>().add(GetHistoryRequested()),
@@ -666,14 +644,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             ),
                           ),
                           title: Text('${req.pointsConverted} Points',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
+                              style: AppTextStyles.bodyBold()),
                           subtitle: Text(
                               'To ${req.conversionType} • ${_formatDate(req.createdAt)}'),
                           trailing: Text(
                             '\$${req.cashAmount.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w900, fontSize: 16),
+                            style: AppTextStyles.sectionTitle(),
                           ),
                         ),
                       );
@@ -708,13 +684,13 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
           children: [
             Icon(icon, size: 64, color: Theme.of(context).hintColor),
             const SizedBox(height: 16),
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title, style: AppTextStyles.sectionHeader()),
             const SizedBox(height: 8),
             Text(sub,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).hintColor)),
+                style: AppTextStyles.body(
+                  color: Theme.of(context).hintColor,
+                )),
           ],
         ),
       ),

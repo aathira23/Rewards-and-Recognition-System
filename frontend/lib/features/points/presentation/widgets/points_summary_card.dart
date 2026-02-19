@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../injection_container.dart';
@@ -106,9 +106,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                 const SizedBox(width: 10),
                 Text(
                   isManager ? 'Manager Wallet' : 'Points Wallet',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  style: AppTextStyles.label(
                     color: Colors.white,
                   ),
                 ),
@@ -191,9 +189,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+          style: AppTextStyles.smallBold(
             color: active ? const Color(0xFF1E56BD) : Colors.white70,
           ),
         ),
@@ -217,15 +213,13 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             children: [
               Text(
                 s.balance.toString(),
-                style: GoogleFonts.outfit(
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
+                style: AppTextStyles.displayLarge(
                   color: Colors.white,
                 ),
               ),
               Text(
                 'Available Points',
-                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70),
+                style: AppTextStyles.body(color: Colors.white70),
               ),
             ],
           ),
@@ -282,8 +276,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
               const Icon(Icons.error_outline, color: Colors.white60, size: 28),
               const SizedBox(height: 8),
               Text('Could not load budget',
-                  style:
-                      GoogleFonts.inter(fontSize: 13, color: Colors.white60)),
+                  style: AppTextStyles.body(color: Colors.white60)),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () {
@@ -292,11 +285,8 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                   _loadManagerWallet();
                 },
                 child: Text('Tap to retry',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: AppTextStyles.small(
                       color: Colors.white,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.white,
                     )),
               ),
             ],
@@ -323,16 +313,13 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                 children: [
                   Text(
                     balance.toString(),
-                    style: GoogleFonts.outfit(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
+                    style: AppTextStyles.displayLarge(
                       color: Colors.white,
                     ),
                   ),
                   Text(
                     'pts available to reward',
-                    style:
-                        GoogleFonts.inter(fontSize: 13, color: Colors.white70),
+                    style: AppTextStyles.body(color: Colors.white70),
                   ),
                 ],
               ),
@@ -347,7 +334,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
               const SizedBox(height: 10),
               Text(
                 'Use your budget to reward team members directly from this wallet.',
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
+                style: AppTextStyles.small(color: Colors.white60),
               ),
             ],
           ),
@@ -376,9 +363,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             const SizedBox(width: 8),
             Text(
               'Reward Employee',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+              style: AppTextStyles.bodyBold(
                 color: Colors.white,
               ),
             ),
@@ -491,22 +476,18 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
           children: [
             Icon(icon, size: 14, color: Colors.white70),
             const SizedBox(width: 4),
-            Text(label,
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+            Text(label, style: AppTextStyles.small(color: Colors.white70)),
           ],
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          style: AppTextStyles.sectionHeader(
             color: Colors.white,
           ),
         ),
         if (sub != null)
-          Text(sub,
-              style: GoogleFonts.inter(fontSize: 10, color: Colors.white54)),
+          Text(sub, style: AppTextStyles.tiny(color: Colors.white54)),
       ],
     );
   }

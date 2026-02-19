@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/leaderboard_entry_entity.dart';
 
 class LeaderboardPanel extends StatelessWidget {
@@ -31,12 +32,9 @@ class LeaderboardPanel extends StatelessWidget {
                 Icon(Icons.emoji_events_outlined,
                     color: Colors.blue.shade700, size: 24),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Leaderboard',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.pageTitle(),
                 ),
               ],
             ),
@@ -102,10 +100,9 @@ class LeaderboardPanel extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.black87 : Colors.grey.shade600,
-            ),
+            style: isSelected
+                ? AppTextStyles.bodyBold(color: Colors.black87)
+                : AppTextStyles.body(color: Colors.grey.shade600),
           ),
         ),
       ),
@@ -130,10 +127,8 @@ class LeaderboardPanel extends StatelessWidget {
               entry.name.isNotEmpty
                   ? entry.name.substring(0, 1).toUpperCase()
                   : '?',
-              style: TextStyle(
+              style: AppTextStyles.cardTitle(
                 color: Colors.blue.shade700,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -144,16 +139,12 @@ class LeaderboardPanel extends StatelessWidget {
               children: [
                 Text(
                   entry.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                  style: AppTextStyles.cardTitle(),
                 ),
                 Text(
                   '${entry.score} points',
-                  style: TextStyle(
+                  style: AppTextStyles.small(
                     color: Colors.grey.shade600,
-                    fontSize: 12,
                   ),
                 ),
               ],
@@ -173,10 +164,8 @@ class LeaderboardPanel extends StatelessWidget {
       return const Icon(Icons.emoji_events, color: Colors.brown, size: 20);
     return Text(
       rank.toString(),
-      style: TextStyle(
+      style: AppTextStyles.cardTitle(
         color: Colors.grey.shade600,
-        fontWeight: FontWeight.bold,
-        fontSize: 14,
       ),
       textAlign: TextAlign.center,
     );

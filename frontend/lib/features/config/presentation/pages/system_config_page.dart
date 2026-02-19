@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -71,12 +71,11 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Configuration',
-                        style: GoogleFonts.outfit(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
+                        style: AppTextStyles.pageTitle()),
                     const SizedBox(height: 4),
                     Text('Manage system settings and point rules',
-                        style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade500)),
+                        style: AppTextStyles.body(
+                            color: Colors.grey.shade500)),
                   ],
                 ),
                 IconButton(
@@ -154,10 +153,9 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                style: GoogleFonts.inter(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
+                style: AppTextStyles.label()),
             Text(subtitle,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                style: AppTextStyles.caption(color: Colors.grey.shade400)),
           ],
         ),
       ],
@@ -196,12 +194,11 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name.toString(),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
+                    style: AppTextStyles.cardTitle()),
                 if (description.toString().isNotEmpty)
                   Text(description.toString(),
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                      style: AppTextStyles.small(
+                          color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -213,8 +210,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: Text('$points',
-                style:
-                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                style: AppTextStyles.cardTitle()),
           ),
         ],
       ),
@@ -249,12 +245,11 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(key,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
+                    style: AppTextStyles.cardTitle()),
                 if (description.toString().isNotEmpty)
                   Text(description,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                      style: AppTextStyles.small(
+                          color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -265,8 +260,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(value.toString(),
-                style:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                style: AppTextStyles.bodyBold()),
           ),
           const SizedBox(width: 8),
           IconButton(
@@ -293,8 +287,8 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(config['description'],
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                    style: AppTextStyles.body(
+                        color: Colors.grey.shade600)),
               ),
             TextField(
               controller: controller,

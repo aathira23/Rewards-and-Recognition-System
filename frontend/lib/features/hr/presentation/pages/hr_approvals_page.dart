@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -130,13 +130,11 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Approvals & Allocation',
-                          style: GoogleFonts.outfit(
-                              fontSize: 22, fontWeight: FontWeight.bold)),
+                          style: AppTextStyles.pageTitle()),
                       const SizedBox(height: 4),
                       Text(
                         'Review nominations, conversion requests & allocate budgets',
-                        style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade500),
+                        style: AppTextStyles.body(color: Colors.grey.shade500),
                       ),
                     ],
                   ),
@@ -162,10 +160,8 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                 unselectedLabelColor: Colors.grey.shade500,
                 indicatorColor: theme.colorScheme.primary,
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w500),
+                labelStyle: AppTextStyles.bodyBold(),
+                unselectedLabelStyle: AppTextStyles.bodyMedium(),
                 dividerHeight: 0,
                 tabs: [
                   _TabWithBadge(
@@ -179,7 +175,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                                   'HR')
                           .length),
                   _TabWithBadge(
-                      label: 'Conversions',
+                      label: 'Payroll Encashment',
                       count: _conversions
                           .where((c) => c['status'] == 'PENDING')
                           .length),
@@ -317,9 +313,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(awardType,
-                        style: GoogleFonts.inter(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(awardType, style: AppTextStyles.cardTitle()),
                     const SizedBox(height: 2),
                     RichText(
                       text: TextSpan(
@@ -344,9 +338,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                   _NomStatusBadge(nom: nom),
                   const SizedBox(height: 4),
                   Text('$points pts',
-                      style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                      style: AppTextStyles.smallBold(
                           color: theme.colorScheme.primary)),
                 ],
               ),
@@ -408,7 +400,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
       builder: (ctx) => AlertDialog(
         title: Text(
           isApprove ? 'Approve Nomination' : 'Reject Nomination',
-          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+          style: AppTextStyles.sectionTitle(),
         ),
         content: SizedBox(
           width: 380,
@@ -476,9 +468,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
           // Pending section
           Row(
             children: [
-              Text('Pending Requests',
-                  style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
+              Text('Pending Requests', style: AppTextStyles.label()),
               const SizedBox(width: 8),
               if (pending.isNotEmpty)
                 Container(
@@ -508,9 +498,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
 
           if (resolved.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('Resolved',
-                style: GoogleFonts.inter(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
+            Text('Resolved', style: AppTextStyles.label()),
             const SizedBox(height: 12),
             ...resolved
                 .take(20)
@@ -679,9 +667,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
           const SizedBox(height: 24),
 
           // Manager list
-          Text('Managers',
-              style:
-                  GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text('Managers', style: AppTextStyles.label()),
           const SizedBox(height: 4),
           Text('Select a manager below to quickly allocate budget',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
@@ -783,9 +769,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
               Icon(Icons.person_rounded,
                   size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('Individual Allocation',
-                  style: GoogleFonts.inter(
-                      fontSize: 14, fontWeight: FontWeight.w600)),
+              Text('Individual Allocation', style: AppTextStyles.cardTitle()),
             ],
           ),
           const SizedBox(height: 16),
@@ -864,9 +848,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                 Icon(Icons.groups_rounded,
                     size: 18, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('Bulk Allocation',
-                    style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                Text('Bulk Allocation', style: AppTextStyles.cardTitle()),
               ],
             ),
             const SizedBox(height: 16),
@@ -952,8 +934,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Allocate to ${manager['name']}',
-            style:
-                GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+            style: AppTextStyles.sectionTitle()),
         content: SizedBox(
           width: 340,
           child: TextField(

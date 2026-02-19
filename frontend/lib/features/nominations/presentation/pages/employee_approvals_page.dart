@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -173,12 +173,11 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('My Nominations',
-                            style: GoogleFonts.outfit(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
+                            style: AppTextStyles.pageTitle()),
                         const SizedBox(height: 2),
                         Text('Track your nominations and awards',
-                            style: TextStyle(
-                                fontSize: 13, color: Colors.grey.shade500)),
+                            style: AppTextStyles.body(
+                                color: Colors.grey.shade500)),
                       ],
                     ),
                   ),
@@ -229,8 +228,7 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                       labelColor: theme.colorScheme.primary,
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: theme.colorScheme.primary,
-                      labelStyle: GoogleFonts.inter(
-                          fontSize: 13, fontWeight: FontWeight.w600),
+                      labelStyle: AppTextStyles.bodyBold(),
                       tabs: const [
                         Tab(text: 'Submitted'),
                         Tab(text: 'Received'),
@@ -383,8 +381,7 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                     Expanded(
                       child: Text(
                         n.awardTypeName.isEmpty ? 'Award' : n.awardTypeName,
-                        style: GoogleFonts.outfit(
-                            fontSize: 14, fontWeight: FontWeight.w600),
+                        style: AppTextStyles.cardTitle(),
                       ),
                     ),
                     Container(

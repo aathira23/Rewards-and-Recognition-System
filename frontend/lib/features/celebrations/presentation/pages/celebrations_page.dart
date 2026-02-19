@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/celebration_entity.dart';
 import '../bloc/celebrations_bloc.dart';
@@ -43,8 +43,7 @@ class _CelebrationsView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Celebrations',
-                    style: GoogleFonts.outfit(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: AppTextStyles.pageTitle()),
                 const SizedBox(height: 24),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,9 +60,7 @@ class _CelebrationsView extends StatelessWidget {
                                   color: Colors.pink.shade400, size: 22),
                               const SizedBox(width: 8),
                               Text('Upcoming Celebrations',
-                                  style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600)),
+                                  style: AppTextStyles.sectionTitle()),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -88,9 +85,7 @@ class _CelebrationsView extends StatelessWidget {
                                   color: Colors.blue.shade400, size: 22),
                               const SizedBox(width: 8),
                               Text('Recent Celebrations',
-                                  style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600)),
+                                  style: AppTextStyles.sectionTitle()),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -142,8 +137,7 @@ class _CelebrationsView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(c.userName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
+                    style: AppTextStyles.cardTitle()),
                 const SizedBox(height: 4),
                 Container(
                   padding:
@@ -153,10 +147,8 @@ class _CelebrationsView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(label,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: color,
-                          fontWeight: FontWeight.w600)),
+                      style: AppTextStyles.captionBold(
+                          color: color)),
                 ),
               ],
             ),
@@ -165,15 +157,13 @@ class _CelebrationsView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(c.celebrationDate,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  style: AppTextStyles.small(color: Colors.grey.shade600)),
               if (c.pointsAwarded > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text('+${c.pointsAwarded} pts',
-                      style: TextStyle(
-                          color: Colors.green.shade600,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12)),
+                      style: AppTextStyles.smallBold(
+                          color: Colors.green.shade600)),
                 ),
             ],
           ),
@@ -202,14 +192,11 @@ class _CelebrationsView extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(c.userName,
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                style: AppTextStyles.bodyMedium()),
           ),
           Text('+${c.pointsAwarded}',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.green.shade600,
-                  fontWeight: FontWeight.w600)),
+              style: AppTextStyles.smallBold(
+                  color: Colors.green.shade600)),
         ],
       ),
     );

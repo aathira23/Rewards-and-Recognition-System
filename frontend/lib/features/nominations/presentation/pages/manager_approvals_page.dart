@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -200,12 +200,11 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Nomination Approvals',
-                            style: GoogleFonts.outfit(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
+                            style: AppTextStyles.pageTitle()),
                         const SizedBox(height: 2),
                         Text('Review and action pending award nominations',
-                            style: TextStyle(
-                                fontSize: 13, color: Colors.grey.shade500)),
+                            style: AppTextStyles.body(
+                                color: Colors.grey.shade500)),
                       ],
                     ),
                   ),
@@ -294,8 +293,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                               labelColor: theme.colorScheme.primary,
                               unselectedLabelColor: Colors.grey,
                               indicatorColor: theme.colorScheme.primary,
-                              labelStyle: GoogleFonts.inter(
-                                  fontSize: 13, fontWeight: FontWeight.w600),
+                              labelStyle: AppTextStyles.bodyBold(),
                               tabs: [
                                 Tab(
                                   child: Row(
@@ -467,9 +465,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(awardName,
-                          style: GoogleFonts.outfit(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      child: Text(awardName, style: AppTextStyles.cardTitle()),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -554,9 +550,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isApproved
-                          ? 'You approved ($myLevel)'
-                          : 'You rejected ($myLevel)',
+                      isApproved ? 'You approved' : 'You rejected',
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -697,8 +691,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     Expanded(
                       child: Text(
                         n.awardTypeName.isEmpty ? 'Award' : n.awardTypeName,
-                        style: GoogleFonts.outfit(
-                            fontSize: 14, fontWeight: FontWeight.w600),
+                        style: AppTextStyles.cardTitle(),
                       ),
                     ),
                     Container(
@@ -860,8 +853,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: Text(
             isApprove ? 'Approve Nomination' : 'Reject Nomination',
-            style:
-                GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+            style: AppTextStyles.sectionHeader(),
           ),
           content: SizedBox(
             width: 360,

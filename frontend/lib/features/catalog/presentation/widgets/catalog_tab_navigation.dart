@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
 class CatalogTabNavigation extends StatelessWidget {
   final int selectedIndex;
@@ -71,11 +72,9 @@ class CatalogTabNavigation extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : theme.hintColor,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 13,
-              ),
+              style: isSelected
+                  ? AppTextStyles.tabSelected(color: Colors.white)
+                  : AppTextStyles.tabUnselected(color: theme.hintColor),
             ),
           ],
         ),

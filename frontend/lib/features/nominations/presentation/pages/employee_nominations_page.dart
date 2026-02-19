@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -113,14 +113,13 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                       children: [
                         Text(
                           'Nominations',
-                          style: GoogleFonts.outfit(
-                              fontSize: 20, fontWeight: FontWeight.bold),
+                          style: AppTextStyles.pageTitle(),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Nominate a colleague or check your award status',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade500),
+                          style:
+                              AppTextStyles.body(color: Colors.grey.shade500),
                         ),
                       ],
                     ),
@@ -172,8 +171,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                       labelColor: theme.colorScheme.primary,
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: theme.colorScheme.primary,
-                      labelStyle: GoogleFonts.inter(
-                          fontSize: 13, fontWeight: FontWeight.w600),
+                      labelStyle: AppTextStyles.bodyBold(),
                       tabs: const [
                         Tab(text: 'My Nominations'),
                         Tab(text: 'Awards Received'),
@@ -361,8 +359,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                     Expanded(
                       child: Text(
                         nom.awardTypeName,
-                        style: GoogleFonts.outfit(
-                            fontSize: 14, fontWeight: FontWeight.w600),
+                        style: AppTextStyles.cardTitle(),
                       ),
                     ),
                     _statusBadge(nom),
@@ -517,8 +514,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                     children: [
                       Text(
                         nom.awardTypeName,
-                        style: GoogleFonts.outfit(
-                            fontSize: 14, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.cardTitle(),
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -555,9 +551,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                     children: [
                       Text(
                         '+${nom.pointsAwarded}',
-                        style: GoogleFonts.outfit(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                        style: AppTextStyles.headline2(
                             color: Colors.amber.shade700),
                       ),
                       Text('pts',

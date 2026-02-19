@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/award_type_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
@@ -111,8 +111,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
               children: [
                 Text(
                   'Nominate an Employee',
-                  style: GoogleFonts.outfit(
-                      fontSize: 17, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.sectionHeader(),
                 ),
                 Text(
                   'Select an award and choose the nominee',
@@ -270,11 +269,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 children: [
                   Text(
                     type.name,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                    style: AppTextStyles.cardTitle(),
                   ),
                   if (type.description != null &&
                       type.description!.isNotEmpty) ...[

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/reward_entity.dart';
 
 class RewardItemCard extends StatelessWidget {
@@ -65,10 +66,7 @@ class RewardItemCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         reward.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                        style: AppTextStyles.label(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -83,11 +81,8 @@ class RewardItemCard extends StatelessWidget {
                   children: [
                     Text(
                       reward.pointsCost.toString(),
-                      style: TextStyle(
+                      style: AppTextStyles.headline2(
                         color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -95,10 +90,8 @@ class RewardItemCard extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 3),
                       child: Text(
                         'pts',
-                        style: TextStyle(
+                        style: AppTextStyles.smallMedium(
                           color: theme.hintColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -123,8 +116,7 @@ class RewardItemCard extends StatelessWidget {
                     ),
                     child: Text(
                       hasInsufficientPoints ? 'Short on Points' : 'Redeem Now',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold),
+                      style: AppTextStyles.bodyBold(),
                     ),
                   ),
                 ),
@@ -155,10 +147,8 @@ class RewardItemCard extends StatelessWidget {
       ),
       child: Text(
         category,
-        style: TextStyle(
+        style: AppTextStyles.tiny(
           color: theme.colorScheme.onSecondaryContainer,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );

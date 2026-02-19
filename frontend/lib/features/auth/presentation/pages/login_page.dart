@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import 'package:rr_frontend/features/analytics/presentation/pages/dashboard_page.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
@@ -96,9 +96,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 20),
                       Text(
                         'Agility',
-                        style: GoogleFonts.outfit(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
+                        style: AppTextStyles.display(
                           color: Colors.white,
                         ),
                       ),
@@ -108,8 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: Text(
                           'We seize the opportunity and respond quickly by demonstrating a digital mindset.',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
+                          style: AppTextStyles.loginSubtitle(
                             color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
@@ -162,18 +159,14 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 12),
                         Text(
                           'ASHOK LEYLAND',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
+                          style: AppTextStyles.headline1(
                             color: theme.colorScheme.primary,
                           ),
                         ),
                         const SizedBox(height: 40),
                         Text(
                           'Welcome to',
-                          style: TextStyle(
-                            fontSize: 18,
+                          style: AppTextStyles.loginSubtitle(
                             color: Colors.grey[600],
                           ),
                         ),
@@ -187,9 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(width: 8),
                             Text(
                               'engage',
-                              style: GoogleFonts.outfit(
-                                fontSize: 42,
-                                fontWeight: FontWeight.bold,
+                              style: AppTextStyles.displayLarge(
                                 color: theme.colorScheme.primary,
                               ),
                             ),
@@ -206,8 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                                   const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 'Login',
-                                style: TextStyle(
-                                  fontSize: 12,
+                                style: AppTextStyles.small(
                                   color: Colors.grey[500],
                                 ),
                               ),

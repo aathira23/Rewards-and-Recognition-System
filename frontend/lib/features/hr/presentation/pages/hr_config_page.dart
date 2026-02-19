@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -96,14 +96,11 @@ class _HrConfigPageState extends State<HrConfigPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Configuration',
-                          style: GoogleFonts.outfit(
-                              fontSize: 22, fontWeight: FontWeight.bold)),
+                      Text('Configuration', style: AppTextStyles.pageTitle()),
                       const SizedBox(height: 4),
                       Text(
                         'Manage awards, badges, catalog, point rules & system settings',
-                        style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade500),
+                        style: AppTextStyles.body(color: Colors.grey.shade500),
                       ),
                     ],
                   ),
@@ -129,10 +126,8 @@ class _HrConfigPageState extends State<HrConfigPage>
                 unselectedLabelColor: Colors.grey.shade500,
                 indicatorColor: theme.colorScheme.primary,
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w500),
+                labelStyle: AppTextStyles.bodyBold(),
+                unselectedLabelStyle: AppTextStyles.bodyMedium(),
                 dividerHeight: 0,
                 tabs: const [
                   Tab(text: 'Award Types'),
@@ -205,10 +200,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600)),
                   Text(a['award_key']?.toString() ?? '',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontFamily: 'monospace')),
+                      style: AppTextStyles.small(color: Colors.grey.shade600)),
                   Text('${a['points'] ?? 0}',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w700)),
@@ -816,9 +808,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(c['key']?.toString() ?? '',
-                                  style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600)),
+                                  style: AppTextStyles.bodyBold()),
                               if (c['description'] != null &&
                                   c['description'].toString().isNotEmpty)
                                 Text(c['description'].toString(),
@@ -836,8 +826,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(c['value']?.toString() ?? '',
-                              style: GoogleFonts.inter(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                              style: AppTextStyles.bodyBold()),
                         ),
                         const SizedBox(width: 8),
                         _IconBtn(
@@ -888,9 +877,7 @@ class _HrConfigPageState extends State<HrConfigPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
+              Text(title, style: AppTextStyles.label()),
               const SizedBox(height: 2),
               Text(subtitle,
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
@@ -927,9 +914,7 @@ class _HrConfigPageState extends State<HrConfigPage>
         bool saving = false;
         return StatefulBuilder(builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: Text(title,
-                style: GoogleFonts.inter(
-                    fontSize: 16, fontWeight: FontWeight.w700)),
+            title: Text(title, style: AppTextStyles.sectionTitle()),
             content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -1074,9 +1059,7 @@ class _ErrorState extends StatelessWidget {
         children: [
           Icon(Icons.cloud_off_rounded, size: 40, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text('Failed to load data',
-              style:
-                  GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+          Text('Failed to load data', style: AppTextStyles.cardTitle()),
           const SizedBox(height: 4),
           Text(message,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
@@ -1240,10 +1223,7 @@ class _DataCard extends StatelessWidget {
                   flex: flexes[i],
                   child: Text(
                     columns[i].toUpperCase(),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
+                    style: AppTextStyles.captionStrong(
                       color: Colors.grey.shade500,
                     ),
                   ),

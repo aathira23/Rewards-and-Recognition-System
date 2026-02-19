@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../bloc/notifications_bloc.dart';
@@ -44,15 +44,13 @@ class _NotificationsView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Notifications',
-                            style: GoogleFonts.outfit(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
+                            style: AppTextStyles.pageTitle()),
                         if (state.unreadCount > 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               '${state.unreadCount} unread',
-                              style: TextStyle(
-                                  fontSize: 13,
+                              style: AppTextStyles.body(
                                   color: theme.colorScheme.primary),
                             ),
                           ),
@@ -174,12 +172,12 @@ class _NotificationsView extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   notification.message,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  style: AppTextStyles.body(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   _formatDate(notification.createdAt),
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                  style: AppTextStyles.caption(color: Colors.grey.shade400),
                 ),
               ],
             ),

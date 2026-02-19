@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/recognition_entity.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
 class RecognitionFeedList extends StatelessWidget {
   final List<RecognitionEntity> feed;
@@ -21,18 +21,15 @@ class RecognitionFeedList extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'No recognitions yet',
-                style: TextStyle(
+                style: AppTextStyles.sectionTitle(
                   color: Colors.grey[500],
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Be the first to appreciate someone!',
-                style: TextStyle(
+                style: AppTextStyles.bodyLarge(
                   color: Colors.grey[400],
-                  fontSize: 14,
                 ),
               ),
             ],
@@ -91,10 +88,8 @@ class RecognitionFeedList extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               senderName.substring(0, 1).toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFF1565C0), // Blue 800
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+              style: AppTextStyles.sectionHeader(
+                color: const Color(0xFF1565C0),
               ),
             ),
           ),
@@ -107,24 +102,23 @@ class RecognitionFeedList extends StatelessWidget {
                 // Header: Sender appreciated Receiver
                 RichText(
                   text: TextSpan(
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
+                    style: AppTextStyles.label(
                       color: Colors.black87,
                     ),
                     children: [
                       TextSpan(
                         text: senderName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      const TextSpan(
+                      TextSpan(
                         text: ' appreciated ',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Colors.grey[500]),
                       ),
                       TextSpan(
                         text: receiverName,
                         style: const TextStyle(
-                          color: Color(0xFF2962FF), // Bright Blue
-                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2962FF),
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -151,11 +145,8 @@ class RecognitionFeedList extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           badgeName.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
+                          style: AppTextStyles.captionBold(
                             color: badgeStyle.textColor,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
                           ),
                         ),
                       ],
@@ -167,19 +158,15 @@ class RecognitionFeedList extends StatelessWidget {
                     recognition.message!.isNotEmpty)
                   Text(
                     '"${recognition.message}"',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF546E7A), // Blue Grey 600
-                      height: 1.4,
+                    style: AppTextStyles.bodyLarge(
+                      color: const Color(0xFF546E7A),
                     ),
                   ),
                 const SizedBox(height: 12),
                 // Timestamp
                 Text(
                   timeAgo,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
+                  style: AppTextStyles.small(
                     color: Colors.grey[400],
                   ),
                 ),

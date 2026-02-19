@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
 class RewardsBalanceCard extends StatelessWidget {
   final int balance;
@@ -75,11 +76,8 @@ class RewardsBalanceCard extends StatelessWidget {
                         children: [
                           Text(
                             'Your Points Balance',
-                            style: TextStyle(
+                            style: AppTextStyles.cardTitle(
                               color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.5,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -89,20 +87,15 @@ class RewardsBalanceCard extends StatelessWidget {
                             children: [
                               Text(
                                 balance.toString(),
-                                style: const TextStyle(
+                                style: AppTextStyles.display(
                                   color: Colors.white,
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -1,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'pts',
-                                style: TextStyle(
+                                style: AppTextStyles.pageTitle(
                                   color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
@@ -147,10 +140,8 @@ class RewardsBalanceCard extends StatelessWidget {
                           expiringPoints != null && expiringPoints! > 0
                               ? '$expiringPoints pts expiring soon'
                               : 'All points are active',
-                          style: const TextStyle(
+                          style: AppTextStyles.smallMedium(
                             color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
@@ -319,9 +319,7 @@ class _ReportsPageState extends State<ReportsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Reports',
-              style: GoogleFonts.outfit(
-                  fontSize: 22, fontWeight: FontWeight.bold)),
+          Text('Reports', style: AppTextStyles.pageTitle()),
           const SizedBox(height: 4),
           Text('Generate, filter and export detailed organizational reports',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
@@ -403,9 +401,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(type.title,
-                        style: GoogleFonts.outfit(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(type.title, style: AppTextStyles.sectionHeader()),
                     const SizedBox(height: 2),
                     Text(type.subtitle,
                         style: TextStyle(
@@ -710,9 +706,7 @@ class _ReportsPageState extends State<ReportsPage> {
                         child: Icon(s.icon, size: 16, color: s.color),
                       ),
                       const SizedBox(height: 10),
-                      Text(s.value,
-                          style: GoogleFonts.inter(
-                              fontSize: 22, fontWeight: FontWeight.w700)),
+                      Text(s.value, style: AppTextStyles.headline2()),
                       const SizedBox(height: 3),
                       Text(s.label,
                           style: TextStyle(
@@ -926,10 +920,7 @@ class _ReportsPageState extends State<ReportsPage> {
                         flex: c.flex,
                         child: Text(
                           c.label.toUpperCase(),
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                          style: AppTextStyles.captionStrong(
                             color: Colors.grey.shade500,
                           ),
                         ),
@@ -1192,9 +1183,7 @@ class _ReportCardState extends State<_ReportCard> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(widget.type.title,
-                      style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w700)),
+                  Text(widget.type.title, style: AppTextStyles.cardTitle()),
                   const SizedBox(height: 4),
                   Text(widget.type.subtitle,
                       maxLines: 2,

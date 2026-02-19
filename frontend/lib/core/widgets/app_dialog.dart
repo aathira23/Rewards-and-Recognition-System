@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
 class AppDialog extends StatelessWidget {
   final String title;
@@ -72,10 +73,7 @@ class AppDialog extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.pageTitle(),
           ),
           if (showCloseButton)
             IconButton(

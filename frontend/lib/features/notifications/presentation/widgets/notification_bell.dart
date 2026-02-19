@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../bloc/notifications_bloc.dart';
@@ -129,9 +129,7 @@ class _NotificationBellState extends State<NotificationBell> {
                       child: Center(
                         child: Text(
                           count > 99 ? '99+' : '$count',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+                          style: AppTextStyles.micro(
                             color: Colors.white,
                           ),
                         ),
@@ -183,10 +181,7 @@ class _NotificationsPanel extends StatelessWidget {
                     children: [
                       Text(
                         'Notifications',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: AppTextStyles.sectionTitle(),
                       ),
                       if (state.unreadCount > 0) ...[
                         const SizedBox(width: 8),
@@ -199,9 +194,7 @@ class _NotificationsPanel extends StatelessWidget {
                           ),
                           child: Text(
                             '${state.unreadCount}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                            style: AppTextStyles.captionBold(
                               color: Colors.white,
                             ),
                           ),
@@ -359,14 +352,14 @@ class _NotificationItem extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     notification.message,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: AppTextStyles.small(color: Colors.grey.shade600),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _timeAgo(notification.createdAt),
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                    style: AppTextStyles.caption(color: Colors.grey.shade400),
                   ),
                 ],
               ),
@@ -430,19 +423,16 @@ class _NotificationItem extends StatelessWidget {
                             ),
                             child: Text(
                               notification.type.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                              style: AppTextStyles.tiny(
                                 color: color,
-                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             _timeAgo(notification.createdAt),
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey.shade400),
+                            style: AppTextStyles.caption(
+                                color: Colors.grey.shade400),
                           ),
                         ],
                       ),
@@ -460,9 +450,7 @@ class _NotificationItem extends StatelessWidget {
                 // ── Title ──
                 Text(
                   notification.title,
-                  style: GoogleFonts.outfit(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
+                  style: AppTextStyles.sectionHeader(
                     color: Colors.black87,
                   ),
                 ),
@@ -472,10 +460,8 @@ class _NotificationItem extends StatelessWidget {
                 // ── Full message (no truncation) ──
                 Text(
                   notification.message,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: AppTextStyles.bodyLarge(
                     color: Colors.grey.shade700,
-                    height: 1.6,
                   ),
                 ),
                 const SizedBox(height: 24),

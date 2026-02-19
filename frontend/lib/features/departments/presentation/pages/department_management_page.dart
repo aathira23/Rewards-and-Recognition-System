@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -58,8 +58,7 @@ class _DepartmentManagementPageState extends State<DepartmentManagementPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Department Management',
-                    style: GoogleFonts.outfit(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: AppTextStyles.pageTitle()),
                 Row(
                   children: [
                     IconButton(
@@ -121,12 +120,9 @@ class _DepartmentManagementPageState extends State<DepartmentManagementPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(dept['name'] ?? '',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14)),
+                                  style: AppTextStyles.cardTitle()),
                               Text('ID: ${dept['id']}',
-                                  style: TextStyle(
-                                      fontSize: 11,
+                                  style: AppTextStyles.caption(
                                       color: Colors.grey.shade500)),
                             ],
                           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../bloc/recognitions_bloc.dart';
@@ -43,31 +44,26 @@ class AppreciationComposer extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Send an Appreciation',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.pageTitle(),
                 ),
                 TextButton(
                   onPressed: () => _showSentAppreciationsDialog(context),
-                  child: const Text(
+                  child: Text(
                     'Appreciations Sent',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A60FF),
+                    style: AppTextStyles.bodyBold(
+                      color: const Color(0xFF1A60FF),
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Select a badge to appreciate someone',
-              style: TextStyle(
+              style: AppTextStyles.body(
                 color: Colors.grey,
-                fontSize: 15,
               ),
             ),
             const SizedBox(height: 32),
@@ -152,7 +148,7 @@ class _BadgeCard extends StatelessWidget {
                 child: badgeInfo.isEmoji
                     ? Text(
                         badgeInfo.emoji!,
-                        style: const TextStyle(fontSize: 28),
+                        style: AppTextStyles.emoji(),
                       )
                     : Icon(
                         badgeInfo.icon,
@@ -164,10 +160,7 @@ class _BadgeCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               badge.name,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+              style: AppTextStyles.cardTitle(),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -175,10 +168,8 @@ class _BadgeCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${badge.points ?? 50} pts',
-              style: TextStyle(
+              style: AppTextStyles.bodyMedium(
                 color: Colors.grey[500],
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],

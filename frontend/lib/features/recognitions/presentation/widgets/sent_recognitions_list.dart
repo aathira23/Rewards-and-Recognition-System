@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/recognition_entity.dart';
 
 class SentRecognitionsList extends StatelessWidget {
@@ -13,12 +14,12 @@ class SentRecognitionsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (recognitions.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
+          padding: const EdgeInsets.symmetric(vertical: 40),
           child: Text(
             'You haven\'t sent any appreciations yet.',
-            style: TextStyle(color: Colors.grey),
+            style: AppTextStyles.body(color: Colors.grey),
           ),
         ),
       );
@@ -60,9 +61,8 @@ class _SentRecognitionTile extends StatelessWidget {
                       recognition.receiverName!.isNotEmpty
                   ? recognition.receiverName!.substring(0, 1).toUpperCase()
                   : 'U',
-              style: TextStyle(
+              style: AppTextStyles.bodyBold(
                 color: theme.primaryColor,
-                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -77,18 +77,14 @@ class _SentRecognitionTile extends StatelessWidget {
                     Flexible(
                       child: Text(
                         'To: ${recognition.receiverName ?? 'Unknown'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                        style: AppTextStyles.label(),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
                       dateStr,
-                      style: TextStyle(
+                      style: AppTextStyles.small(
                         color: Colors.grey[600],
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -100,10 +96,8 @@ class _SentRecognitionTile extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       recognition.badge?.name ?? 'Badge',
-                      style: TextStyle(
+                      style: AppTextStyles.bodyMedium(
                         color: theme.primaryColor,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -113,10 +107,8 @@ class _SentRecognitionTile extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     recognition.message!,
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
+                    style: AppTextStyles.body(
                       color: Colors.grey[800],
-                      fontSize: 13,
                     ),
                   ),
                 ],

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -65,8 +65,7 @@ class _BudgetsPageState extends State<BudgetsPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Budget Management',
-                style: GoogleFonts.outfit(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
+                style: AppTextStyles.pageTitle()),
             const SizedBox(height: 24),
 
             // Wallet summary card
@@ -97,15 +96,13 @@ class _BudgetsPageState extends State<BudgetsPage>
                               isHR
                                   ? 'Manager Wallet Overview'
                                   : 'My Budget Wallet',
-                              style: GoogleFonts.inter(
-                                  color: Colors.white70, fontSize: 13),
+                              style: AppTextStyles.body(
+                                  color: Colors.white70),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               '${_walletData?['balance'] ?? 0} pts',
-                              style: GoogleFonts.outfit(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
+                              style: AppTextStyles.displayMedium(
                                 color: Colors.white,
                               ),
                             ),
@@ -114,8 +111,8 @@ class _BudgetsPageState extends State<BudgetsPage>
                         const Spacer(),
                         if (_error != null)
                           Text(_error!,
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 12)),
+                              style: AppTextStyles.small(
+                                  color: Colors.white70)),
                       ],
                     ),
             ),
@@ -169,8 +166,7 @@ class _BudgetsPageState extends State<BudgetsPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Allocate Budget to Manager',
-              style:
-                  GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              style: AppTextStyles.label()),
           const SizedBox(height: 16),
           TextField(
             controller: managerIdController,
@@ -237,8 +233,7 @@ class _BudgetsPageState extends State<BudgetsPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Reward Employee from Budget',
-              style:
-                  GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              style: AppTextStyles.label()),
           const SizedBox(height: 16),
           TextField(
             controller: employeeIdController,

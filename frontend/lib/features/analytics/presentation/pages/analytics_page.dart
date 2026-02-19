@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/analytics_entity.dart';
 import '../bloc/analytics_bloc.dart';
@@ -87,8 +87,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                   ),
                   const SizedBox(height: 16),
                   Text('Loading analytics…',
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey.shade500)),
+                      style: AppTextStyles.body(color: Colors.grey.shade500)),
                 ],
               ),
             );
@@ -103,13 +102,12 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                       size: 44, color: Colors.grey.shade300),
                   const SizedBox(height: 12),
                   Text('Unable to load analytics',
-                      style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
+                      style: AppTextStyles.label()),
                   if (state.errorMessage != null) ...[
                     const SizedBox(height: 4),
                     Text(state.errorMessage!,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade400)),
+                        style:
+                            AppTextStyles.small(color: Colors.grey.shade400)),
                   ],
                   const SizedBox(height: 20),
                   TextButton.icon(
@@ -200,7 +198,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
         const Spacer(),
         Text(
           scopeLabel,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+          style: AppTextStyles.small(color: Colors.grey.shade400),
         ),
         const SizedBox(width: 12),
         _buildRefreshButton(theme),
@@ -277,14 +275,11 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
         children: [
           Row(
             children: [
-              Text('Recognition Activity',
-                  style: GoogleFonts.inter(
-                      fontSize: 14, fontWeight: FontWeight.w600)),
+              Text('Recognition Activity', style: AppTextStyles.cardTitle()),
               const Spacer(),
               if (trends.isNotEmpty)
                 Text('${trends.length} days',
-                    style: TextStyle(
-                        fontSize: 11, color: Colors.grey.shade400)),
+                    style: AppTextStyles.caption(color: Colors.grey.shade400)),
             ],
           ),
           const SizedBox(height: 20),
@@ -313,13 +308,10 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(title, style: AppTextStyles.cardTitle()),
           const SizedBox(height: 2),
           Text(subtitle,
-              style:
-                  TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+              style: AppTextStyles.caption(color: Colors.grey.shade400)),
           const SizedBox(height: 16),
           if (items.isEmpty)
             _emptyState(emptyIcon, 'No data available')
@@ -329,8 +321,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
               final item = entry.value;
               final name = item['name']?.toString() ?? 'Unknown';
               final count = (item['count'] as num?)?.toInt() ?? 0;
-              final maxCount =
-                  (items.first['count'] as num?)?.toInt() ?? 1;
+              final maxCount = (items.first['count'] as num?)?.toInt() ?? 1;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -343,9 +334,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: rank <= 3
-                              ? primary
-                              : Colors.grey.shade400,
+                          color: rank <= 3 ? primary : Colors.grey.shade400,
                         ),
                       ),
                     ),
@@ -373,25 +362,19 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                         children: [
                           Text(name,
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500),
+                                  fontSize: 12, fontWeight: FontWeight.w500),
                               overflow: TextOverflow.ellipsis),
                           const SizedBox(height: 4),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(2),
                             child: LinearProgressIndicator(
-                              value: maxCount > 0
-                                  ? count / maxCount
-                                  : 0,
+                              value: maxCount > 0 ? count / maxCount : 0,
                               minHeight: 3,
                               backgroundColor: Colors.grey.shade100,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(
+                              valueColor: AlwaysStoppedAnimation<Color>(
                                 primary.withValues(
                                     alpha: 0.25 +
-                                        (count /
-                                                math.max(maxCount, 1)) *
-                                            0.6),
+                                        (count / math.max(maxCount, 1)) * 0.6),
                               ),
                             ),
                           ),
@@ -428,9 +411,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
           children: [
             Icon(icon, size: 28, color: Colors.grey.shade300),
             const SizedBox(height: 8),
-            Text(text,
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+            Text(text, style: AppTextStyles.small(color: Colors.grey.shade400)),
           ],
         ),
       ),
@@ -492,8 +473,7 @@ class _ScopeChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
@@ -549,9 +529,7 @@ class _MetricCard extends StatelessWidget {
                           color: Colors.grey.shade500,
                           letterSpacing: 0.2)),
                   const SizedBox(height: 8),
-                  Text(value,
-                      style: GoogleFonts.inter(
-                          fontSize: 22, fontWeight: FontWeight.w700)),
+                  Text(value, style: AppTextStyles.headline2()),
                 ],
               ),
             ),
@@ -636,8 +614,7 @@ class _TrendPainter extends CustomPainter {
         text: TextSpan(text: label, style: gridLabelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(
-          canvas, Offset(chartLeft - tp.width - 6, y - tp.height / 2));
+      tp.paint(canvas, Offset(chartLeft - tp.width - 6, y - tp.height / 2));
     }
 
     // Bars
@@ -671,30 +648,25 @@ class _TrendPainter extends CustomPainter {
         if (dateStr.length >= 10) {
           try {
             final dt = DateTime.parse(dateStr);
-            const days = [
-              'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
-            ];
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             label = data.length <= 7
                 ? days[dt.weekday - 1]
                 : '${dt.day}/${dt.month}';
           } catch (_) {
-            label =
-                dateStr.length >= 5 ? dateStr.substring(5) : dateStr;
+            label = dateStr.length >= 5 ? dateStr.substring(5) : dateStr;
           }
         }
 
         final tp = TextPainter(
           text: TextSpan(
             text: label,
-            style:
-                TextStyle(fontSize: 9, color: Colors.grey.shade400),
+            style: TextStyle(fontSize: 9, color: Colors.grey.shade400),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(
           canvas,
-          Offset(
-              x + w / 2 - tp.width / 2, size.height - chartBottom + 6),
+          Offset(x + w / 2 - tp.width / 2, size.height - chartBottom + 6),
         );
       }
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../injection_container.dart';
 import '../bloc/recognitions_bloc.dart';
@@ -50,12 +51,9 @@ class EmployeeRecognitionsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Recognitions Center',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.pageTitle(),
                 ),
                 const SizedBox(height: 24),
                 BlocBuilder<RecognitionsBloc, RecognitionsState>(
@@ -105,12 +103,9 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Recognition Feed',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: AppTextStyles.sectionHeader(),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.refresh,
@@ -159,12 +154,9 @@ class EmployeeRecognitionsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'To',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: AppTextStyles.sectionTitle(),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
@@ -190,12 +182,9 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                       value == null ? 'Please select a colleague' : null,
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Message',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: AppTextStyles.sectionTitle(),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -227,11 +216,10 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Cancel',
-                  style: TextStyle(
+                  style: AppTextStyles.bodyBold(
                     color: Colors.black,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

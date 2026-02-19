@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -108,12 +108,11 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Payroll Encashment',
-                          style: GoogleFonts.outfit(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
+                          style: AppTextStyles.pageTitle()),
                       const SizedBox(height: 2),
                       Text('View and export points encashment requests',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade500)),
+                          style:
+                              AppTextStyles.body(color: Colors.grey.shade500)),
                     ],
                   ),
                 ),
@@ -137,8 +136,7 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(_selectedMonth,
-                            style: GoogleFonts.inter(
-                                fontSize: 13, fontWeight: FontWeight.w600)),
+                            style: AppTextStyles.bodyBold()),
                       ),
                       IconButton(
                         icon: const Icon(Icons.chevron_right, size: 18),

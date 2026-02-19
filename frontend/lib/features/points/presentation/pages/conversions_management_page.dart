@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -80,16 +80,14 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Points Conversions',
-                    style: GoogleFonts.outfit(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                Text('Points Conversions', style: AppTextStyles.pageTitle()),
                 IconButton(
                     icon: const Icon(Icons.refresh), onPressed: _loadPending),
               ],
             ),
             const SizedBox(height: 8),
             Text('Approve or reject employee points conversion requests',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                style: AppTextStyles.body(color: Colors.grey.shade600)),
             const SizedBox(height: 24),
             if (_isLoading)
               const Center(
@@ -99,7 +97,7 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
             if (_error != null)
               Center(
                   child: Text('Error: $_error',
-                      style: TextStyle(color: Colors.red.shade700))),
+                      style: AppTextStyles.body(color: Colors.red.shade700))),
             if (!_isLoading && _pending.isEmpty)
               Center(
                 child: Padding(
@@ -110,7 +108,8 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
                           size: 48, color: Colors.green.shade300),
                       const SizedBox(height: 16),
                       Text('No pending conversions',
-                          style: TextStyle(color: Colors.grey.shade600)),
+                          style:
+                              AppTextStyles.body(color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
@@ -164,17 +163,14 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(userName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(userName, style: AppTextStyles.cardTitle()),
                 const SizedBox(height: 4),
                 Text(
                   '$type • $points pts → ₹$amount',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: AppTextStyles.small(color: Colors.grey.shade600),
                 ),
                 Text(date,
-                    style:
-                        TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                    style: AppTextStyles.caption(color: Colors.grey.shade400)),
               ],
             ),
           ),
@@ -200,9 +196,7 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(status,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  style: AppTextStyles.captionBold(
                     color: status == 'APPROVED' ? Colors.green : Colors.red,
                   )),
             ),

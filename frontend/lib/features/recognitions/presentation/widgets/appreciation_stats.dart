@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 
 class AppreciationStats extends StatelessWidget {
@@ -11,12 +12,9 @@ class AppreciationStats extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Appreciations Received',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTextStyles.sectionHeader(),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -53,9 +51,7 @@ class AppreciationStats extends StatelessWidget {
                 Expanded(
                   child: Text(
                     badgeName,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                    style: AppTextStyles.bodyLarge(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                     maxLines: 2,
@@ -66,9 +62,7 @@ class AppreciationStats extends StatelessWidget {
             ),
             Text(
               count.toString(),
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
+              style: AppTextStyles.display(
                 color: theme.colorScheme.onSurface,
               ),
             ),
