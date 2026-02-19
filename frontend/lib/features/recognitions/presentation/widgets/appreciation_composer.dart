@@ -174,7 +174,7 @@ class _BadgeCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${badgeInfo.points} pts',
+              '${badge.points ?? 50} pts',
               style: TextStyle(
                 color: Colors.grey[500],
                 fontSize: 13,
@@ -190,59 +190,30 @@ class _BadgeCard extends StatelessWidget {
   _BadgeDetails _getBadgeInfo(String badgeName) {
     switch (badgeName.toLowerCase()) {
       case 'you rock !!!':
-        return const _BadgeDetails(
-          emoji: '👍',
-          color: Colors.amber,
-          points: 50,
-        );
+        return const _BadgeDetails(emoji: '👍', color: Colors.amber);
       case 'out of box thinker !!!':
-        return const _BadgeDetails(
-          emoji: '💡',
-          color: Colors.purple,
-          points: 75,
-        );
+        return const _BadgeDetails(emoji: '💡', color: Colors.purple);
       case 'bright spark !!!':
-        return const _BadgeDetails(
-          emoji: '💖',
-          color: Colors.pink,
-          points: 50,
-        );
+        return const _BadgeDetails(emoji: '💖', color: Colors.pink);
       case 'great team player !!!':
-        return const _BadgeDetails(
-          emoji: '👥',
-          color: Color(0xFF1B60FF),
-          points: 60,
-        );
+        return const _BadgeDetails(emoji: '👥', color: Color(0xFF1B60FF));
       case 'invaluable help !!!':
-        return const _BadgeDetails(
-          emoji: '💎',
-          color: Colors.cyan,
-          points: 50,
-        );
+        return const _BadgeDetails(emoji: '💎', color: Colors.cyan);
       case 'agility champion !!!':
-        return const _BadgeDetails(
-          emoji: '⚡',
-          color: Colors.blue,
-          points: 70,
-        );
+        return const _BadgeDetails(emoji: '⚡', color: Colors.blue);
       case 'trust builder !!!':
-        return const _BadgeDetails(
-          emoji: '🛡️',
-          color: Colors.lightBlue,
-          points: 65,
-        );
+        return const _BadgeDetails(emoji: '🛡️', color: Colors.lightBlue);
       case 'partnership pioneer !!!':
-        return const _BadgeDetails(
-          emoji: '🎯',
-          color: Colors.redAccent,
-          points: 80,
-        );
+        return const _BadgeDetails(emoji: '🎯', color: Colors.redAccent);
+      case 'customer hero !!!':
+        return const _BadgeDetails(emoji: '🦸', color: Colors.teal);
+      case 'star of innovation !!!':
+        return const _BadgeDetails(emoji: '⭐', color: Colors.orange);
+      case 'heartfelt apology !!':
+        return const _BadgeDetails(emoji: '🙏', color: Colors.deepPurple);
       default:
         return const _BadgeDetails(
-          icon: Icons.stars_outlined,
-          color: Colors.blue,
-          points: 50,
-        );
+            icon: Icons.stars_outlined, color: Colors.blue);
     }
   }
 }
@@ -251,13 +222,11 @@ class _BadgeDetails {
   final String? emoji;
   final IconData? icon;
   final Color color;
-  final int points;
 
   const _BadgeDetails({
     this.emoji,
     this.icon,
     required this.color,
-    required this.points,
   });
 
   bool get isEmoji => emoji != null;

@@ -7,6 +7,7 @@ class BadgeModel extends BadgeEntity {
     super.description,
     super.iconUrl,
     required super.isActive,
+    super.points,
   });
 
   factory BadgeModel.fromJson(Map<String, dynamic> json) {
@@ -16,6 +17,7 @@ class BadgeModel extends BadgeEntity {
       description: json['description'],
       iconUrl: json['icon_url'],
       isActive: json['is_active'] ?? true,
+      points: json['points'],
     );
   }
 
@@ -26,6 +28,7 @@ class BadgeModel extends BadgeEntity {
       'description': description,
       'icon_url': iconUrl,
       'is_active': isActive,
+      'points': points,
     };
   }
 }

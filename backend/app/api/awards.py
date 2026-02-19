@@ -8,7 +8,7 @@ from typing import List
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.users import User
-from app.schemas.awards import AwardNominationCreate, AwardResponse, AwardActionRequest
+from app.schemas.awards import AwardNominationCreate, AwardResponse, AwardActionRequest, ApprovalHistoryItem
 from app.schemas.award_types import AwardTypeCreate, AwardTypeUpdate, AwardTypeResponse
 from app.services.awards_service import AwardsService
 from app.utils.enums import UserRole, ApprovalLevel
@@ -71,9 +71,9 @@ def get_award_types(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all award types."""
+    """Get award types the current user is eligible to nominate for."""
     service = AwardsService(db)
-    types = service.get_award_types()
+    types = service.get_award_types(user_role=current_user.role)
     return success(data=[AwardTypeResponse.model_validate(t) for t in types], message="Award types fetched")
 
 
@@ -127,6 +127,22 @@ def update_award_type(
     if not updated:
         return client_error(message="Award type not found", status_code=404)
     return success(data=AwardTypeResponse.model_validate(updated), message="Award type updated")
+
+
+@router.get("/nominations/my-approvals")
+def get_my_approval_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Return all nominations the current user has personally approved or rejected."""
+    if current_user.role == UserRole.EMPLOYEE.value:
+        return success(data=[], message="No approval history for employees")
+    service = AwardsService(db)
+    items = service.get_my_approval_history(user_id=current_user.id)
+    return success(
+        data=[ApprovalHistoryItem(**item).model_dump(mode='json') for item in items],
+        message="Approval history fetched"
+    )
 
 
 # Nomination-specific routes - AFTER /types to avoid conflict

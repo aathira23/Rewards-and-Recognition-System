@@ -21,6 +21,7 @@ class ApiConstants {
   static const String nominationAction = 'awards/nominations'; // /{id}/action
   static const String nominationApprovalStatus =
       'awards/nominations'; // /{id}/approval-status
+  static const String myApprovalHistory = 'awards/nominations/my-approvals';
 
   // Points & Wallets
   static const String userPoints = 'points/balance';

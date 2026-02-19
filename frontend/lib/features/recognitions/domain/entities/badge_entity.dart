@@ -6,6 +6,7 @@ class BadgeEntity extends Equatable {
   final String? description;
   final String? iconUrl;
   final bool isActive;
+  final int? points;
 
   const BadgeEntity({
     required this.id,
@@ -13,8 +14,9 @@ class BadgeEntity extends Equatable {
     this.description,
     this.iconUrl,
     required this.isActive,
+    this.points,
   });
 
   @override
-  List<Object?> get props => [id, name, description, iconUrl, isActive];
+  List<Object?> get props => [id, name, description, iconUrl, isActive, points];
 }

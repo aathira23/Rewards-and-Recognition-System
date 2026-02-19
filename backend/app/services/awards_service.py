@@ -1,7 +1,8 @@
 """
 Awards service - Business logic for award nominations and approvals.
 """
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy import and_, or_
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from fastapi import HTTPException
@@ -241,7 +242,17 @@ class AwardsService:
                 status_code=400,
                 detail=f"Approval must be done in order. Next required level: {next_required_level}. Current completed: {existing_approvals}"
             )
-        
+
+        # 3b. For MANAGER-level approval, enforce that only the nominee's direct manager
+        #     may approve — prevents any random manager from acting on the nomination.
+        if approval_level == 'MANAGER':
+            nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+            if nominee and nominee.manager_id != approver_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only the nominee's direct manager can approve at the MANAGER level."
+                )
+
         # 4. Create approval record
         approval = AwardApproval(
             award_id=award_id,
@@ -310,6 +321,15 @@ class AwardsService:
         if award.status != AwardStatus.PENDING.value:
             raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
 
+        # For MANAGER-level rejection, enforce that only the nominee's direct manager may reject.
+        if approval_level.upper() == 'MANAGER':
+            nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+            if nominee and nominee.manager_id != approver_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only the nominee's direct manager can reject at the MANAGER level."
+                )
+
         # 1. Create approval record with REJECTED status
         approval = AwardApproval(
             award_id=award_id,
@@ -339,13 +359,30 @@ class AwardsService:
         """Get award nominations based on user role."""
         query = self.db.query(Award)
         
-        # By default, only HR (and optionally Dept Head) may view all nominations.
-        # Other roles (Employee, Manager) see only nominations they are part of (nominator or nominee).
+        # Visibility rules:
+        #  HR / ADMIN / DEPT_HEAD : see all nominations
+        #  MANAGER               : see nominations they submitted, received, or
+        #                          where they are the nominee's direct manager
+        #                          (so peer-nominated direct reports appear in their queue)
+        #  EMPLOYEE              : see only nominations they submitted or received
         if role in [UserRole.HR.value, UserRole.ADMIN.value, UserRole.DEPT_HEAD.value]:
-            # HR and Dept Head can see all nominations
-            pass
+            pass  # full visibility
+        elif role == UserRole.MANAGER.value:
+            NomineeUser = aliased(User)
+            query = query.join(NomineeUser, Award.nominee_id == NomineeUser.id)
+            query = query.filter(
+                or_(
+                    Award.nominator_id == user_id,
+                    Award.nominee_id   == user_id,
+                    # Pending nominations where this manager manages the nominee
+                    and_(
+                        Award.status == AwardStatus.PENDING.value,
+                        NomineeUser.manager_id == user_id
+                    )
+                )
+            )
         else:
-            # Employees and Managers see only nominations they made or received
+            # Employee — only their own
             query = query.filter((Award.nominator_id == user_id) | (Award.nominee_id == user_id))
 
         if status_filter:
@@ -377,11 +414,64 @@ class AwardsService:
                 award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
         return award
 
-    def get_award_types(self, active_only: bool = True) -> List[AwardType]:
-        """Get all award types."""
+    def get_my_approval_history(self, user_id: int) -> List[dict]:
+        """
+        Return all nominations where the current user has an AwardApproval record.
+        Reads directly from award_approvals joined with awards — no filtering
+        on nomination status so the user sees both in-progress and finalised ones.
+        """
+        approvals = (
+            self.db.query(AwardApproval)
+            .filter(AwardApproval.approver_id == user_id)
+            .order_by(AwardApproval.created_at.desc())
+            .all()
+        )
+        result = []
+        for ap in approvals:
+            award = ap.award
+            if not award:
+                continue
+            result.append({
+                'my_action':          ap.status,
+                'my_action_at':       ap.created_at,
+                'my_level':           ap.approval_level,
+                'my_comments':        ap.comments,
+                'nomination_id':      award.id,
+                'nominee_id':         award.nominee_id,
+                'nominator_id':       award.nominator_id,
+                'award_type_name':    award.award_type.name if award.award_type else '',
+                'points_awarded':     award.points_awarded,
+                'justification':      award.justification,
+                'nomination_status':  award.status,
+                'nominee_name':       award.nominee.name if award.nominee else f'User #{award.nominee_id}',
+                'nominator_name':     award.nominator.name if award.nominator else f'User #{award.nominator_id}',
+                'created_at':         award.created_at,
+            })
+        return result
+
+    # Roles allowed to use each eligibility rule
+    _ROLE_ELIGIBLE_RULES: Dict[str, List[str]] = {
+        UserRole.EMPLOYEE.value:  ['PEER'],
+        UserRole.MANAGER.value:   ['PEER', 'MANAGER_ONLY'],
+        UserRole.DEPT_HEAD.value: ['PEER', 'MANAGER_ONLY', 'SENIOR_MGMT'],
+        UserRole.HR.value:        ['PEER', 'MANAGER_ONLY', 'SENIOR_MGMT'],
+    }
+
+    def get_award_types(
+        self,
+        active_only: bool = True,
+        user_role: Optional[str] = None
+    ) -> List[AwardType]:
+        """Get award types visible to the requesting user's role."""
         query = self.db.query(AwardType)
         if active_only:
             query = query.filter(AwardType.is_active == True)
+        if user_role:
+            allowed_rules = self._ROLE_ELIGIBLE_RULES.get(
+                user_role.upper(),
+                ['PEER']          # safe fallback for unknown roles
+            )
+            query = query.filter(AwardType.eligibility_rule.in_(allowed_rules))
         return query.all()
 
     def create_award_type(
@@ -442,13 +532,13 @@ class AwardsService:
         Returns:
             List of approval levels in order (e.g., ["MANAGER", "DEPT_HEAD", "HR"])
         """
-        if not award_type.approval_workflow:
+        if not award_type.approval_workflow or not award_type.approval_workflow.strip():
             # Default workflow: MANAGER -> DEPT_HEAD -> HR
             return ["MANAGER", "DEPT_HEAD", "HR"]
         
-        # Parse comma-separated workflow
-        levels = [level.strip().upper() for level in award_type.approval_workflow.split(",")]
-        return levels
+        # Parse comma-separated workflow, drop any blank tokens
+        levels = [level.strip().upper() for level in award_type.approval_workflow.split(",") if level.strip()]
+        return levels if levels else ["MANAGER", "DEPT_HEAD", "HR"]
     
     def _get_existing_approvals(self, award_id: int) -> List[str]:
         """

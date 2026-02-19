@@ -75,12 +75,19 @@ class RecognitionService:
         if not badge or not badge.is_active:
             raise ValueError("Invalid or inactive badge selected.")
 
-        # 2. Get points value from policy
-        policy = self.db.query(PointsPolicy).filter(
-            PointsPolicy.recognition_type == "ECARD",
-            PointsPolicy.is_active == True
-        ).first()
-        points = policy.points if policy else 100  # Default to 100 if no policy found
+        # 2. Get points value — priority:
+        #    1) badge.points column (set per-badge via HR Badges tab)
+        #    2) generic ECARD policy row (event_key IS NULL) — org-wide default
+        #    3) hardcoded fallback of 50
+        if badge.points is not None:
+            points = badge.points
+        else:
+            generic_policy = self.db.query(PointsPolicy).filter(
+                PointsPolicy.recognition_type == "ECARD",
+                PointsPolicy.event_key == None,
+                PointsPolicy.is_active == True
+            ).first()
+            points = generic_policy.points if generic_policy else 50
 
         # 3. Create eCard record
         ecard = ECard(

@@ -33,7 +33,7 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
 
   @override
   Future<List<NominationModel>> getNominations() async {
-    final response = await client.get(ApiConstants.nominations);
+    final response = await client.get('${ApiConstants.nominations}?limit=200');
     if (response.statusCode == 200) {
       final List data = response.data['data'] ?? [];
       return data.map((json) => NominationModel.fromJson(json)).toList();
@@ -90,7 +90,7 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
   Future<AwardTypeModel> updateAwardType(
       int id, Map<String, dynamic> data) async {
     final response =
-        await client.patch('${ApiConstants.awardTypes}types/$id', data: data);
+        await client.put('${ApiConstants.awardTypes}$id', data: data);
     if (response.statusCode == 200) {
       return AwardTypeModel.fromJson(response.data['data']);
     }

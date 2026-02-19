@@ -11,6 +11,7 @@ class BadgeBase(BaseModel):
     name: str
     description: Optional[str] = None
     icon_url: Optional[str] = None
+    points: Optional[int] = None
     is_active: bool = True
 
 
@@ -24,6 +25,7 @@ class BadgeUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     icon_url: Optional[str] = None
+    points: Optional[int] = None
     is_active: Optional[bool] = None
 
 

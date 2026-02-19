@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/nomination_entity.dart';
+import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
 import '../widgets/nominate_employee_dialog.dart';
 
+/// Employee Nomination Tracker — read-only view.
+///
+/// Tabs:
+/// • Submitted – nominations this employee created
+/// • Received  – approved awards where the employee is the nominee
+/// • All       – every nomination the employee is involved in
+///
+/// Employees do NOT have approve/reject authority.
 class EmployeeApprovalsPage extends StatelessWidget {
   const EmployeeApprovalsPage({super.key});
 
@@ -33,11 +44,29 @@ class _ApprovalsView extends StatefulWidget {
 class _ApprovalsViewState extends State<_ApprovalsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int? _myId;
+  bool _idLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final res = await sl<ApiClient>().get(ApiConstants.profile);
+      final data = res.data['data'] ?? res.data ?? {};
+      if (mounted) {
+        setState(() {
+          _myId = data['id'];
+          _idLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _idLoading = false);
+    }
   }
 
   @override
@@ -46,6 +75,69 @@ class _ApprovalsViewState extends State<_ApprovalsView>
     super.dispose();
   }
 
+  // ── helpers ──────────────────────────────────────────────────────
+  String _resolveName(
+      NominationEntity n, bool isNominee, List<UserEntity> users) {
+    final name = isNominee ? n.nomineeName : n.nominatorName;
+    final id = isNominee ? n.nomineeId : n.nominatorId;
+    if (name != 'Unknown') return name;
+    return users.where((u) => u.id == id).map((u) => u.name).firstOrNull ??
+        'Unknown';
+  }
+
+  Color _statusColor(String s) {
+    switch (s.toUpperCase()) {
+      case 'APPROVED':
+        return const Color(0xFF16A34A);
+      case 'REJECTED':
+        return const Color(0xFFDC2626);
+      case 'PENDING':
+        return const Color(0xFFF59E0B);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _statusLabel(NominationEntity n) {
+    if (n.status.toUpperCase() != 'PENDING' || n.nextRequiredLevel == null) {
+      return n.status;
+    }
+    switch (n.nextRequiredLevel!.toUpperCase()) {
+      case 'MANAGER':
+        return 'Awaiting Manager';
+      case 'DEPT_HEAD':
+        return 'Awaiting Dept Head';
+      case 'HR':
+        return 'Awaiting HR';
+      default:
+        return 'Pending';
+    }
+  }
+
+  String _fmtDate(String d) {
+    try {
+      final dt = DateTime.parse(d);
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return d;
+    }
+  }
+
+  // ── build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -73,17 +165,27 @@ class _ApprovalsViewState extends State<_ApprovalsView>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Header ──────────────────────────────────────────
               Row(
                 children: [
                   Expanded(
-                    child: Text('Nominations & Approvals',
-                        style: GoogleFonts.outfit(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('My Nominations',
+                            style: GoogleFonts.outfit(
+                                fontSize: 20, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('Track your nominations and awards',
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey.shade500)),
+                      ],
+                    ),
                   ),
                   BlocBuilder<NominationsBloc, NominationsState>(
                     builder: (context, state) {
                       return ElevatedButton.icon(
-                        onPressed: (state.awardTypes.isEmpty)
+                        onPressed: state.awardTypes.isEmpty
                             ? null
                             : () => showDialog(
                                   context: context,
@@ -94,10 +196,9 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                                   ),
                                 ),
                         icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Nominate Employee'),
+                        label: const Text('Nominate'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
+                          backgroundColor: theme.colorScheme.primary,
                           foregroundColor: Colors.white,
                           minimumSize: Size.zero,
                           padding: const EdgeInsets.symmetric(
@@ -113,6 +214,8 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                 ],
               ),
               const SizedBox(height: 24),
+
+              // ── Tabs ────────────────────────────────────────────
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -126,36 +229,70 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                       labelColor: theme.colorScheme.primary,
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: theme.colorScheme.primary,
+                      labelStyle: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w600),
                       tabs: const [
-                        Tab(text: 'All Nominations'),
-                        Tab(text: 'Pending'),
-                        Tab(text: 'Resolved'),
+                        Tab(text: 'Submitted'),
+                        Tab(text: 'Received'),
+                        Tab(text: 'All Activity'),
                       ],
                     ),
                     BlocBuilder<NominationsBloc, NominationsState>(
                       builder: (context, state) {
-                        if (state.status == NominationsStatus.loading &&
-                            state.nominations.isEmpty) {
+                        if ((state.status == NominationsStatus.loading &&
+                                state.nominations.isEmpty) ||
+                            _idLoading) {
                           return const Padding(
                             padding: EdgeInsets.all(48.0),
                             child: Center(child: CircularProgressIndicator()),
                           );
                         }
 
-                        final all = state.nominations;
-                        final pending =
-                            all.where((n) => n.status == 'PENDING').toList();
-                        final resolved =
-                            all.where((n) => n.status != 'PENDING').toList();
+                        // Nominations I submitted
+                        final submitted = _myId == null
+                            ? state.nominations
+                            : state.nominations
+                                .where((n) => n.nominatorId == _myId)
+                                .toList();
+
+                        // Approved awards where I'm the nominee
+                        final received = _myId == null
+                            ? <NominationEntity>[]
+                            : state.nominations
+                                .where((n) =>
+                                    n.nomineeId == _myId &&
+                                    n.status == 'APPROVED')
+                                .toList();
+
+                        // All nominations I'm involved in
+                        final allMine = _myId == null
+                            ? state.nominations
+                            : state.nominations
+                                .where((n) =>
+                                    n.nominatorId == _myId ||
+                                    n.nomineeId == _myId)
+                                .toList();
 
                         return SizedBox(
-                          height: 500,
+                          height: 520,
                           child: TabBarView(
                             controller: _tabController,
                             children: [
-                              _buildNominationsList(context, all),
-                              _buildNominationsList(context, pending),
-                              _buildNominationsList(context, resolved),
+                              _buildList(
+                                  submitted,
+                                  state.users,
+                                  'You haven\'t submitted any nominations yet',
+                                  Icons.outbox_rounded),
+                              _buildList(
+                                  received,
+                                  state.users,
+                                  'No awards received yet',
+                                  Icons.workspace_premium_outlined),
+                              _buildList(
+                                  allMine,
+                                  state.users,
+                                  'No nomination activity',
+                                  Icons.inbox_rounded),
                             ],
                           ),
                         );
@@ -171,210 +308,190 @@ class _ApprovalsViewState extends State<_ApprovalsView>
     );
   }
 
-  Widget _buildNominationsList(
-      BuildContext context, List<NominationEntity> nominations) {
-    if (nominations.isEmpty) {
+  Widget _buildList(List<NominationEntity> items, List<UserEntity> users,
+      String emptyMsg, IconData emptyIcon) {
+    if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_rounded, size: 48, color: Colors.grey.shade400),
+            Icon(emptyIcon, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            Text('No nominations found',
-                style: TextStyle(color: Colors.grey.shade500)),
+            Text(emptyMsg,
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
           ],
         ),
       );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: nominations.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final nom = nominations[index];
-        return _buildNominationCard(context, nom);
-      },
+      padding: const EdgeInsets.all(14),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => _buildCard(items[i], users),
     );
   }
 
-  Widget _buildNominationCard(BuildContext context, NominationEntity nom) {
-    final statusColor = _getStatusColor(nom.status);
+  Widget _buildCard(NominationEntity n, List<UserEntity> users) {
+    final color = _statusColor(n.status);
+    final nominee = _resolveName(n, true, users);
+    final nominator = _resolveName(n, false, users);
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.emoji_events_rounded,
-                    color: Colors.amber.shade700, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Accent bar
+          Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.6),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Award type + status
+                Row(
                   children: [
-                    Text(nom.awardTypeName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 14)),
-                    Text('Nominee: ${nom.nomineeName}',
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.emoji_events_rounded,
+                          color: Colors.amber.shade700, size: 17),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        n.awardTypeName.isEmpty ? 'Award' : n.awardTypeName,
+                        style: GoogleFonts.outfit(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _statusLabel(n),
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600)),
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
+                const SizedBox(height: 10),
+                Divider(height: 1, color: Colors.grey.shade100),
+                const SizedBox(height: 10),
+                // Nominee / Nominator
+                Row(
+                  children: [
+                    Expanded(
+                        child: _infoCell(
+                            Icons.person_outline_rounded, 'Nominee', nominee)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: _infoCell(Icons.how_to_reg_outlined,
+                            'Nominated by', nominator)),
+                  ],
                 ),
-                child: Text(
-                  nom.status,
-                  style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          if (nom.justification.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(nom.justification,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text('By ${nom.nominatorName}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-              const Spacer(),
-              Text(_formatDate(nom.createdAt),
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            ],
-          ),
-          if (nom.status == 'PENDING') ...[
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _showActionDialog(context, nom.id, false),
-                  icon: const Icon(Icons.close, size: 16),
-                  label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _showActionDialog(context, nom.id, true),
-                  icon: const Icon(Icons.check, size: 16),
-                  label: const Text('Approve'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size.zero,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
+                if (n.justification.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(n.justification,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          height: 1.4)),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_rounded,
+                        size: 12, color: Colors.grey.shade400),
+                    const SizedBox(width: 4),
+                    Text(_fmtDate(n.createdAt),
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade400)),
+                    if (n.status == 'APPROVED' && n.pointsAwarded != null) ...[
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF16A34A).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '+${n.pointsAwarded} pts',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF16A34A)),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  void _showActionDialog(
-      BuildContext context, int nominationId, bool isApprove) {
-    final commentsController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(isApprove ? 'Approve Nomination' : 'Reject Nomination'),
-          content: TextField(
-            controller: commentsController,
-            decoration: const InputDecoration(
-              labelText: 'Comments (optional)',
-            ),
-            maxLines: 3,
+  Widget _infoCell(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: Colors.grey.shade400),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade400,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 1),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (isApprove) {
-                  context.read<NominationsBloc>().add(
-                      ApproveNominationRequested(
-                          nominationId: nominationId,
-                          comments: commentsController.text.isEmpty
-                              ? null
-                              : commentsController.text));
-                } else {
-                  context.read<NominationsBloc>().add(RejectNominationRequested(
-                      nominationId: nominationId,
-                      comments: commentsController.text.isEmpty
-                          ? null
-                          : commentsController.text));
-                }
-                Navigator.of(dialogContext).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isApprove ? Colors.green : Colors.red,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-              ),
-              child: Text(isApprove ? 'Approve' : 'Reject'),
-            ),
-          ],
-        );
-      },
+        ),
+      ],
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'APPROVED':
-        return Colors.green;
-      case 'REJECTED':
-        return Colors.red;
-      case 'PENDING':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final dt = DateTime.parse(dateStr);
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
-      return dateStr;
-    }
   }
 }

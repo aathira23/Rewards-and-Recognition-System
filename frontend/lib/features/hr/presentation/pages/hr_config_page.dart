@@ -275,8 +275,8 @@ class _HrConfigPageState extends State<HrConfigPage>
     final descC = TextEditingController(text: existing?['description'] ?? '');
     final eligC =
         TextEditingController(text: existing?['eligibility_rule'] ?? '');
-    final workflowC =
-        TextEditingController(text: existing?['approval_workflow'] ?? '');
+    final workflowC = TextEditingController(
+        text: existing?['approval_workflow'] ?? 'MANAGER,DEPT_HEAD,HR');
 
     _showFormDialog(
       title: isEdit ? 'Edit Award Type' : 'Create Award Type',
@@ -351,22 +351,21 @@ class _HrConfigPageState extends State<HrConfigPage>
                 icon: Icons.military_tech_outlined, text: 'No badges yet'),
           if (_badges.isNotEmpty)
             _DataCard(
-              columns: const ['Name', 'Type', 'Description', 'Status', ''],
-              flexes: const [2, 2, 4, 1, 1],
+              columns: const ['Name', 'Description', 'Points', 'Status', ''],
+              flexes: const [2, 4, 1, 1, 1],
               rows: _badges.map((b) {
                 final isActive = b['is_active'] ?? true;
                 return [
                   Text(b['name']?.toString() ?? '',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600)),
-                  _TypeBadge(
-                      type: b['badge_type']?.toString() ??
-                          b['type']?.toString() ??
-                          ''),
                   Text(b['description']?.toString() ?? '—',
                       style:
                           TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       overflow: TextOverflow.ellipsis),
+                  Text('${b['points'] ?? 50} pts',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700)),
                   _StatusChip(isActive: isActive),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -419,34 +418,35 @@ class _HrConfigPageState extends State<HrConfigPage>
   void _showBadgeDialog({Map<String, dynamic>? existing}) {
     final isEdit = existing != null;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
-    final typeC = TextEditingController(
-        text: existing?['badge_type'] ?? existing?['type'] ?? '');
     final descC = TextEditingController(text: existing?['description'] ?? '');
+    final pointsC =
+        TextEditingController(text: existing?['points']?.toString() ?? '');
 
     _showFormDialog(
       title: isEdit ? 'Edit Badge' : 'Create Badge',
       fields: [
         _Field(label: 'Name', controller: nameC, hint: 'e.g. Star Performer'),
-        _Field(
-            label: 'Badge Type',
-            controller: typeC,
-            hint: 'PEER / AWARD / MILESTONE'),
         _Field(label: 'Description', controller: descC, maxLines: 2),
+        _Field(
+            label: 'Points',
+            controller: pointsC,
+            hint: 'e.g. 50',
+            isNumber: true),
       ],
       onSave: () async {
         final client = sl<ApiClient>();
+        final data = <String, dynamic>{
+          'name': nameC.text,
+          'description': descC.text,
+        };
+        if (pointsC.text.isNotEmpty) {
+          data['points'] = int.tryParse(pointsC.text);
+        }
         if (isEdit) {
-          await client.put('${ApiConstants.badges}/${existing['id']}', data: {
-            'name': nameC.text,
-            'badge_type': typeC.text,
-            'description': descC.text,
-          });
+          await client.put('${ApiConstants.badges}/${existing['id']}',
+              data: data);
         } else {
-          await client.post(ApiConstants.badges, data: {
-            'name': nameC.text,
-            'badge_type': typeC.text,
-            'description': descC.text,
-          });
+          await client.post(ApiConstants.badges, data: data);
         }
         _loadAll();
       },

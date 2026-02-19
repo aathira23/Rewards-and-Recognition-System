@@ -273,6 +273,9 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
   Widget _buildNominationCard(Map<String, dynamic> nom, ThemeData theme) {
     final status = nom['status']?.toString() ?? 'PENDING';
     final isPending = status == 'PENDING';
+    // Only show action buttons when it is specifically HR's turn to act
+    final isForHR = isPending &&
+        nom['next_required_level']?.toString().toUpperCase() == 'HR';
     final nomineeName = nom['nominee']?['name'] ??
         nom['nominee_name'] ??
         'User #${nom['nominee_id']}';
@@ -362,7 +365,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
               Text(_formatDate(createdAt),
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
               const Spacer(),
-              if (isPending) ...[
+              if (isForHR) ...[
                 OutlinedButton.icon(
                   onPressed: () => _showNomActionDialog(nom['id'], false),
                   icon: const Icon(Icons.close, size: 14),

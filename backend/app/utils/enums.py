@@ -113,7 +113,23 @@ class AwardFrequency(str, Enum):
 
 
 class EligibilityRule(str, Enum):
-    """Award eligibility rules."""
+    """
+    Award eligibility rules — defines who may nominate for an award.
+
+    MANAGER_ONLY  : Only Managers / Dept Heads / HR can nominate.
+                    Used for formal performance-based awards given top-down
+                    (e.g. Star Performer, Best Team Player, Rising Star).
+
+    PEER          : Any employee (including Managers / Dept Heads / HR) can
+                    nominate a colleague.  Used for culture / value awards where
+                    grassroots recognition matters (e.g. Above and Beyond,
+                    Spot Award).
+
+    SENIOR_MGMT   : Dept Heads and HR only.  Used for high-value org-wide or
+                    cross-functional awards that require senior visibility
+                    (e.g. Innovation Award, Leadership Excellence,
+                    Special Achievement).
+    """
     MANAGER_ONLY = "MANAGER_ONLY"
-    PEER = "PEER"
-    CROSS_DEPT = "CROSS_DEPT"
+    PEER         = "PEER"
+    SENIOR_MGMT  = "SENIOR_MGMT"

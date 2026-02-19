@@ -33,7 +33,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<List<UserModel>> getUsers() async {
     final response = await client.get(
-      ApiConstants.users,
+      '${ApiConstants.users}?limit=500',
     );
 
     if (response.statusCode == 200) {

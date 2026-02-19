@@ -9,6 +9,7 @@ import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
 import '../widgets/nominate_employee_dialog.dart';
 import '../../domain/entities/nomination_entity.dart';
+import '../../../profile/domain/entities/user_entity.dart';
 
 /// Employee-only nominations page.
 ///
@@ -216,8 +217,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                           child: TabBarView(
                             controller: _tabController,
                             children: [
-                              _buildSubmittedList(context, state, submitted),
-                              _buildReceivedList(context, received),
+                              _buildSubmittedList(
+                                  context, state, submitted, state.users),
+                              _buildReceivedList(
+                                  context, received, state.users),
                             ],
                           ),
                         );
@@ -235,7 +238,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
 
   // ── My Nominations tab ──────────────────────────────────────────
   Widget _buildSubmittedList(BuildContext context, NominationsState state,
-      List<NominationEntity> nominations) {
+      List<NominationEntity> nominations, List<UserEntity> users) {
     if (nominations.isEmpty) {
       return Center(
         child: Column(
@@ -258,14 +261,14 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
       padding: const EdgeInsets.all(16),
       itemCount: nominations.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) =>
-          _buildNominationCard(nominations[index], canAction: false),
+      itemBuilder: (context, index) => _buildNominationCard(nominations[index],
+          users: users, canAction: false),
     );
   }
 
   // ── Awards Received tab ─────────────────────────────────────────
-  Widget _buildReceivedList(
-      BuildContext context, List<NominationEntity> received) {
+  Widget _buildReceivedList(BuildContext context,
+      List<NominationEntity> received, List<UserEntity> users) {
     if (received.isEmpty) {
       return Center(
         child: Column(
@@ -288,145 +291,285 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
       padding: const EdgeInsets.all(16),
       itemCount: received.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _buildReceivedCard(received[index]),
+      itemBuilder: (context, index) =>
+          _buildReceivedCard(received[index], users),
     );
   }
 
-  Widget _buildNominationCard(NominationEntity nom, {required bool canAction}) {
+  Widget _buildNominationCard(NominationEntity nom,
+      {required bool canAction, List<UserEntity> users = const []}) {
+    final nomineeName = nom.nomineeName == 'Unknown'
+        ? users
+                .where((u) => u.id == nom.nomineeId)
+                .map((u) => u.name)
+                .firstOrNull ??
+            'Unknown'
+        : nom.nomineeName;
+    final nominatorName = nom.nominatorName == 'Unknown'
+        ? users
+                .where((u) => u.id == nom.nominatorId)
+                .map((u) => u.name)
+                .firstOrNull ??
+            'Unknown'
+        : nom.nominatorName;
+
+    final statusColor = _statusColor(nom.status.toUpperCase());
+
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.emoji_events_rounded,
-                    color: Colors.amber.shade700, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Top accent bar matching status colour
+          Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.6),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Award name row + status badge
+                Row(
                   children: [
-                    Text(nom.awardTypeName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 14)),
-                    Text('Nominee: ${nom.nomineeName}',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600)),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.emoji_events_rounded,
+                          color: Colors.amber.shade700, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        nom.awardTypeName,
+                        style: GoogleFonts.outfit(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    _statusBadge(nom),
                   ],
                 ),
-              ),
-              _statusBadge(nom),
-            ],
-          ),
-          if (nom.justification.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(nom.justification,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text('Submitted ${_formatDate(nom.createdAt)}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-              if (nom.status == 'APPROVED' && nom.pointsAwarded != null) ...[
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Text(
-                    '+${nom.pointsAwarded} pts awarded',
+                const SizedBox(height: 12),
+                const Divider(height: 1, thickness: 1),
+                const SizedBox(height: 10),
+                // Nominee + Nominator row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _infoCell(
+                          Icons.person_outline_rounded, 'Nominee', nomineeName),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _infoCell(Icons.how_to_reg_outlined,
+                          'Nominated by', nominatorName),
+                    ),
+                  ],
+                ),
+                if (nom.justification.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    nom.justification,
                     style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.green.shade700),
+                        fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_rounded,
+                        size: 12, color: Colors.grey.shade400),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(nom.createdAt),
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    ),
+                    if (nom.status == 'APPROVED' &&
+                        nom.pointsAwarded != null) ...[
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Text(
+                          '+${nom.pointsAwarded} pts',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green.shade700),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildReceivedCard(NominationEntity nom) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.amber.shade50,
-            Colors.orange.shade50,
-          ],
+  Widget _infoCell(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: Colors.grey.shade400),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade400,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 1),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.amber.shade200),
+      ],
+    );
+  }
+
+  Widget _buildReceivedCard(NominationEntity nom, List<UserEntity> users) {
+    final nominatorName = nom.nominatorName == 'Unknown'
+        ? users
+                .where((u) => u.id == nom.nominatorId)
+                .map((u) => u.name)
+                .firstOrNull ??
+            'Unknown'
+        : nom.nominatorName;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
         children: [
+          // Gold accent bar
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.workspace_premium_rounded,
-                color: Colors.amber.shade800, size: 28),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(nom.awardTypeName,
-                    style: GoogleFonts.outfit(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text('Nominated by ${nom.nominatorName}',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                const SizedBox(height: 4),
-                Text(_formatDate(nom.createdAt),
-                    style:
-                        TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-              ],
+            height: 3,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFFBBF24)]),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
           ),
-          if (nom.pointsAwarded != null)
-            Column(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
               children: [
-                Text(
-                  '+${nom.pointsAwarded}',
-                  style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber.shade800),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.workspace_premium_rounded,
+                      color: Colors.amber.shade700, size: 26),
                 ),
-                Text('points',
-                    style:
-                        TextStyle(fontSize: 10, color: Colors.amber.shade700)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nom.awardTypeName,
+                        style: GoogleFonts.outfit(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.how_to_reg_outlined,
+                              size: 12, color: Colors.grey.shade400),
+                          const SizedBox(width: 4),
+                          Text(
+                            'By $nominatorName',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule_rounded,
+                              size: 12, color: Colors.grey.shade400),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDate(nom.createdAt),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade400),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (nom.pointsAwarded != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '+${nom.pointsAwarded}',
+                        style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade700),
+                      ),
+                      Text('pts',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.amber.shade600,
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ),
               ],
             ),
+          ),
         ],
       ),
     );
