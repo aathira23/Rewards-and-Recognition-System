@@ -17,7 +17,7 @@ from app.utils.response import success, created, client_error, conflict, server_
 router = APIRouter()
 
 
-@router.post("/", response_model=ECardResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def send_recognition(
     ecard_in: ECardCreate,
     db: Session = Depends(get_db),
@@ -38,12 +38,12 @@ def send_recognition(
             data.sender.department_name = ecard.sender.department.name if ecard.sender.department else None
         if data.receiver and ecard.receiver:
             data.receiver.department_name = ecard.receiver.department.name if ecard.receiver.department else None
-        return created(data=data, message="Recognition sent successfully")
+        return created(data=data.model_dump(), message="Recognition sent successfully")
     except ValueError as e:
         return client_error(message=str(e))
 
 
-@router.get("/feed", response_model=List[RecognitionFeedResponse])
+@router.get("/feed")
 def get_recognition_feed(
     skip: int = 0,
     limit: int = 20,
@@ -61,7 +61,7 @@ def get_recognition_feed(
             feed_item.actor.department_name = item.actor.department.name if item.actor.department else None
         if feed_item.receiver and item.receiver:
             feed_item.receiver.department_name = item.receiver.department.name if item.receiver.department else None
-        data.append(feed_item)
+        data.append(feed_item.model_dump())
     return success(data=data, message="Feed retrieved")
 
 
@@ -73,18 +73,11 @@ def get_my_appreciation_overview(
     """Get recognitions received and sent by current user."""
     service = RecognitionService(db)
     overview = service.get_appreciation_overview(user_id=current_user_id)
-
-    # Serialize ORM ECard objects to JSON-safe dicts using ECardResponse schema
-    data = {
-        "received": [ECardResponse.model_validate(e).model_dump() for e in overview["received"]],
-        "sent": [ECardResponse.model_validate(e).model_dump() for e in overview["sent"]],
-        "total_received": overview["total_received"],
-        "total_sent": overview["total_sent"],
-    }
-    return success(data=data, message="Overview retrieved")
+    # Service already returns serialized data, use it directly
+    return success(data=overview, message="Overview retrieved")
 
 
-@router.get("/leaderboard", response_model=List[LeaderboardEntry])
+@router.get("/leaderboard")
 def get_leaderboard(
     period: str = "MONTHLY",  # MONTHLY, YEARLY
     metric: str = "POINTS",   # POINTS, COUNT
@@ -99,7 +92,7 @@ def get_leaderboard(
 
 
 # Badges (Used for eCards)
-@router.post("/badges", response_model=BadgeResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/badges", status_code=status.HTTP_201_CREATED)
 def create_badge(
     badge: BadgeCreate,
     db: Session = Depends(get_db),
@@ -111,7 +104,6 @@ def create_badge(
         return client_error(message="Only HR/Admin can create badges", status_code=403)
         
     service = RecognitionService(db)
-    service = RecognitionService(db)
     try:
         badge_obj = service.create_badge(
             name=badge.name,
@@ -119,7 +111,7 @@ def create_badge(
             icon_url=badge.icon_url
         )
         data = BadgeResponse.model_validate(badge_obj)
-        return created(data=data, message="Badge created")
+        return created(data=data.model_dump(), message="Badge created")
     except ValueError as e:
         # Duplicate badge name
         return conflict(message=str(e), data={"field": "name", "value": badge.name})
@@ -127,7 +119,7 @@ def create_badge(
         return server_error(message="Failed to create badge", data=None)
 
 
-@router.put("/badges/{badge_id}", response_model=BadgeResponse)
+@router.put("/badges/{badge_id}")
 def update_badge(
     badge_id: int,
     badge: BadgeUpdate,
@@ -143,12 +135,12 @@ def update_badge(
     try:
         updated = service.update_badge(badge_id, badge.model_dump(exclude_unset=True))
         data = BadgeResponse.model_validate(updated)
-        return success(data=data, message="Badge updated")
+        return success(data=data.model_dump(), message="Badge updated")
     except ValueError as e:
         return client_error(message=str(e), status_code=status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/badges", response_model=List[BadgeResponse])
+@router.get("/badges")
 def get_badges(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
@@ -156,11 +148,11 @@ def get_badges(
     """Get all badges."""
     service = RecognitionService(db)
     badges = service.get_badges()
-    data = [BadgeResponse.model_validate(b) for b in badges]
+    data = [BadgeResponse.model_validate(b).model_dump() for b in badges]
     return success(data=data, message="Badges retrieved")
 
 
-@router.get("/{recognition_id}", response_model=ECardResponse)
+@router.get("/{recognition_id}")
 def get_recognition(
     recognition_id: int,
     db: Session = Depends(get_db),
@@ -183,4 +175,4 @@ def get_recognition(
         data.sender.department_name = ecard.sender.department.name if ecard.sender.department else None
     if data.receiver and ecard.receiver:
         data.receiver.department_name = ecard.receiver.department.name if ecard.receiver.department else None
-    return success(data=data, message="Recognition found")
+    return success(data=data.model_dump(), message="Recognition found")
