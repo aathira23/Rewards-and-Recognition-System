@@ -11,11 +11,20 @@ class GetPointsSummaryRequested extends PointsEvent {}
 
 class GetPointsHistoryRequested extends PointsEvent {
   final int page;
+  final String? category;
+  final String? startDate;
+  final String? endDate;
 
-  const GetPointsHistoryRequested({this.page = 1});
+  const GetPointsHistoryRequested({
+    this.page = 1,
+    this.category,
+    this.startDate,
+    this.endDate,
+  });
 
   @override
-  List<Object> get props => [page];
+  List<Object> get props =>
+      [page, category ?? '', startDate ?? '', endDate ?? ''];
 }
 
 class GetLeaderboardRequested extends PointsEvent {

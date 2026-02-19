@@ -9,6 +9,7 @@ class PointsState extends Equatable {
   final PointsStatus status;
   final PointsSummaryEntity? summary;
   final List<PointTransactionEntity> history;
+  final int historyTotal;
   final List<LeaderboardEntryEntity> leaderboard;
   final bool hasReachedMax;
   final String? errorMessage;
@@ -18,6 +19,7 @@ class PointsState extends Equatable {
     this.status = PointsStatus.initial,
     this.summary,
     this.history = const [],
+    this.historyTotal = 0,
     this.leaderboard = const [],
     this.hasReachedMax = false,
     this.errorMessage,
@@ -28,6 +30,7 @@ class PointsState extends Equatable {
     PointsStatus? status,
     PointsSummaryEntity? summary,
     List<PointTransactionEntity>? history,
+    int? historyTotal,
     List<LeaderboardEntryEntity>? leaderboard,
     bool? hasReachedMax,
     String? errorMessage,
@@ -37,6 +40,7 @@ class PointsState extends Equatable {
       status: status ?? this.status,
       summary: summary ?? this.summary,
       history: history ?? this.history,
+      historyTotal: historyTotal ?? this.historyTotal,
       leaderboard: leaderboard ?? this.leaderboard,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       errorMessage: errorMessage,
@@ -49,6 +53,7 @@ class PointsState extends Equatable {
         status,
         summary,
         history,
+        historyTotal,
         leaderboard,
         hasReachedMax,
         errorMessage,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../injection_container.dart';
 import '../bloc/points_bloc.dart';
 import '../bloc/points_event.dart';
@@ -20,17 +22,36 @@ class _PointsPageState extends State<PointsPage> {
   String _currentPeriod = 'MONTHLY';
   late PointsBloc _bloc;
 
+  // History filters
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String? _category; // null = all, 'received', 'spent', 'pending', 'expired'
+  int _page = 1;
+  static const _perPage = 20;
+
   @override
   void initState() {
     super.initState();
     _bloc = sl<PointsBloc>();
-    _refreshData();
+    _refreshAll();
   }
 
-  void _refreshData() {
+  void _refreshAll() {
     _bloc.add(GetPointsSummaryRequested());
-    _bloc.add(const GetPointsHistoryRequested());
+    _fetchHistory(page: 1);
     _bloc.add(GetLeaderboardRequested(period: _currentPeriod));
+  }
+
+  void _fetchHistory({int page = 1}) {
+    setState(() => _page = page);
+    _bloc.add(GetPointsHistoryRequested(
+      page: page,
+      category: _category,
+      startDate:
+          _startDate != null ? DateFormat('yyyy-MM-dd').format(_startDate!) : null,
+      endDate:
+          _endDate != null ? DateFormat('yyyy-MM-dd').format(_endDate!) : null,
+    ));
   }
 
   @override
@@ -47,33 +68,23 @@ class _PointsPageState extends State<PointsPage> {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (state.status == PointsStatus.failure &&
-                state.summary == null &&
-                state.leaderboard.isEmpty) {
-              return Center(child: Text('Error: ${state.errorMessage}'));
-            }
-
             return RefreshIndicator(
-              onRefresh: () async {
-                _refreshData();
-              },
+              onRefresh: () async => _refreshAll(),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Points Overview',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 24),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Left Column: Wallet & History
+                        // Left: wallet card + history table
                         Expanded(
                           flex: 65,
                           child: Column(
@@ -84,67 +95,24 @@ class _PointsPageState extends State<PointsPage> {
                                   summary: state.summary!,
                                   userRole: widget.userRole,
                                 ),
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 28),
                               ],
-                              const Text(
-                                'Transaction History',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              if (state.history.isEmpty)
-                                const Center(
-                                    child: Padding(
-                                  padding: EdgeInsets.all(32.0),
-                                  child: Text('No transactions yet'),
-                                ))
-                              else
-                                ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: state.history.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildTransactionItem(
-                                        state.history[index]);
-                                  },
-                                ),
+                              _buildHistorySection(state),
                             ],
                           ),
                         ),
                         const SizedBox(width: 24),
-                        // Right Column: Leaderboard
+                        // Right: leaderboard
                         Expanded(
                           flex: 35,
-                          child: Column(
-                            children: [
-                              if (state.status == PointsStatus.loading &&
-                                  state.leaderboard.isEmpty)
-                                const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(32.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              else if (state.status == PointsStatus.failure &&
-                                  state.leaderboard.isEmpty)
-                                _buildErrorCard(state.errorMessage ??
-                                    'Failed to load leaderboard')
-                              else
-                                LeaderboardPanel(
-                                  entries: state.leaderboard,
-                                  currentPeriod: _currentPeriod,
-                                  onPeriodChanged: (period) {
-                                    setState(() {
-                                      _currentPeriod = period;
-                                    });
-                                    _bloc.add(GetLeaderboardRequested(
-                                        period: period));
-                                  },
-                                ),
-                            ],
+                          child: LeaderboardPanel(
+                            entries: state.leaderboard,
+                            currentPeriod: _currentPeriod,
+                            onPeriodChanged: (period) {
+                              setState(() => _currentPeriod = period);
+                              _bloc.add(
+                                  GetLeaderboardRequested(period: period));
+                            },
                           ),
                         ),
                       ],
@@ -159,82 +127,423 @@ class _PointsPageState extends State<PointsPage> {
     );
   }
 
-  Widget _buildErrorCard(String message) {
-    return Card(
-      color: Colors.red.shade50,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.red.shade900, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTransactionItem(PointTransactionEntity transaction) {
-    final isCredit = transaction.points.startsWith('+');
-    final color = isCredit ? Colors.green : Colors.red;
-    final icon =
-        isCredit ? Icons.add_circle_outline : Icons.remove_circle_outline;
-
+  // ─── History section ────────────────────────────────────────────
+  Widget _buildHistorySection(PointsState state) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildFilterBar(),
+          const Divider(height: 1),
+          _buildTableHeader(),
+          const Divider(height: 1),
+          if (state.status == PointsStatus.loading && state.history.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (state.history.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Center(
+                child: Text(
+                  'No transactions found',
+                  style:
+                      TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                ),
+              ),
+            )
+          else
+            ...state.history.asMap().entries.map((e) =>
+                _buildRow(e.value, e.key == state.history.length - 1)),
+          _buildFooter(state),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.description,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  transaction.date,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
           Text(
-            transaction.points,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+            'Points History',
+            style: GoogleFonts.inter(
+                fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const Spacer(),
+          // From date
+          _DateChip(
+            label: _startDate != null
+                ? DateFormat('dd/MM/yyyy').format(_startDate!)
+                : 'mm/dd/yyyy',
+            isSet: _startDate != null,
+            onTap: () async {
+              final d = await showDatePicker(
+                context: context,
+                initialDate: _startDate ?? DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              if (d != null) {
+                setState(() => _startDate = d);
+                _fetchHistory();
+              }
+            },
+            onClear: _startDate != null
+                ? () {
+                    setState(() => _startDate = null);
+                    _fetchHistory();
+                  }
+                : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text('to',
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          ),
+          // To date
+          _DateChip(
+            label: _endDate != null
+                ? DateFormat('dd/MM/yyyy').format(_endDate!)
+                : 'mm/dd/yyyy',
+            isSet: _endDate != null,
+            onTap: () async {
+              final d = await showDatePicker(
+                context: context,
+                initialDate: _endDate ?? DateTime.now(),
+                firstDate: _startDate ?? DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              if (d != null) {
+                setState(() => _endDate = d);
+                _fetchHistory();
+              }
+            },
+            onClear: _endDate != null
+                ? () {
+                    setState(() => _endDate = null);
+                    _fetchHistory();
+                  }
+                : null,
+          ),
+          const SizedBox(width: 10),
+          // Type dropdown
+          _TypeDropdown(
+            value: _category,
+            onChanged: (v) {
+              setState(() => _category = v);
+              _fetchHistory();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      color: Colors.grey.shade50,
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: _hdr('DATE')),
+          Expanded(flex: 4, child: _hdr('DESCRIPTION')),
+          Expanded(flex: 2, child: _hdr('TYPE')),
+          Expanded(flex: 2, child: _hdr('POINTS')),
+          const SizedBox(width: 28),
+        ],
+      ),
+    );
+  }
+
+  Widget _hdr(String label) => Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: Colors.grey.shade500,
+        ),
+      );
+
+  Widget _buildRow(PointTransactionEntity tx, bool isLast) {
+    final isCredit = tx.points.startsWith('+');
+    final ptColor =
+        isCredit ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+
+    return Container(
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : Border(bottom: BorderSide(color: Colors.grey.shade100)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              tx.date,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: Text(
+              tx.description,
+              style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _TypeBadge(type: tx.type),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              tx.points,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: ptColor,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 28,
+            child: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert,
+                  size: 18, color: Colors.grey.shade400),
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                    value: 'details', child: Text('View Details')),
+              ],
+              onSelected: (_) {},
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFooter(PointsState state) {
+    final total = state.historyTotal;
+    final showing = state.history.length;
+    final start = (_page - 1) * _perPage + 1;
+    final end = start + showing - 1;
+    final hasPrev = _page > 1;
+    final hasNext = total > 0 && end < total;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Row(
+        children: [
+          if (total > 0)
+            Text(
+              'Showing $start\u2013$end of $total records',
+              style:
+                  TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            )
+          else
+            Text(
+              '$showing record${showing == 1 ? '' : 's'}',
+              style:
+                  TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
+          const Spacer(),
+          if (total > _perPage) ...[
+            _PageBtn(
+              icon: Icons.chevron_left,
+              enabled: hasPrev,
+              onTap:
+                  hasPrev ? () => _fetchHistory(page: _page - 1) : null,
+            ),
+            const SizedBox(width: 6),
+            _PageBtn(
+              icon: Icons.chevron_right,
+              enabled: hasNext,
+              onTap:
+                  hasNext ? () => _fetchHistory(page: _page + 1) : null,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Private widgets
+// ═══════════════════════════════════════════════════════════════════
+
+class _TypeBadge extends StatelessWidget {
+  final String type;
+  const _TypeBadge({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = type.toLowerCase();
+    final Color bg;
+    final Color fg;
+    if (t == 'earned' || t == 'received') {
+      bg = const Color(0xFFDCFCE7);
+      fg = const Color(0xFF16A34A);
+    } else if (t == 'redeemed' || t == 'spent') {
+      bg = const Color(0xFFFEF3C7);
+      fg = const Color(0xFFD97706);
+    } else if (t == 'pending') {
+      bg = const Color(0xFFDBEAFE);
+      fg = const Color(0xFF2563EB);
+    } else {
+      bg = Colors.grey.shade100;
+      fg = Colors.grey.shade600;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        type,
+        style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+      ),
+    );
+  }
+}
+
+class _DateChip extends StatelessWidget {
+  final String label;
+  final bool isSet;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+  const _DateChip({
+    required this.label,
+    required this.isSet,
+    required this.onTap,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.calendar_today_outlined,
+                size: 14, color: Colors.grey.shade500),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: isSet ? Colors.black87 : Colors.grey.shade500),
+            ),
+            if (isSet && onClear != null) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close,
+                    size: 13, color: Colors.grey.shade500),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TypeDropdown extends StatelessWidget {
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  const _TypeDropdown({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          style:
+              const TextStyle(fontSize: 12, color: Colors.black87),
+          icon: Icon(Icons.keyboard_arrow_down,
+              size: 16, color: Colors.grey.shade500),
+          items: const [
+            DropdownMenuItem(value: null, child: Text('All Types')),
+            DropdownMenuItem(
+                value: 'received', child: Text('Earned')),
+            DropdownMenuItem(
+                value: 'spent', child: Text('Redeemed')),
+            DropdownMenuItem(
+                value: 'pending', child: Text('Pending')),
+            DropdownMenuItem(
+                value: 'expired', child: Text('Expired')),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onTap;
+  const _PageBtn(
+      {required this.icon, required this.enabled, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(icon,
+            size: 18,
+            color: enabled
+                ? Colors.grey.shade700
+                : Colors.grey.shade300),
       ),
     );
   }

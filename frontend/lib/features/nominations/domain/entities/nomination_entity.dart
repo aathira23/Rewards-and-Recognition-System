@@ -8,6 +8,7 @@ class NominationEntity extends Equatable {
   final String nominatorName;
   final int awardTypeId;
   final String awardTypeName;
+  final String? nextRequiredLevel;
   final String status;
   final int? pointsAwarded;
   final String justification;
@@ -25,8 +26,22 @@ class NominationEntity extends Equatable {
     this.pointsAwarded,
     required this.justification,
     required this.createdAt,
+    this.nextRequiredLevel,
   });
 
   @override
-  List<Object?> get props => [id, nomineeId, nominatorId, awardTypeId, status];
+  List<Object?> get props => [
+        id,
+        nomineeId,
+        nomineeName,
+        nominatorId,
+        nominatorName,
+        awardTypeId,
+        awardTypeName,
+        status,
+        pointsAwarded,
+        justification,
+        createdAt,
+        nextRequiredLevel,
+      ];
 }

@@ -65,7 +65,7 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
   Future<void> approveNomination(int nominationId, {String? comments}) async {
     await client.post(
       '${ApiConstants.nominations}/$nominationId/action',
-      data: {'action': 'APPROVED', if (comments != null) 'comments': comments},
+      data: {'action': 'APPROVE', if (comments != null) 'comments': comments},
     );
   }
 
@@ -73,7 +73,7 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
   Future<void> rejectNomination(int nominationId, {String? comments}) async {
     await client.post(
       '${ApiConstants.nominations}/$nominationId/action',
-      data: {'action': 'REJECTED', if (comments != null) 'comments': comments},
+      data: {'action': 'REJECT', if (comments != null) 'comments': comments},
     );
   }
 

@@ -5,7 +5,12 @@ import '../models/point_transaction_model.dart';
 
 abstract class PointsRemoteDataSource {
   Future<PointsSummaryModel> getPointsSummary();
-  Future<List<PointTransactionModel>> getPointsHistory({int page = 1});
+  Future<(int, List<PointTransactionModel>)> getPointsHistory({
+    int page = 1,
+    String? category,
+    String? startDate,
+    String? endDate,
+  });
   Future<List<Map<String, dynamic>>> getLeaderboard(
       {String period = 'MONTHLY'});
 }
@@ -32,19 +37,30 @@ class PointsRemoteDataSourceImpl implements PointsRemoteDataSource {
   }
 
   @override
-  Future<List<PointTransactionModel>> getPointsHistory({int page = 1}) async {
+  Future<(int, List<PointTransactionModel>)> getPointsHistory({
+    int page = 1,
+    String? category,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final qp = <String, dynamic>{'page': page};
+    if (category != null) qp['category'] = category;
+    if (startDate != null) qp['start_date'] = startDate;
+    if (endDate != null) qp['end_date'] = endDate;
+
     final response = await client.get(
       ApiConstants.pointsHistory,
-      queryParameters: {'page': page},
+      queryParameters: qp,
     );
 
     if (response.statusCode == 200) {
-      // Endpoint /history returns { "data": { "history": [...], "balance": ... }, ... }
       final Map<String, dynamic> data = response.data['data'];
-      final List historyList = data['history'];
-      return historyList
+      final List historyList = data['history'] ?? [];
+      final int total = (data['total'] as num?)?.toInt() ?? historyList.length;
+      final items = historyList
           .map((json) => PointTransactionModel.fromJson(json))
           .toList();
+      return (total, items);
     } else {
       throw Exception('Failed to fetch points history: ${response.statusCode}');
     }

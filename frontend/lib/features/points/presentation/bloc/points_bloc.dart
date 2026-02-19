@@ -58,8 +58,12 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
       emit(state.copyWith(status: PointsStatus.loading, history: []));
     }
 
-    final result =
-        await getPointsHistoryUseCase(GetPointsHistoryParams(page: event.page));
+    final result = await getPointsHistoryUseCase(GetPointsHistoryParams(
+      page: event.page,
+      category: event.category,
+      startDate: event.startDate,
+      endDate: event.endDate,
+    ));
     result.fold(
       (failure) {
         print('PointsBloc: History Failure: ${failure.message}');
@@ -68,8 +72,10 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
           errorMessage: failure.message,
         ));
       },
-      (newHistory) {
-        print('PointsBloc: History Success, count=${newHistory.length}');
+      (bundle) {
+        final (total, newHistory) = bundle;
+        print(
+            'PointsBloc: History Success, count=${newHistory.length}, total=$total');
         final mergedHistory = event.page == 1
             ? newHistory
             : (List.of(state.history)..addAll(newHistory));
@@ -77,6 +83,7 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
         emit(state.copyWith(
           status: PointsStatus.success,
           history: mergedHistory,
+          historyTotal: total,
           currentPage: event.page,
           hasReachedMax: newHistory.isEmpty,
         ));

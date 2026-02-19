@@ -27,11 +27,21 @@ class PointsRepositoryImpl implements PointsRepository {
   }
 
   @override
-  Future<Either<Failure, List<PointTransactionEntity>>> getPointsHistory(
-      {int page = 1}) async {
+  Future<Either<Failure, (int, List<PointTransactionEntity>)>>
+      getPointsHistory({
+    int page = 1,
+    String? category,
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final history = await remoteDataSource.getPointsHistory(page: page);
-      return Right(history);
+      final (total, models) = await remoteDataSource.getPointsHistory(
+        page: page,
+        category: category,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      return Right((total, List<PointTransactionEntity>.from(models)));
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {

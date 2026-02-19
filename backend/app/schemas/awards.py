@@ -24,6 +24,7 @@ class AwardResponse(AwardBase):
     nominator_id: int
     status: str
     points_awarded: Optional[int]
+    next_required_level: Optional[str] = None
     created_at: datetime
 
     class Config:

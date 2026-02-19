@@ -6,8 +6,13 @@ import '../entities/leaderboard_entry_entity.dart';
 
 abstract class PointsRepository {
   Future<Either<Failure, PointsSummaryEntity>> getPointsSummary();
-  Future<Either<Failure, List<PointTransactionEntity>>> getPointsHistory(
-      {int page = 1});
+  Future<Either<Failure, (int, List<PointTransactionEntity>)>>
+      getPointsHistory({
+    int page = 1,
+    String? category,
+    String? startDate,
+    String? endDate,
+  });
   Future<Either<Failure, List<LeaderboardEntryEntity>>> getLeaderboard(
       {String period = 'MONTHLY'});
 }

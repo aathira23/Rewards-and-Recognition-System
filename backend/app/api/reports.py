@@ -23,6 +23,7 @@ def get_reports(
     from_date: date = None,
     to_date: date = None,
     department_id: int = None,
+    days: int = 30,
     export_format: str = "json", # json, csv
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
@@ -42,7 +43,6 @@ def get_reports(
         data = service.get_wallet_utilization_report()
         msg = "Wallet utilization report generated"
     elif report_type == "EXPIRY_FORECAST":
-        days = 30 # Default to 30 days
         data = service.get_expiry_forecast(days)
         msg = f"Points expiry forecast for next {days} days generated"
     else:

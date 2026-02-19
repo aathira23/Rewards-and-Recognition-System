@@ -1,11 +1,12 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../injection_container.dart';
+import '../../domain/entities/analytics_entity.dart';
 import '../bloc/analytics_bloc.dart';
 import '../bloc/analytics_event.dart';
 import '../bloc/analytics_state.dart';
-import '../../domain/entities/analytics_entity.dart';
 
 class AnalyticsPage extends StatelessWidget {
   final String userRole;
@@ -42,19 +43,54 @@ class _AnalyticsView extends StatefulWidget {
 }
 
 class _AnalyticsViewState extends State<_AnalyticsView> {
-  String _timePeriod = 'Last 30 Days';
-  String _department = 'All Departments';
+  late String _activeScope;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeScope = widget.scope;
+  }
+
+  void _refresh() {
+    context
+        .read<AnalyticsBloc>()
+        .add(GetAnalyticsRequested(scope: _activeScope));
+  }
+
+  void _changeScope(String scope) {
+    setState(() => _activeScope = scope);
+    context.read<AnalyticsBloc>().add(GetAnalyticsRequested(scope: scope));
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: theme.colorScheme.surfaceContainer,
       body: BlocBuilder<AnalyticsBloc, AnalyticsState>(
         builder: (context, state) {
           if (state.status == AnalyticsStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Loading analytics…',
+                      style: TextStyle(
+                          fontSize: 13, color: Colors.grey.shade500)),
+                ],
+              ),
+            );
           }
 
           if (state.status == AnalyticsStatus.failure) {
@@ -62,27 +98,24 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.error_outline_rounded,
-                      size: 48, color: Colors.red.shade300),
+                  Icon(Icons.cloud_off_rounded,
+                      size: 44, color: Colors.grey.shade300),
                   const SizedBox(height: 12),
-                  Text('Failed to load analytics',
-                      style: GoogleFonts.outfit(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(state.errorMessage ?? '',
-                      style:
-                          TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                  Text('Unable to load analytics',
+                      style: GoogleFonts.inter(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
+                  if (state.errorMessage != null) ...[
+                    const SizedBox(height: 4),
+                    Text(state.errorMessage!,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade400)),
+                  ],
                   const SizedBox(height: 20),
-                  OutlinedButton.icon(
-                    onPressed: () => context
-                        .read<AnalyticsBloc>()
-                        .add(GetAnalyticsRequested(scope: widget.scope)),
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Retry'),
-                    style: OutlinedButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10)),
+                  TextButton.icon(
+                    onPressed: _refresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Try again'),
+                    style: TextButton.styleFrom(minimumSize: Size.zero),
                   ),
                 ],
               ),
@@ -92,37 +125,40 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
           final data = state.data;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Filter Row ──
-                _buildFilterRow(context),
+                _buildHeader(theme),
                 const SizedBox(height: 24),
-
-                // ── KPI Cards ──
-                _buildKpiCards(theme, data),
-                const SizedBox(height: 24),
-
-                // ── Charts Row ──
+                _buildMetricCards(theme, data),
+                const SizedBox(height: 20),
+                _buildTrendsSection(theme, data),
+                const SizedBox(height: 20),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 55,
-                      child: _buildTrendsChart(theme, data),
+                      child: _buildLeaderboard(
+                        theme: theme,
+                        title: 'Top Recognizers',
+                        subtitle: 'People who give the most recognition',
+                        items: data?.topRecognizers ?? [],
+                        emptyIcon: Icons.volunteer_activism_rounded,
+                      ),
                     ),
                     const SizedBox(width: 20),
                     Expanded(
-                      flex: 45,
-                      child: _buildDepartmentActivity(theme, data),
+                      child: _buildLeaderboard(
+                        theme: theme,
+                        title: 'Most Recognized',
+                        subtitle: 'People who receive the most recognition',
+                        items: data?.topRecognized ?? [],
+                        emptyIcon: Icons.emoji_events_rounded,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-
-                // ── Top Recognized Table ──
-                _buildTopRecognizedTable(theme, data),
               ],
             ),
           );
@@ -131,513 +167,245 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
     );
   }
 
-  // ─── Filter Row ──────────────────────────────────────────────
-  Widget _buildFilterRow(BuildContext context) {
+  // ───────────────────────────────────────────────────────────────
+  // HEADER
+  // ───────────────────────────────────────────────────────────────
+  Widget _buildHeader(ThemeData theme) {
+    final scopeLabel = _activeScope == 'ORG'
+        ? 'Organization'
+        : _activeScope == 'DEPARTMENT'
+            ? 'Department'
+            : 'Team';
+
     return Row(
       children: [
-        _FilterDropdown(
-          value: _timePeriod,
-          items: const [
-            'Last 7 Days',
-            'Last 30 Days',
-            'Last 90 Days',
-            'This Year'
-          ],
-          onChanged: (v) => setState(() => _timePeriod = v),
+        _ScopeChip(
+          label: 'Organization',
+          isActive: _activeScope == 'ORG',
+          onTap: () => _changeScope('ORG'),
         ),
-        const SizedBox(width: 12),
-        _FilterDropdown(
-          value: _department,
-          items: const [
-            'All Departments',
-            'Engineering',
-            'Sales & Marketing',
-            'Customer Support',
-            'Human Resources',
-            'Finance'
-          ],
-          onChanged: (v) => setState(() => _department = v),
+        const SizedBox(width: 8),
+        _ScopeChip(
+          label: 'Department',
+          isActive: _activeScope == 'DEPARTMENT',
+          onTap: () => _changeScope('DEPARTMENT'),
         ),
-        const SizedBox(width: 12),
-        _FilterDropdown(
-          value:
-              'Scope: ${widget.scope == 'ORG' ? 'Global' : widget.scope == 'DEPARTMENT' ? 'Department' : 'Team'}',
-          items: const ['Scope: Global', 'Scope: Department', 'Scope: Team'],
-          onChanged: (v) {
-            final scope = v.contains('Global')
-                ? 'ORG'
-                : v.contains('Department')
-                    ? 'DEPARTMENT'
-                    : 'TEAM';
-            context
-                .read<AnalyticsBloc>()
-                .add(GetAnalyticsRequested(scope: scope));
-          },
+        const SizedBox(width: 8),
+        _ScopeChip(
+          label: 'Team',
+          isActive: _activeScope == 'TEAM',
+          onTap: () => _changeScope('TEAM'),
         ),
         const Spacer(),
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, size: 20),
-          tooltip: 'Refresh',
-          onPressed: () => context
-              .read<AnalyticsBloc>()
-              .add(GetAnalyticsRequested(scope: widget.scope)),
+        Text(
+          scopeLabel,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
         ),
+        const SizedBox(width: 12),
+        _buildRefreshButton(theme),
       ],
     );
   }
 
-  // ─── KPI Cards ───────────────────────────────────────────────
-  Widget _buildKpiCards(ThemeData theme, AnalyticsEntity? data) {
+  Widget _buildRefreshButton(ThemeData theme) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: _refresh,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Icon(Icons.refresh_rounded,
+              size: 18, color: Colors.grey.shade500),
+        ),
+      ),
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────
+  // METRIC CARDS
+  // ───────────────────────────────────────────────────────────────
+  Widget _buildMetricCards(ThemeData theme, AnalyticsEntity? data) {
     return Row(
       children: [
-        Expanded(
-          child: _KpiCard(
-            label: 'Total Recognitions',
-            value: _formatNumber(data?.totalRecognitions ?? 0),
-            borderColor: const Color(0xFF3B82F6),
-            icon: Icons.card_giftcard_rounded,
-            iconBg: const Color(0xFFDBEAFE),
-            iconColor: const Color(0xFF3B82F6),
-          ),
+        _MetricCard(
+          label: 'Recognitions',
+          value: _fmt(data?.totalRecognitions ?? 0),
+          icon: Icons.workspace_premium_rounded,
+          color: theme.colorScheme.primary,
         ),
         const SizedBox(width: 16),
-        Expanded(
-          child: _KpiCard(
-            label: 'Points Issued',
-            value: _formatNumber(data?.totalPointsDistributed ?? 0),
-            borderColor: const Color(0xFF8B5CF6),
-            icon: Icons.bar_chart_rounded,
-            iconBg: const Color(0xFFEDE9FE),
-            iconColor: const Color(0xFF8B5CF6),
-          ),
+        _MetricCard(
+          label: 'Points Distributed',
+          value: _fmt(data?.totalPointsDistributed ?? 0),
+          icon: Icons.toll_rounded,
+          color: const Color(0xFF0D9488),
         ),
         const SizedBox(width: 16),
-        Expanded(
-          child: _KpiCard(
-            label: 'Active Users',
-            value: '${(data?.engagementRate ?? 0).toStringAsFixed(0)}%',
-            borderColor: const Color(0xFF10B981),
-            icon: Icons.groups_rounded,
-            iconBg: const Color(0xFFD1FAE5),
-            iconColor: const Color(0xFF10B981),
-          ),
+        _MetricCard(
+          label: 'Engagement',
+          value: '${(data?.engagementRate ?? 0).toStringAsFixed(0)}%',
+          icon: Icons.show_chart_rounded,
+          color: const Color(0xFF7C3AED),
         ),
         const SizedBox(width: 16),
-        Expanded(
-          child: _KpiCard(
-            label: 'Wallet Utilization',
-            value: '${data?.userCount ?? 0}',
-            borderColor: const Color(0xFFF59E0B),
-            icon: Icons.attach_money_rounded,
-            iconBg: const Color(0xFFFEF3C7),
-            iconColor: const Color(0xFFF59E0B),
-          ),
+        _MetricCard(
+          label: 'Active Users',
+          value: _fmt(data?.userCount ?? 0),
+          icon: Icons.people_outline_rounded,
+          color: const Color(0xFFD97706),
         ),
       ],
     );
   }
 
-  // ─── Recognition Trends Chart ────────────────────────────────
-  Widget _buildTrendsChart(ThemeData theme, AnalyticsEntity? data) {
+  // ───────────────────────────────────────────────────────────────
+  // TRENDS CHART
+  // ───────────────────────────────────────────────────────────────
+  Widget _buildTrendsSection(ThemeData theme, AnalyticsEntity? data) {
     final trends = data?.trends ?? [];
-    // Group trends by day-of-week for display like the mockup
-    final display =
-        trends.length > 7 ? trends.sublist(trends.length - 7) : trends;
 
-    final maxCount = display
-        .map((t) => (t['count'] as num?) ?? 0)
-        .fold<num>(1, (a, b) => a > b ? a : b);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text('Recognition Trends',
+              Text('Recognition Activity',
                   style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
+                      fontSize: 14, fontWeight: FontWeight.w600)),
               const Spacer(),
-              Icon(Icons.more_vert, size: 18, color: Colors.grey.shade400),
-            ],
-          ),
-          const SizedBox(height: 24),
-          if (display.isEmpty)
-            SizedBox(
-              height: 200,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.show_chart_rounded,
-                        size: 40, color: Colors.grey.shade300),
-                    const SizedBox(height: 8),
-                    Text('No trend data yet',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade400)),
-                  ],
-                ),
-              ),
-            )
-          else
-            SizedBox(
-              height: 200,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Y-axis labels
-                  SizedBox(
-                    width: 30,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('$maxCount',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.grey.shade400)),
-                        Text('${(maxCount * 0.75).round()}',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.grey.shade400)),
-                        Text('${(maxCount * 0.50).round()}',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.grey.shade400)),
-                        Text('${(maxCount * 0.25).round()}',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.grey.shade400)),
-                        Text('0',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.grey.shade400)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Bars
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: display.asMap().entries.map((entry) {
-                        final t = entry.value;
-                        final count = ((t['count'] as num?) ?? 0).toDouble();
-                        final frac = maxCount > 0 ? count / maxCount : 0.0;
-                        final date = t['date']?.toString() ?? '';
-                        // Get day label
-                        String dayLabel = '';
-                        if (date.length >= 10) {
-                          try {
-                            final dt = DateTime.parse(date);
-                            const days = [
-                              'Mon',
-                              'Tue',
-                              'Wed',
-                              'Thu',
-                              'Fri',
-                              'Sat',
-                              'Sun'
-                            ];
-                            dayLabel = days[dt.weekday - 1];
-                          } catch (_) {
-                            dayLabel = date.substring(8);
-                          }
-                        }
-
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Flexible(
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 400),
-                                    width: double.infinity,
-                                    height: (frac * 160).clamp(4.0, 160.0),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF6366F1)
-                                          .withValues(alpha: 0.5 + frac * 0.5),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(dayLabel,
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade500)),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Department Activity Panel ───────────────────────────────
-  Widget _buildDepartmentActivity(ThemeData theme, AnalyticsEntity? data) {
-    // Use top_recognizers + top_recognized to approximate department data
-    // Since backend doesn't have a dedicated dept endpoint, we show top recognizers as dept proxies
-    final recognizers = data?.topRecognizers ?? [];
-    final recognized = data?.topRecognized ?? [];
-
-    // Combine both lists for a departmental-style view
-    final Map<String, int> deptMap = {};
-    for (final r in [...recognizers, ...recognized]) {
-      final name = r['name']?.toString() ?? 'Unknown';
-      final count = (r['count'] as num?)?.toInt() ?? 0;
-      deptMap[name] = (deptMap[name] ?? 0) + count;
-    }
-    final deptEntries = deptMap.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final maxVal =
-        deptEntries.isNotEmpty ? deptEntries.first.value.toDouble() : 1.0;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('Department Activity',
-                  style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
-              const Spacer(),
-              Icon(Icons.more_vert, size: 18, color: Colors.grey.shade400),
+              if (trends.isNotEmpty)
+                Text('${trends.length} days',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade400)),
             ],
           ),
           const SizedBox(height: 20),
-          if (deptEntries.isEmpty)
-            SizedBox(
-              height: 200,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.business_rounded,
-                        size: 40, color: Colors.grey.shade300),
-                    const SizedBox(height: 8),
-                    Text('No department data yet',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade400)),
-                  ],
-                ),
-              ),
-            )
+          if (trends.isEmpty)
+            _emptyState(Icons.insights_rounded, 'No activity data yet')
           else
-            ...deptEntries.take(5).map((e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(e.key,
-                              style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w500)),
-                          Text('${e.value} recs',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade700)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: e.value / maxVal,
-                          minHeight: 6,
-                          backgroundColor: Colors.grey.shade100,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFF3B82F6)),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+            _TrendChart(trends: trends, color: theme.colorScheme.primary),
         ],
       ),
     );
   }
 
-  // ─── Top Recognized Employees Table ──────────────────────────
-  Widget _buildTopRecognizedTable(ThemeData theme, AnalyticsEntity? data) {
-    final recognized = data?.topRecognized ?? [];
+  // ───────────────────────────────────────────────────────────────
+  // LEADERBOARDS
+  // ───────────────────────────────────────────────────────────────
+  Widget _buildLeaderboard({
+    required ThemeData theme,
+    required String title,
+    required String subtitle,
+    required List<Map<String, dynamic>> items,
+    required IconData emptyIcon,
+  }) {
+    final primary = theme.colorScheme.primary;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text('Top Recognized Employees',
-                  style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
-              const Spacer(),
-              TextButton(
-                onPressed: () {},
-                child: Text('View All',
-                    style: TextStyle(
-                        fontSize: 13, color: theme.colorScheme.primary)),
-              ),
-            ],
-          ),
+          Text(title,
+              style: GoogleFonts.inter(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(subtitle,
+              style:
+                  TextStyle(fontSize: 11, color: Colors.grey.shade400)),
           const SizedBox(height: 16),
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              children: [
-                Expanded(
-                    flex: 3,
-                    child: Text('EMPLOYEE',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: Colors.grey))),
-                Expanded(
-                    flex: 2,
-                    child: Text('RECOGNITIONS',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: Colors.grey))),
-                Expanded(
-                    flex: 2,
-                    child: Text('POINTS RECEIVED',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: Colors.grey))),
-                Expanded(
-                    flex: 1,
-                    child: Text('TREND',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: Colors.grey))),
-                SizedBox(width: 32),
-              ],
-            ),
-          ),
-          if (recognized.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Text('No data yet',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-              ),
-            )
+          if (items.isEmpty)
+            _emptyState(emptyIcon, 'No data available')
           else
-            ...recognized.asMap().entries.map((entry) {
+            ...items.asMap().entries.map((entry) {
+              final rank = entry.key + 1;
               final item = entry.value;
               final name = item['name']?.toString() ?? 'Unknown';
               final count = (item['count'] as num?)?.toInt() ?? 0;
-              // Simulate points (count * avg points per recognition)
-              final points = count * 100;
+              final maxCount =
+                  (items.first['count'] as num?)?.toInt() ?? 1;
 
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  border:
-                      Border(bottom: BorderSide(color: Colors.grey.shade100)),
-                ),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   children: [
+                    SizedBox(
+                      width: 22,
+                      child: Text(
+                        '$rank',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: rank <= 3
+                              ? primary
+                              : Colors.grey.shade400,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
-                      flex: 3,
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: theme.colorScheme.primary
-                                .withValues(alpha: 0.1),
-                            child: Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
                           Text(name,
                               style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: maxCount > 0
+                                  ? count / maxCount
+                                  : 0,
+                              minHeight: 3,
+                              backgroundColor: Colors.grey.shade100,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                primary.withValues(
+                                    alpha: 0.25 +
+                                        (count /
+                                                math.max(maxCount, 1)) *
+                                            0.6),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Text('$count',
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500)),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        _formatNumber(points),
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green.shade700),
+                    const SizedBox(width: 12),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade700,
                       ),
                     ),
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '+${(count > 0 ? (count % 20) + 1 : 0)}%',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green.shade700),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.visibility_outlined,
-                        size: 18, color: Colors.grey.shade400),
                   ],
                 ),
               );
@@ -647,121 +415,291 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
     );
   }
 
-  // ─── Helpers ─────────────────────────────────────────────────
-  String _formatNumber(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)
-      return '${(n / 1000).toStringAsFixed(0)},${(n % 1000).toString().padLeft(3, '0')}';
-    return '$n';
-  }
-}
-
-// ── KPI Card Widget ───────────────────────────────────────────
-class _KpiCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color borderColor;
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-
-  const _KpiCard({
-    required this.label,
-    required this.value,
-    required this.borderColor,
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          // Colored left accent
-          Container(
-            width: 4,
-            height: 50,
-            decoration: BoxDecoration(
-              color: borderColor,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                const SizedBox(height: 6),
-                Text(value,
-                    style: GoogleFonts.outfit(
-                        fontSize: 24, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Filter Dropdown Widget ───────────────────────────────────
-class _FilterDropdown extends StatelessWidget {
-  final String value;
-  final List<String> items;
-  final ValueChanged<String> onChanged;
-
-  const _FilterDropdown({
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: items.contains(value) ? value : items.first,
-          isDense: true,
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              size: 18, color: Colors.grey.shade500),
-          style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700),
-          items: items
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
+  // ───────────────────────────────────────────────────────────────
+  // HELPERS
+  // ───────────────────────────────────────────────────────────────
+  Widget _emptyState(IconData icon, String text) {
+    return SizedBox(
+      height: 120,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 28, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            Text(text,
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+          ],
         ),
       ),
     );
   }
+
+  String _fmt(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) {
+      final k = n / 1000;
+      return k == k.roundToDouble()
+          ? '${k.round()}K'
+          : '${k.toStringAsFixed(1)}K';
+    }
+    return '$n';
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// REUSABLE WIDGETS
+// ═════════════════════════════════════════════════════════════════
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  const _Card({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ScopeChip extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  const _ScopeChip({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Material(
+      color: isActive ? primary : Colors.white,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isActive ? primary : Colors.grey.shade200,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: isActive ? Colors.white : Colors.grey.shade600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFEEEEEE)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade500,
+                          letterSpacing: 0.2)),
+                  const SizedBox(height: 8),
+                  Text(value,
+                      style: GoogleFonts.inter(
+                          fontSize: 22, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrendChart extends StatelessWidget {
+  final List<Map<String, dynamic>> trends;
+  final Color color;
+  const _TrendChart({required this.trends, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final display =
+        trends.length > 21 ? trends.sublist(trends.length - 21) : trends;
+
+    return SizedBox(
+      height: 160,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return CustomPaint(
+            size: Size(constraints.maxWidth, 160),
+            painter: _TrendPainter(data: display, color: color),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TrendPainter extends CustomPainter {
+  final List<Map<String, dynamic>> data;
+  final Color color;
+  _TrendPainter({required this.data, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty) return;
+
+    final counts =
+        data.map((d) => ((d['count'] as num?) ?? 0).toDouble()).toList();
+    final maxVal = counts.reduce(math.max).clamp(1.0, double.infinity);
+
+    const chartLeft = 28.0;
+    const chartBottom = 22.0;
+    final chartWidth = size.width - chartLeft - 8;
+    final chartHeight = size.height - chartBottom - 4;
+
+    // Grid lines
+    final gridPaint = Paint()
+      ..color = Colors.grey.shade100
+      ..strokeWidth = 1;
+
+    final gridLabelStyle = TextStyle(
+      fontSize: 9,
+      color: Colors.grey.shade400,
+    );
+
+    for (int i = 0; i <= 4; i++) {
+      final y = 4 + chartHeight - (chartHeight * i / 4);
+      canvas.drawLine(
+        Offset(chartLeft, y),
+        Offset(size.width - 8, y),
+        gridPaint,
+      );
+
+      final label = '${(maxVal * i / 4).round()}';
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: gridLabelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(
+          canvas, Offset(chartLeft - tp.width - 6, y - tp.height / 2));
+    }
+
+    // Bars
+    final barWidth = chartWidth / data.length;
+    final barPadding = barWidth * 0.25;
+
+    for (int i = 0; i < counts.length; i++) {
+      final val = counts[i];
+      final barH = (val / maxVal) * chartHeight;
+      final x = chartLeft + i * barWidth + barPadding;
+      final w = barWidth - barPadding * 2;
+      final y = 4 + chartHeight - barH;
+
+      final barRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, y, w, barH),
+        const Radius.circular(3),
+      );
+
+      final barPaint = Paint()
+        ..color = color.withValues(alpha: 0.55 + (val / maxVal) * 0.4);
+      canvas.drawRRect(barRect, barPaint);
+
+      // X-axis labels
+      final showLabel = data.length <= 10 ||
+          i % (data.length ~/ 7 + 1) == 0 ||
+          i == data.length - 1;
+
+      if (showLabel) {
+        final dateStr = data[i]['date']?.toString() ?? '';
+        String label = '';
+        if (dateStr.length >= 10) {
+          try {
+            final dt = DateTime.parse(dateStr);
+            const days = [
+              'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+            ];
+            label = data.length <= 7
+                ? days[dt.weekday - 1]
+                : '${dt.day}/${dt.month}';
+          } catch (_) {
+            label =
+                dateStr.length >= 5 ? dateStr.substring(5) : dateStr;
+          }
+        }
+
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style:
+                TextStyle(fontSize: 9, color: Colors.grey.shade400),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(
+          canvas,
+          Offset(
+              x + w / 2 - tp.width / 2, size.height - chartBottom + 6),
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrendPainter old) =>
+      data != old.data || color != old.color;
 }

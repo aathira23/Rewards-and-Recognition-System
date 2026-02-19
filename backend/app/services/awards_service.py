@@ -185,6 +185,13 @@ class AwardsService:
                 source_id=award.id
             )
 
+        if award.status != 'PENDING':
+            award.next_required_level = None
+        else:
+            required_levels = self._get_required_approval_levels(award_type)
+            completed_levels = self._get_existing_approvals(award.id)
+            award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
+
         return award
 
     def approve_nomination(
@@ -278,6 +285,14 @@ class AwardsService:
 
         self.db.commit()
         self.db.refresh(award)
+        
+        if award.status != 'PENDING':
+            award.next_required_level = None
+        else:
+            required_levels = self._get_required_approval_levels(award.award_type)
+            completed_levels = self._get_existing_approvals(award.id)
+            award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
+            
         return award
 
     def reject_nomination(
@@ -310,6 +325,7 @@ class AwardsService:
         
         self.db.commit()
         self.db.refresh(award)
+        award.next_required_level = None
         return award
 
     def get_nominations(
@@ -335,11 +351,31 @@ class AwardsService:
         if status_filter:
             query = query.filter(Award.status == status_filter)
 
-        return query.order_by(Award.created_at.desc()).offset(skip).limit(limit).all()
+        awards = query.order_by(Award.created_at.desc()).offset(skip).limit(limit).all()
+        
+        # Attach next_required_level to each award for the API response
+        for award in awards:
+            if award.status != 'PENDING':
+                award.next_required_level = None
+                continue
+                
+            required_levels = self._get_required_approval_levels(award.award_type)
+            completed_levels = self._get_existing_approvals(award.id)
+            award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
+            
+        return awards
 
     def get_nomination(self, award_id: int) -> Optional[Award]:
         """Get specific nomination details."""
-        return self.db.query(Award).filter(Award.id == award_id).first()
+        award = self.db.query(Award).filter(Award.id == award_id).first()
+        if award:
+            if award.status != 'PENDING':
+                award.next_required_level = None
+            else:
+                required_levels = self._get_required_approval_levels(award.award_type)
+                completed_levels = self._get_existing_approvals(award.id)
+                award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
+        return award
 
     def get_award_types(self, active_only: bool = True) -> List[AwardType]:
         """Get all award types."""
