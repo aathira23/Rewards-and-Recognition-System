@@ -39,8 +39,6 @@ class RecognitionFeedList extends StatelessWidget {
     }
 
     return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
       itemCount: feed.length,
       itemBuilder: (context, index) {
         final recognition = feed[index];

@@ -96,32 +96,51 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                         // Right Column: Feed
                         Expanded(
                           flex: 35,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Recognition Feed',
-                                    style: AppTextStyles.sectionHeader(),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.refresh,
-                                        size: 20, color: Colors.grey),
-                                    onPressed: () {
-                                      context
-                                          .read<RecognitionsBloc>()
-                                          .add(GetRecognitionFeedRequested());
-                                    },
-                                    tooltip: 'Refresh Feed',
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              RecognitionFeedList(feed: state.feed),
-                            ],
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.72,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: Colors.grey.withValues(alpha: 0.1)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Recognition Feed',
+                                      style: AppTextStyles.sectionHeader(),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh,
+                                          size: 20, color: Colors.grey),
+                                      onPressed: () {
+                                        context
+                                            .read<RecognitionsBloc>()
+                                            .add(GetRecognitionFeedRequested());
+                                      },
+                                      tooltip: 'Refresh Feed',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: RecognitionFeedList(feed: state.feed),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
