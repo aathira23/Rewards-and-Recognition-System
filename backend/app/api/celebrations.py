@@ -55,8 +55,8 @@ def process_today_celebrations(
     from app.utils.enums import UserRole
     from app.utils.response import client_error
     
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can trigger celebration processing", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Only HR/Admin can trigger celebration processing", status_code=403)
     
     service = CelebrationService(db)
     result = service.process_today_celebrations()

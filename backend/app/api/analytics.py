@@ -30,7 +30,7 @@ def get_analytics(
     # 1. Enforce Role-Based Scope
     if not scope:
         # Default scope based on role
-        if current_user.role in [UserRole.HR.value]:
+        if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
             scope = "ORG"
         elif current_user.role == UserRole.DEPT_HEAD.value:
             scope = "DEPARTMENT"
@@ -40,10 +40,10 @@ def get_analytics(
             scope = "TEAM" # Employees can see team analytics if they are managers, otherwise it will be empty
 
     # Check permission for requested scope
-    if scope == "ORG" and current_user.role not in [UserRole.HR.value]:
+    if scope == "ORG" and current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value]:
         return client_error(message="Access denied to Organization scope", status_code=403)
     
-    if scope == "DEPARTMENT" and current_user.role not in [UserRole.HR.value, UserRole.DEPT_HEAD.value]:
+    if scope == "DEPARTMENT" and current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value, UserRole.DEPT_HEAD.value]:
         return client_error(message="Access denied to Department scope", status_code=403)
 
     if scope == "TEAM" and current_user.role not in [UserRole.HR.value, UserRole.DEPT_HEAD.value, UserRole.MANAGER.value]:

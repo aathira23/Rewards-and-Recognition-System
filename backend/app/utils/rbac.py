@@ -39,8 +39,8 @@ def require_roles(allowed_roles: List[str]):
 
 
 def require_hr(func):
-    """Shortcut decorator for HR-only endpoints."""
-    return require_roles([UserRole.HR.value])(func)
+    """Shortcut decorator for HR-only endpoints (treat ADMIN as HR)."""
+    return require_roles([UserRole.HR.value, UserRole.ADMIN.value])(func)
 
 
 def require_manager_or_above(func):
@@ -48,5 +48,6 @@ def require_manager_or_above(func):
     return require_roles([
         UserRole.MANAGER.value,
         UserRole.DEPT_HEAD.value,
-        UserRole.HR.value
+        UserRole.HR.value,
+        UserRole.ADMIN.value,
     ])(func)

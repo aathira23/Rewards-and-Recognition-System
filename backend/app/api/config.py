@@ -21,7 +21,7 @@ def list_configs(
     current_user = Depends(get_current_user)
 ):
     """List all system configurations (Admin/HR only)."""
-    if current_user.role != UserRole.HR.value:
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied", status_code=403)
         
     service = ConfigService(db)
@@ -40,7 +40,7 @@ def update_config(
     current_user = Depends(get_current_user)
 ):
     """Update a system configuration (Admin/HR only)."""
-    if current_user.role != UserRole.HR.value:
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied", status_code=403)
         
     service = ConfigService(db)

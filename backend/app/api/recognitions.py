@@ -107,8 +107,8 @@ def create_badge(
 ):
     """Create a new badge (HR only)."""
     from app.utils.enums import UserRole
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can create badges", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Only HR/Admin can create badges", status_code=403)
         
     service = RecognitionService(db)
     service = RecognitionService(db)
@@ -136,8 +136,8 @@ def update_badge(
 ):
     """Update a badge (HR only)."""
     from app.utils.enums import UserRole
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can update badges", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Only HR/Admin can update badges", status_code=403)
 
     service = RecognitionService(db)
     try:

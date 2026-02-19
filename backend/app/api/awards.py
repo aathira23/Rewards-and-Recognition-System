@@ -84,8 +84,8 @@ def create_award_type(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new award type (admin only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can create award types", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Only HR/Admin can create award types", status_code=403)
         
     service = AwardsService(db)
     try:
@@ -119,8 +119,8 @@ def update_award_type(
     current_user: User = Depends(get_current_user)
 ):
     """Update an award type (admin only)."""
-    if current_user.role != UserRole.HR.value:
-        return client_error(message="Only HR can update award types", status_code=403)
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return client_error(message="Only HR/Admin can update award types", status_code=403)
         
     service = AwardsService(db)
     updated = service.update_award_type(type_id, award_type.model_dump(exclude_unset=True))
@@ -143,7 +143,7 @@ def get_nomination(
         return client_error(message="Nomination not found", status_code=404)
     
     # Check if user has access (Admin, or participant)
-    if current_user.role != UserRole.HR.value and \
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value) and \
        current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
         return client_error(message="Not authorized to view this nomination", status_code=403)
         
@@ -170,7 +170,7 @@ def action_nomination(
 
     # Determine approval level based on role
     approval_level = ApprovalLevel.MANAGER.value
-    if current_user.role == UserRole.HR.value:
+    if current_user.role in (UserRole.HR.value, UserRole.ADMIN.value):
         approval_level = ApprovalLevel.HR.value
     elif current_user.role == UserRole.DEPT_HEAD.value:
         approval_level = ApprovalLevel.DEPT_HEAD.value
@@ -207,7 +207,7 @@ def get_approval_status(
         return client_error(message="Nomination not found", status_code=404)
     
     # Check access: HR, or participants in the nomination
-    if current_user.role != UserRole.HR.value and \
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value) and \
        current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
         return client_error(message="Not authorized to view this nomination", status_code=403)
     
