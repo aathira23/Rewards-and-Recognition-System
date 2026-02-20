@@ -1,38 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/widgets/app_dialog.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../../data/datasources/hr_config_remote_data_source.dart';
+import '../bloc/hr_config_bloc.dart';
+import '../bloc/hr_config_event.dart';
+import '../bloc/hr_config_state.dart';
 
 /// HR Configuration page — manages Award Types, Rewards Catalog,
 /// Points Policy, and System Settings in a single tabbed view.
-class HrConfigPage extends StatefulWidget {
+class HrConfigPage extends StatelessWidget {
   const HrConfigPage({super.key});
 
   @override
-  State<HrConfigPage> createState() => _HrConfigPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<HrConfigBloc>()..add(LoadAllHrConfig()),
+      child: const _HrConfigView(),
+    );
+  }
 }
 
-class _HrConfigPageState extends State<HrConfigPage>
+class _HrConfigView extends StatefulWidget {
+  const _HrConfigView();
+
+  @override
+  State<_HrConfigView> createState() => _HrConfigViewState();
+}
+
+class _HrConfigViewState extends State<_HrConfigView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // Data
-  List<Map<String, dynamic>> _awardTypes = [];
-  List<Map<String, dynamic>> _badges = [];
-  List<Map<String, dynamic>> _rewards = [];
-  List<Map<String, dynamic>> _policies = [];
-  List<Map<String, dynamic>> _configs = [];
-
-  bool _isLoading = true;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
-    _loadAll();
   }
 
   @override
@@ -41,133 +44,119 @@ class _HrConfigPageState extends State<HrConfigPage>
     super.dispose();
   }
 
-  Future<void> _loadAll() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final client = sl<ApiClient>();
-      final results = await Future.wait([
-        client.get(ApiConstants.awardTypes),
-        client.get(ApiConstants.badges),
-        client.get(ApiConstants.catalogItems),
-        client.get(ApiConstants.pointsRules),
-        client.get(ApiConstants.systemConfig),
-      ]);
-
-      setState(() {
-        _awardTypes = _extractList(results[0].data);
-        _badges = _extractList(results[1].data);
-        _rewards = _extractList(results[2].data);
-        _policies = _extractList(results[3].data);
-        _configs = _extractList(results[4].data);
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  List<Map<String, dynamic>> _extractList(dynamic body) {
-    final data = body is Map ? (body['data'] ?? []) : body;
-    if (data is List) return data.cast<Map<String, dynamic>>();
-    return <Map<String, dynamic>>[];
-  }
-
   // ─── Build ───────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainer,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Configuration', style: AppTextStyles.pageTitle()),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage awards, badges, catalog, point rules & system settings',
-                        style: AppTextStyles.body(color: Colors.grey.shade500),
+    return BlocConsumer<HrConfigBloc, HrConfigState>(
+      listener: (context, state) {
+        if (state.error != null) {
+          _snack(state.error!, isError: true);
+        }
+        if (state.successMessage != null) {
+          _snack(state.successMessage!);
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Configuration',
+                              style: AppTextStyles.pageTitle()),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Manage awards, badges, catalog, point rules & system settings',
+                            style:
+                                AppTextStyles.body(color: Colors.grey.shade500),
+                          ),
+                        ],
                       ),
+                    ),
+                    _RefreshBtn(
+                      onTap: () =>
+                          context.read<HrConfigBloc>().add(LoadAllHrConfig()),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Tab bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: theme.colorScheme.primary,
+                    unselectedLabelColor: Colors.grey.shade500,
+                    indicatorColor: theme.colorScheme.primary,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelStyle: AppTextStyles.bodyBold(),
+                    unselectedLabelStyle: AppTextStyles.bodyMedium(),
+                    dividerHeight: 0,
+                    tabs: const [
+                      Tab(text: 'Award Types'),
+                      Tab(text: 'Badges'),
+                      Tab(text: 'Rewards Catalog'),
+                      Tab(text: 'Points Policy'),
+                      Tab(text: 'Settings'),
                     ],
                   ),
                 ),
-                _RefreshBtn(onTap: _loadAll),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Tab bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
               ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: theme.colorScheme.primary,
-                unselectedLabelColor: Colors.grey.shade500,
-                indicatorColor: theme.colorScheme.primary,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: AppTextStyles.bodyBold(),
-                unselectedLabelStyle: AppTextStyles.bodyMedium(),
-                dividerHeight: 0,
-                tabs: const [
-                  Tab(text: 'Award Types'),
-                  Tab(text: 'Badges'),
-                  Tab(text: 'Rewards Catalog'),
-                  Tab(text: 'Points Policy'),
-                  Tab(text: 'Settings'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          // Content
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? _ErrorState(message: _error!, onRetry: _loadAll)
-                    : TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildAwardTypesTab(theme),
-                          _buildBadgesTab(theme),
-                          _buildRewardsCatalogTab(theme),
-                          _buildPointsPolicyTab(theme),
-                          _buildSystemSettingsTab(theme),
-                        ],
-                      ),
+              // Content
+              Expanded(
+                child: state.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : state.error != null && state.awardTypes.isEmpty
+                        ? _ErrorState(
+                            message: state.error!,
+                            onRetry: () => context
+                                .read<HrConfigBloc>()
+                                .add(LoadAllHrConfig()),
+                          )
+                        : TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _buildAwardTypesTab(context, theme, state),
+                              _buildBadgesTab(context, theme, state),
+                              _buildRewardsCatalogTab(context, theme, state),
+                              _buildPointsPolicyTab(context, theme, state),
+                              _buildSystemSettingsTab(context, theme, state),
+                            ],
+                          ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  TAB 1 — Award Types
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildAwardTypesTab(ThemeData theme) {
+  Widget _buildAwardTypesTab(
+      BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
       child: Column(
@@ -177,13 +166,13 @@ class _HrConfigPageState extends State<HrConfigPage>
             subtitle:
                 'Define official award categories employees can be nominated for',
             actionLabel: 'Add Award Type',
-            onAction: () => _showAwardTypeDialog(),
+            onAction: () => _showAwardTypeDialog(context),
           ),
           const SizedBox(height: 12),
-          if (_awardTypes.isEmpty)
-            _EmptyState(
+          if (state.awardTypes.isEmpty)
+            const _EmptyState(
                 icon: Icons.emoji_events_outlined, text: 'No award types yet'),
-          if (_awardTypes.isNotEmpty)
+          if (state.awardTypes.isNotEmpty)
             _DataCard(
               columns: const [
                 'Name',
@@ -194,7 +183,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                 ''
               ],
               flexes: const [3, 2, 1, 2, 1, 1],
-              rows: _awardTypes.map((a) {
+              rows: state.awardTypes.map((a) {
                 final isActive = a['is_active'] ?? true;
                 return [
                   Text(a['name']?.toString() ?? '',
@@ -215,12 +204,18 @@ class _HrConfigPageState extends State<HrConfigPage>
                       _IconBtn(
                         icon: Icons.edit_outlined,
                         color: theme.colorScheme.primary,
-                        onTap: () => _showAwardTypeDialog(existing: a),
+                        onTap: () => _showAwardTypeDialog(context, existing: a),
                       ),
                       const SizedBox(width: 4),
                       _ToggleIconBtn(
                         isActive: isActive,
-                        onTap: () => _toggleAwardType(a),
+                        onTap: () => context.read<HrConfigBloc>().add(
+                              ToggleItem(
+                                entityType: HrConfigEntityType.awardType,
+                                id: a['id'],
+                                currentlyActive: isActive,
+                              ),
+                            ),
                       ),
                     ],
                   ),
@@ -232,34 +227,8 @@ class _HrConfigPageState extends State<HrConfigPage>
     );
   }
 
-  Future<void> _toggleAwardType(Map<String, dynamic> a) async {
-    final id = a['id'];
-    final current = a['is_active'] ?? true;
-    // Optimistic update — item stays visible with new status immediately
-    setState(() {
-      final idx = _awardTypes.indexWhere((x) => x['id'] == id);
-      if (idx != -1) {
-        _awardTypes[idx] = {..._awardTypes[idx], 'is_active': !current};
-      }
-    });
-    try {
-      final client = sl<ApiClient>();
-      await client.put('${ApiConstants.awardTypes}types/$id',
-          data: {'is_active': !current});
-      _snack(!current ? 'Award type activated' : 'Award type deactivated');
-    } catch (e) {
-      // Revert on failure
-      setState(() {
-        final idx = _awardTypes.indexWhere((x) => x['id'] == id);
-        if (idx != -1) {
-          _awardTypes[idx] = {..._awardTypes[idx], 'is_active': current};
-        }
-      });
-      _snack('Failed: $e', isError: true);
-    }
-  }
-
-  void _showAwardTypeDialog({Map<String, dynamic>? existing}) {
+  void _showAwardTypeDialog(BuildContext context,
+      {Map<String, dynamic>? existing}) {
     final isEdit = existing != null;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
     final keyC = TextEditingController(text: existing?['award_key'] ?? '');
@@ -272,6 +241,7 @@ class _HrConfigPageState extends State<HrConfigPage>
         text: existing?['approval_workflow'] ?? 'MANAGER,DEPT_HEAD,HR');
 
     _showFormDialog(
+      context: context,
       title: isEdit ? 'Edit Award Type' : 'Create Award Type',
       fields: [
         if (!isEdit)
@@ -305,30 +275,21 @@ class _HrConfigPageState extends State<HrConfigPage>
             ]),
         _Field(label: 'Description', controller: descC, maxLines: 2),
       ],
-      onSave: () async {
-        final client = sl<ApiClient>();
-        if (isEdit) {
-          await client
-              .put('${ApiConstants.awardTypes}types/${existing['id']}', data: {
-            'name': nameC.text,
-            'points': int.tryParse(pointsC.text) ?? 0,
-            'frequency': freqC.text,
-            'eligibility_rule': eligC.text,
-            'approval_workflow': workflowC.text,
-            'description': descC.text,
-          });
-        } else {
-          await client.post(ApiConstants.awardTypes, data: {
-            'award_key': keyC.text,
-            'name': nameC.text,
-            'points': int.tryParse(pointsC.text) ?? 0,
-            'frequency': freqC.text,
-            'eligibility_rule': eligC.text,
-            'approval_workflow': workflowC.text,
-            'description': descC.text,
-          });
-        }
-        _loadAll();
+      onSave: () {
+        final data = <String, dynamic>{
+          'name': nameC.text,
+          'points': int.tryParse(pointsC.text) ?? 0,
+          'frequency': freqC.text,
+          'eligibility_rule': eligC.text,
+          'approval_workflow': workflowC.text,
+          'description': descC.text,
+        };
+        if (!isEdit) data['award_key'] = keyC.text;
+        context.read<HrConfigBloc>().add(SaveItem(
+              entityType: HrConfigEntityType.awardType,
+              data: data,
+              id: existing?['id'],
+            ));
       },
     );
   }
@@ -336,7 +297,8 @@ class _HrConfigPageState extends State<HrConfigPage>
   // ═══════════════════════════════════════════════════════════════════
   //  TAB 2 — Badges
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildBadgesTab(ThemeData theme) {
+  Widget _buildBadgesTab(
+      BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
       child: Column(
@@ -346,17 +308,17 @@ class _HrConfigPageState extends State<HrConfigPage>
             subtitle:
                 'Recognition badges employees earn through peer recognitions',
             actionLabel: 'Add Badge',
-            onAction: () => _showBadgeDialog(),
+            onAction: () => _showBadgeDialog(context),
           ),
           const SizedBox(height: 12),
-          if (_badges.isEmpty)
-            _EmptyState(
+          if (state.badges.isEmpty)
+            const _EmptyState(
                 icon: Icons.military_tech_outlined, text: 'No badges yet'),
-          if (_badges.isNotEmpty)
+          if (state.badges.isNotEmpty)
             _DataCard(
               columns: const ['Name', 'Description', 'Points', 'Status', ''],
               flexes: const [2, 4, 1, 1, 1],
-              rows: _badges.map((b) {
+              rows: state.badges.map((b) {
                 final isActive = b['is_active'] ?? true;
                 return [
                   Column(
@@ -405,12 +367,18 @@ class _HrConfigPageState extends State<HrConfigPage>
                       _IconBtn(
                         icon: Icons.edit_outlined,
                         color: theme.colorScheme.primary,
-                        onTap: () => _showBadgeDialog(existing: b),
+                        onTap: () => _showBadgeDialog(context, existing: b),
                       ),
                       const SizedBox(width: 4),
                       _ToggleIconBtn(
                         isActive: isActive,
-                        onTap: () => _toggleBadge(b),
+                        onTap: () => context.read<HrConfigBloc>().add(
+                              ToggleItem(
+                                entityType: HrConfigEntityType.badge,
+                                id: b['id'],
+                                currentlyActive: isActive,
+                              ),
+                            ),
                       ),
                     ],
                   ),
@@ -422,32 +390,8 @@ class _HrConfigPageState extends State<HrConfigPage>
     );
   }
 
-  Future<void> _toggleBadge(Map<String, dynamic> b) async {
-    final id = b['id'];
-    final current = b['is_active'] ?? true;
-    setState(() {
-      final idx = _badges.indexWhere((x) => x['id'] == id);
-      if (idx != -1) {
-        _badges[idx] = {..._badges[idx], 'is_active': !current};
-      }
-    });
-    try {
-      final client = sl<ApiClient>();
-      await client
-          .put('${ApiConstants.badges}/$id', data: {'is_active': !current});
-      _snack(!current ? 'Badge activated' : 'Badge deactivated');
-    } catch (e) {
-      setState(() {
-        final idx = _badges.indexWhere((x) => x['id'] == id);
-        if (idx != -1) {
-          _badges[idx] = {..._badges[idx], 'is_active': current};
-        }
-      });
-      _snack('Failed: $e', isError: true);
-    }
-  }
-
-  void _showBadgeDialog({Map<String, dynamic>? existing}) {
+  void _showBadgeDialog(BuildContext context,
+      {Map<String, dynamic>? existing}) {
     final isEdit = existing != null;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
     final descC = TextEditingController(text: existing?['description'] ?? '');
@@ -456,6 +400,7 @@ class _HrConfigPageState extends State<HrConfigPage>
         TextEditingController(text: existing?['points']?.toString() ?? '');
 
     _showFormDialog(
+      context: context,
       title: isEdit ? 'Edit Badge' : 'Create Badge',
       fields: [
         _Field(label: 'Name', controller: nameC, hint: 'e.g. Star Performer'),
@@ -467,25 +412,20 @@ class _HrConfigPageState extends State<HrConfigPage>
             hint: 'e.g. 50',
             isNumber: true),
       ],
-      onSave: () async {
-        final client = sl<ApiClient>();
+      onSave: () {
         final data = <String, dynamic>{
           'name': nameC.text,
           'description': descC.text,
         };
-        if (iconC.text.isNotEmpty) {
-          data['icon_url'] = iconC.text;
-        }
+        if (iconC.text.isNotEmpty) data['icon_url'] = iconC.text;
         if (pointsC.text.isNotEmpty) {
           data['points'] = int.tryParse(pointsC.text);
         }
-        if (isEdit) {
-          await client.put('${ApiConstants.badges}/${existing['id']}',
-              data: data);
-        } else {
-          await client.post(ApiConstants.badges, data: data);
-        }
-        _loadAll();
+        context.read<HrConfigBloc>().add(SaveItem(
+              entityType: HrConfigEntityType.badge,
+              data: data,
+              id: existing?['id'],
+            ));
       },
     );
   }
@@ -493,7 +433,8 @@ class _HrConfigPageState extends State<HrConfigPage>
   // ═══════════════════════════════════════════════════════════════════
   //  TAB 3 — Rewards Catalog
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildRewardsCatalogTab(ThemeData theme) {
+  Widget _buildRewardsCatalogTab(
+      BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
       child: Column(
@@ -502,13 +443,13 @@ class _HrConfigPageState extends State<HrConfigPage>
             title: 'Rewards Catalog',
             subtitle: 'Manage items employees can redeem with their points',
             actionLabel: 'Add Reward',
-            onAction: () => _showRewardDialog(),
+            onAction: () => _showRewardDialog(context),
           ),
           const SizedBox(height: 12),
-          if (_rewards.isEmpty)
-            _EmptyState(
+          if (state.rewards.isEmpty)
+            const _EmptyState(
                 icon: Icons.card_giftcard_outlined, text: 'No rewards yet'),
-          if (_rewards.isNotEmpty)
+          if (state.rewards.isNotEmpty)
             _DataCard(
               columns: const [
                 'Name',
@@ -519,7 +460,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                 ''
               ],
               flexes: const [3, 2, 2, 1, 1, 1],
-              rows: _rewards.map((r) {
+              rows: state.rewards.map((r) {
                 final isActive = r['is_active'] ?? true;
                 final stock = r['stock_quantity'];
                 return [
@@ -548,12 +489,18 @@ class _HrConfigPageState extends State<HrConfigPage>
                       _IconBtn(
                         icon: Icons.edit_outlined,
                         color: theme.colorScheme.primary,
-                        onTap: () => _showRewardDialog(existing: r),
+                        onTap: () => _showRewardDialog(context, existing: r),
                       ),
                       const SizedBox(width: 4),
                       _ToggleIconBtn(
                         isActive: isActive,
-                        onTap: () => _toggleReward(r),
+                        onTap: () => context.read<HrConfigBloc>().add(
+                              ToggleItem(
+                                entityType: HrConfigEntityType.reward,
+                                id: r['id'],
+                                currentlyActive: isActive,
+                              ),
+                            ),
                       ),
                     ],
                   ),
@@ -565,32 +512,8 @@ class _HrConfigPageState extends State<HrConfigPage>
     );
   }
 
-  Future<void> _toggleReward(Map<String, dynamic> r) async {
-    final id = r['id'];
-    final current = r['is_active'] ?? true;
-    setState(() {
-      final idx = _rewards.indexWhere((x) => x['id'] == id);
-      if (idx != -1) {
-        _rewards[idx] = {..._rewards[idx], 'is_active': !current};
-      }
-    });
-    try {
-      final client = sl<ApiClient>();
-      await client.put('${ApiConstants.catalogItems}/$id',
-          data: {'is_active': !current});
-      _snack(!current ? 'Reward activated' : 'Reward deactivated');
-    } catch (e) {
-      setState(() {
-        final idx = _rewards.indexWhere((x) => x['id'] == id);
-        if (idx != -1) {
-          _rewards[idx] = {..._rewards[idx], 'is_active': current};
-        }
-      });
-      _snack('Failed: $e', isError: true);
-    }
-  }
-
-  void _showRewardDialog({Map<String, dynamic>? existing}) {
+  void _showRewardDialog(BuildContext context,
+      {Map<String, dynamic>? existing}) {
     final isEdit = existing != null;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
     final typeC = TextEditingController(text: existing?['reward_type'] ?? '');
@@ -601,6 +524,7 @@ class _HrConfigPageState extends State<HrConfigPage>
         text: existing?['stock_quantity']?.toString() ?? '');
 
     _showFormDialog(
+      context: context,
       title: isEdit ? 'Edit Reward' : 'Add Reward',
       fields: [
         _Field(label: 'Name', controller: nameC, hint: 'Amazon Gift Card'),
@@ -615,8 +539,7 @@ class _HrConfigPageState extends State<HrConfigPage>
             isNumber: true,
             hint: 'Leave empty for unlimited'),
       ],
-      onSave: () async {
-        final client = sl<ApiClient>();
+      onSave: () {
         final data = <String, dynamic>{
           'name': nameC.text,
           'reward_type': typeC.text,
@@ -625,21 +548,20 @@ class _HrConfigPageState extends State<HrConfigPage>
         if (stockC.text.isNotEmpty) {
           data['stock_quantity'] = int.tryParse(stockC.text);
         }
-        if (isEdit) {
-          await client.put('${ApiConstants.catalogItems}/${existing['id']}',
-              data: data);
-        } else {
-          await client.post(ApiConstants.catalogItems, data: data);
-        }
-        _loadAll();
+        context.read<HrConfigBloc>().add(SaveItem(
+              entityType: HrConfigEntityType.reward,
+              data: data,
+              id: existing?['id'],
+            ));
       },
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  TAB 3 — Points Policy
+  //  TAB 4 — Points Policy
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildPointsPolicyTab(ThemeData theme) {
+  Widget _buildPointsPolicyTab(
+      BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
       child: Column(
@@ -648,12 +570,13 @@ class _HrConfigPageState extends State<HrConfigPage>
             title: 'Points Policy',
             subtitle: 'Define point values, limits & conversion rules',
             actionLabel: 'Add Rule',
-            onAction: () => _showPolicyDialog(),
+            onAction: () => _showPolicyDialog(context),
           ),
           const SizedBox(height: 12),
-          if (_policies.isEmpty)
-            _EmptyState(icon: Icons.rule_outlined, text: 'No rules configured'),
-          if (_policies.isNotEmpty)
+          if (state.policies.isEmpty)
+            const _EmptyState(
+                icon: Icons.rule_outlined, text: 'No rules configured'),
+          if (state.policies.isNotEmpty)
             _DataCard(
               columns: const [
                 'Recognition Type',
@@ -665,7 +588,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                 ''
               ],
               flexes: const [3, 1, 2, 1, 2, 1, 1],
-              rows: _policies.map((p) {
+              rows: state.policies.map((p) {
                 final isActive = p['is_active'] ?? true;
                 return [
                   Column(
@@ -697,7 +620,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                   _IconBtn(
                     icon: Icons.edit_outlined,
                     color: theme.colorScheme.primary,
-                    onTap: () => _showPolicyDialog(existing: p),
+                    onTap: () => _showPolicyDialog(context, existing: p),
                   ),
                 ];
               }).toList(),
@@ -707,7 +630,8 @@ class _HrConfigPageState extends State<HrConfigPage>
     );
   }
 
-  void _showPolicyDialog({Map<String, dynamic>? existing}) {
+  void _showPolicyDialog(BuildContext context,
+      {Map<String, dynamic>? existing}) {
     final isEdit = existing != null;
     final typeC =
         TextEditingController(text: existing?['recognition_type'] ?? '');
@@ -721,9 +645,9 @@ class _HrConfigPageState extends State<HrConfigPage>
         TextEditingController(text: '${existing?['conversion_rate'] ?? ''}');
     final convTypeC =
         TextEditingController(text: existing?['conversion_reward_type'] ?? '');
-    bool isActive = existing?['is_active'] ?? true;
 
     _showFormDialog(
+      context: context,
       title: isEdit ? 'Edit Policy Rule' : 'Create Policy Rule',
       fields: [
         if (!isEdit)
@@ -754,8 +678,7 @@ class _HrConfigPageState extends State<HrConfigPage>
               controller: convTypeC,
               dropdownOptions: const ['PAYROLL', 'CHARITY']),
       ],
-      onSave: () async {
-        final client = sl<ApiClient>();
+      onSave: () {
         if (isEdit) {
           final data = <String, dynamic>{};
           if (pointsC.text.isNotEmpty) {
@@ -770,9 +693,12 @@ class _HrConfigPageState extends State<HrConfigPage>
           if (rateC.text.isNotEmpty) {
             data['conversion_rate'] = double.tryParse(rateC.text);
           }
-          data['is_active'] = isActive;
-          await client.put('${ApiConstants.pointsRules}/${existing['id']}',
-              data: data);
+          data['is_active'] = existing['is_active'] ?? true;
+          context.read<HrConfigBloc>().add(SaveItem(
+                entityType: HrConfigEntityType.policyRule,
+                data: data,
+                id: existing['id'],
+              ));
         } else {
           final data = <String, dynamic>{
             'recognition_type': typeC.text,
@@ -792,17 +718,20 @@ class _HrConfigPageState extends State<HrConfigPage>
           if (convTypeC.text.isNotEmpty) {
             data['conversion_reward_type'] = convTypeC.text;
           }
-          await client.post(ApiConstants.pointsRules, data: data);
+          context.read<HrConfigBloc>().add(SaveItem(
+                entityType: HrConfigEntityType.policyRule,
+                data: data,
+              ));
         }
-        _loadAll();
       },
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  TAB 4 — System Settings
+  //  TAB 5 — System Settings
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildSystemSettingsTab(ThemeData theme) {
+  Widget _buildSystemSettingsTab(
+      BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
       child: Column(
@@ -812,20 +741,20 @@ class _HrConfigPageState extends State<HrConfigPage>
             subtitle: 'Global parameters and feature flags',
           ),
           const SizedBox(height: 12),
-          if (_configs.isEmpty)
-            _EmptyState(
+          if (state.configs.isEmpty)
+            const _EmptyState(
                 icon: Icons.settings_outlined, text: 'No settings configured'),
-          if (_configs.isNotEmpty)
+          if (state.configs.isNotEmpty)
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Column(
-                children: _configs.asMap().entries.map((entry) {
+                children: state.configs.asMap().entries.map((entry) {
                   final c = entry.value;
-                  final isLast = entry.key == _configs.length - 1;
+                  final isLast = entry.key == state.configs.length - 1;
                   return Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 16),
@@ -877,7 +806,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                         _IconBtn(
                           icon: Icons.edit_outlined,
                           color: theme.colorScheme.primary,
-                          onTap: () => _showEditConfigDialog(c),
+                          onTap: () => _showEditConfigDialog(context, c),
                         ),
                       ],
                     ),
@@ -890,20 +819,22 @@ class _HrConfigPageState extends State<HrConfigPage>
     );
   }
 
-  void _showEditConfigDialog(Map<String, dynamic> config) {
+  void _showEditConfigDialog(
+      BuildContext context, Map<String, dynamic> config) {
     final valueC =
         TextEditingController(text: config['value']?.toString() ?? '');
     _showFormDialog(
+      context: context,
       title: 'Edit: ${config['key']}',
       subtitle: config['description']?.toString(),
       fields: [
         _Field(label: 'Value', controller: valueC),
       ],
-      onSave: () async {
-        final client = sl<ApiClient>();
-        await client.put('${ApiConstants.systemConfig}${config['key']}',
-            data: {'value': valueC.text});
-        _loadAll();
+      onSave: () {
+        context.read<HrConfigBloc>().add(UpdateConfigSetting(
+              key: config['key'].toString(),
+              value: valueC.text,
+            ));
       },
     );
   }
@@ -940,15 +871,15 @@ class _HrConfigPageState extends State<HrConfigPage>
   }
 
   void _showFormDialog({
+    required BuildContext context,
     required String title,
     String? subtitle,
     required List<_Field> fields,
-    required Future<void> Function() onSave,
+    required VoidCallback onSave,
   }) {
     showDialog(
       context: context,
       builder: (ctx) {
-        bool saving = false;
         return StatefulBuilder(builder: (ctx, setDialogState) {
           return AlertDialog(
             title: Text(title, style: AppTextStyles.sectionTitle()),
@@ -970,7 +901,7 @@ class _HrConfigPageState extends State<HrConfigPage>
                           padding: const EdgeInsets.only(bottom: 12),
                           child: f.dropdownOptions != null
                               ? DropdownButtonFormField<String>(
-                                  value: f.dropdownOptions!
+                                  initialValue: f.dropdownOptions!
                                           .contains(f.controller.text)
                                       ? f.controller.text
                                       : null,
@@ -1017,29 +948,11 @@ class _HrConfigPageState extends State<HrConfigPage>
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: saving
-                    ? null
-                    : () async {
-                        setDialogState(() => saving = true);
-                        try {
-                          await onSave();
-                          if (ctx.mounted) Navigator.of(ctx).pop();
-                          _snack('Saved successfully');
-                        } catch (e) {
-                          _snack('Error: $e', isError: true);
-                        } finally {
-                          if (ctx.mounted) {
-                            setDialogState(() => saving = false);
-                          }
-                        }
-                      },
-                child: saving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Save'),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  onSave();
+                },
+                child: const Text('Save'),
               ),
             ],
           );
@@ -1085,8 +998,9 @@ class _RefreshBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Material(
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -1224,7 +1138,6 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-/// Larger toggle button used for activate/deactivate actions.
 class _ToggleIconBtn extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
@@ -1247,7 +1160,6 @@ class _ToggleIconBtn extends StatelessWidget {
   }
 }
 
-/// Generic data table card used across all config tabs.
 class _DataCard extends StatelessWidget {
   final List<String> columns;
   final List<int> flexes;
@@ -1260,9 +1172,10 @@ class _DataCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),

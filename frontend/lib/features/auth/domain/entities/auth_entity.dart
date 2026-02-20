@@ -1,7 +1,7 @@
 /// "Entity representing the authentication status and token."
 import 'package:equatable/equatable.dart';
 
-import 'package:rr_frontend/features/profile/domain/entities/user_entity.dart';
+import 'package:rr_frontend/core/entities/user_entity.dart';
 
 class AuthEntity extends Equatable {
   final String token;

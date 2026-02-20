@@ -1,147 +1,135 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dialog.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../../domain/entities/system_config_entity.dart';
+import '../bloc/config_bloc.dart';
+import '../bloc/config_event.dart';
+import '../bloc/config_state.dart';
 
-class SystemConfigPage extends StatefulWidget {
+class SystemConfigPage extends StatelessWidget {
   const SystemConfigPage({super.key});
 
   @override
-  State<SystemConfigPage> createState() => _SystemConfigPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ConfigBloc>()..add(LoadConfig()),
+      child: const _SystemConfigView(),
+    );
+  }
 }
 
-class _SystemConfigPageState extends State<SystemConfigPage> {
-  List<Map<String, dynamic>> _configs = [];
-  List<Map<String, dynamic>> _rules = [];
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAll();
-  }
-
-  Future<void> _loadAll() async {
-    setState(() => _isLoading = true);
-    try {
-      final client = sl<ApiClient>();
-      // Load configs and rules in parallel
-      final results = await Future.wait([
-        client.get(ApiConstants.systemConfig),
-        client.get('${ApiConstants.pointsRules}'),
-      ]);
-
-      final configData = results[0].data['data'] ?? [];
-      final rulesData = results[1].data['data'] ?? results[1].data ?? [];
-
-      setState(() {
-        _configs = (configData is List)
-            ? configData.cast<Map<String, dynamic>>()
-            : <Map<String, dynamic>>[];
-        _rules = (rulesData is List)
-            ? rulesData.cast<Map<String, dynamic>>()
-            : <Map<String, dynamic>>[];
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
+class _SystemConfigView extends StatelessWidget {
+  const _SystemConfigView();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocConsumer<ConfigBloc, ConfigState>(
+      listener: (context, state) {
+        if (state.successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.successMessage!),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+        if (state.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${state.error}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Configuration',
-                        style: AppTextStyles.pageTitle()),
-                    const SizedBox(height: 4),
-                    Text('Manage system settings and point rules',
-                        style: AppTextStyles.body(
-                            color: Colors.grey.shade500)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Configuration', style: AppTextStyles.pageTitle()),
+                        const SizedBox(height: 4),
+                        Text('Manage system settings and point rules',
+                            style: AppTextStyles.body(
+                                color: Colors.grey.shade500)),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () =>
+                          context.read<ConfigBloc>().add(LoadConfig()),
+                    ),
                   ],
                 ),
-                IconButton(
-                    icon: const Icon(Icons.refresh), onPressed: _loadAll),
+                const SizedBox(height: 24),
+                if (state.isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(48.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                if (!state.isLoading) ...[
+                  // System Configuration Section
+                  _buildSectionHeader('System Configuration',
+                      'Global settings and parameters', Icons.settings_rounded),
+                  const SizedBox(height: 12),
+                  if (state.configs.isNotEmpty)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: state.configs
+                            .map((c) => _buildConfigTile(context, c, theme))
+                            .toList(),
+                      ),
+                    ),
+                  if (state.configs.isEmpty)
+                    _buildEmptyState(
+                        Icons.settings_outlined, 'No configuration entries'),
+                  const SizedBox(height: 32),
+
+                  // Point Rules & Eligibility Section
+                  _buildSectionHeader('Point Rules & Eligibility',
+                      'Define point values for different actions',
+                      Icons.rule_rounded),
+                  const SizedBox(height: 12),
+                  if (state.rules.isNotEmpty)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: state.rules
+                            .map((r) => _buildRuleTile(r, theme))
+                            .toList(),
+                      ),
+                    ),
+                  if (state.rules.isEmpty)
+                    _buildEmptyState(
+                        Icons.rule_rounded, 'No point rules configured'),
+                ],
               ],
             ),
-            const SizedBox(height: 24),
-            if (_isLoading)
-              const Center(
-                  child: Padding(
-                      padding: EdgeInsets.all(48.0),
-                      child: CircularProgressIndicator())),
-            if (_error != null)
-              Center(
-                  child: Text('Error: $_error',
-                      style: TextStyle(color: Colors.red.shade700))),
-            if (!_isLoading && _error == null) ...[
-              // ── System Configuration Section ──
-              _buildSectionHeader('System Configuration',
-                  'Global settings and parameters', Icons.settings_rounded),
-              const SizedBox(height: 12),
-              if (_configs.isNotEmpty)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    children: _configs.map((config) {
-                      return _buildConfigTile(context, config, theme);
-                    }).toList(),
-                  ),
-                ),
-              if (_configs.isEmpty)
-                _buildEmptyState(
-                    Icons.settings_outlined, 'No configuration entries'),
-              const SizedBox(height: 32),
-
-              // ── Point Rules & Eligibility Section ──
-              _buildSectionHeader(
-                  'Point Rules & Eligibility',
-                  'Define point values for different actions',
-                  Icons.rule_rounded),
-              const SizedBox(height: 12),
-              if (_rules.isNotEmpty)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    children: _rules.map((rule) {
-                      return _buildRuleTile(rule, theme);
-                    }).toList(),
-                  ),
-                ),
-              if (_rules.isEmpty)
-                _buildEmptyState(
-                    Icons.rule_rounded, 'No point rules configured'),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -153,8 +141,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style: AppTextStyles.label()),
+            Text(title, style: AppTextStyles.label()),
             Text(subtitle,
                 style: AppTextStyles.caption(color: Colors.grey.shade400)),
           ],
@@ -178,11 +165,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
     );
   }
 
-  Widget _buildRuleTile(Map<String, dynamic> rule, ThemeData theme) {
-    final name = rule['rule_name'] ?? rule['name'] ?? '';
-    final description = rule['description'] ?? '';
-    final points = rule['points_value'] ?? rule['points'] ?? 0;
-
+  Widget _buildRuleTile(dynamic rule, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -194,12 +177,10 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name.toString(),
-                    style: AppTextStyles.cardTitle()),
-                if (description.toString().isNotEmpty)
-                  Text(description.toString(),
-                      style: AppTextStyles.small(
-                          color: Colors.grey.shade500)),
+                Text(rule.name, style: AppTextStyles.cardTitle()),
+                if (rule.description != null && rule.description!.isNotEmpty)
+                  Text(rule.description!,
+                      style: AppTextStyles.small(color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -210,8 +191,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: Text('$points',
-                style: AppTextStyles.cardTitle()),
+            child: Text('${rule.points}', style: AppTextStyles.cardTitle()),
           ),
         ],
       ),
@@ -219,11 +199,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
   }
 
   Widget _buildConfigTile(
-      BuildContext context, Map<String, dynamic> config, ThemeData theme) {
-    final key = config['key'] ?? '';
-    final value = config['value'] ?? '';
-    final description = config['description'] ?? '';
-
+      BuildContext context, SystemConfigEntity config, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -245,12 +221,11 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(key,
-                    style: AppTextStyles.cardTitle()),
-                if (description.toString().isNotEmpty)
-                  Text(description,
-                      style: AppTextStyles.small(
-                          color: Colors.grey.shade500)),
+                Text(config.key, style: AppTextStyles.cardTitle()),
+                if (config.description != null &&
+                    config.description!.isNotEmpty)
+                  Text(config.description!,
+                      style: AppTextStyles.small(color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -260,8 +235,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(value.toString(),
-                style: AppTextStyles.bodyBold()),
+            child: Text(config.value, style: AppTextStyles.bodyBold()),
           ),
           const SizedBox(width: 8),
           IconButton(
@@ -273,24 +247,23 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
     );
   }
 
-  void _showEditDialog(BuildContext context, Map<String, dynamic> config) {
-    final controller =
-        TextEditingController(text: config['value']?.toString() ?? '');
+  void _showEditDialog(BuildContext context, SystemConfigEntity config) {
+    final controller = TextEditingController(text: config.value);
+    final bloc = context.read<ConfigBloc>();
     showDialog(
       context: context,
       builder: (ctx) => AppDialog(
-        title: 'Edit: ${config['key']}',
+        title: 'Edit: ${config.key}',
         maxWidth: 420,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (config['description'] != null)
+            if (config.description != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text(config['description'],
-                    style: AppTextStyles.body(
-                        color: Colors.grey.shade600)),
+                child: Text(config.description!,
+                    style: AppTextStyles.body(color: Colors.grey.shade600)),
               ),
             TextField(
               controller: controller,
@@ -303,23 +276,10 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.of(ctx).pop();
-              try {
-                final client = sl<ApiClient>();
-                await client.patch(
-                    '${ApiConstants.systemConfig}${config['key']}',
-                    data: {'value': controller.text});
-                _loadAll();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red),
-                  );
-                }
-              }
+              bloc.add(UpdateConfigEntry(
+                  key: config.key, value: controller.text));
             },
             child: const Text('Save'),
           ),
