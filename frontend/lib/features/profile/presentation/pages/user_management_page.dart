@@ -3,6 +3,9 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/app_dialog.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
@@ -53,31 +56,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('User Management',
-                    style: AppTextStyles.pageTitle()),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _loadUsers,
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _showCreateUserDialog(context),
-                      icon: const Icon(Icons.person_add, size: 18),
-                      label: const Text('Add User'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            AppPageHeader(
+              title: 'User Management',
+              subtitle: 'Manage system users, roles, and departments',
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadUsers,
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showCreateUserDialog(context),
+                    icon: const Icon(Icons.person_add, size: 18),
+                    label: const Text('Add User'),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             if (_isLoading)
@@ -87,9 +83,18 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 child: CircularProgressIndicator(),
               )),
             if (_error != null)
-              Center(
-                  child: Text('Error: $_error',
-                      style: TextStyle(color: Colors.red.shade700))),
+              EmptyStateView(
+                icon: Icons.error_outline_rounded,
+                title: 'Unable to load users',
+                message: _error,
+                onRetry: _loadUsers,
+              ),
+            if (!_isLoading && _users.isEmpty && _error == null)
+              const EmptyStateView(
+                icon: Icons.people_outline_rounded,
+                title: 'No users found',
+                message: 'Add your first user to get started.',
+              ),
             if (!_isLoading && _users.isNotEmpty)
               Container(
                 decoration: BoxDecoration(
@@ -167,8 +172,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(role,
-          style: AppTextStyles.captionBold(color: color)),
+      child: Text(role, style: AppTextStyles.captionBold(color: color)),
     );
   }
 
@@ -178,44 +182,42 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create New User'),
-        content: SizedBox(
-          width: 400,
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Full Name'),
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  onChanged: (v) => name = v,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  onChanged: (v) => email = v,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  obscureText: true,
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  onChanged: (v) => password = v,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Role'),
-                  initialValue: role,
-                  items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) => role = v ?? 'EMPLOYEE',
-                ),
-              ],
-            ),
+      builder: (ctx) => AppDialog(
+        title: 'Create New User',
+        maxWidth: 500,
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                onChanged: (v) => name = v,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                onChanged: (v) => email = v,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                onChanged: (v) => password = v,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Role'),
+                initialValue: role,
+                items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) => role = v ?? 'EMPLOYEE',
+              ),
+            ],
           ),
         ),
         actions: [
@@ -270,31 +272,29 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Edit ${user['name']}'),
-        content: SizedBox(
-          width: 400,
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Full Name'),
-                  initialValue: name,
-                  onChanged: (v) => name = v,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Role'),
-                  initialValue: role,
-                  items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) => role = v ?? role,
-                ),
-              ],
-            ),
+      builder: (ctx) => AppDialog(
+        title: 'Edit ${user['name']}',
+        maxWidth: 500,
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                initialValue: name,
+                onChanged: (v) => name = v,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Role'),
+                initialValue: role,
+                items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) => role = v ?? role,
+              ),
+            ],
           ),
         ),
         actions: [

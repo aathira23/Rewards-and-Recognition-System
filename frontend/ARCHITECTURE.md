@@ -6,6 +6,7 @@ This document provides a simple explanation of the folder and file structure for
 
 - **`main.dart`**: The starting point of the application. It initializes dependencies and runs the app.
 - **`app.dart`**: The root widget that sets up the global theme, routing, and overall application state.
+- **`injection_container.dart`**: Manages Dependency Injection (DI) using `get_it`, connecting all layers (Data, Domain, Presentation) for every feature.
 
 ---
 
@@ -13,8 +14,10 @@ This document provides a simple explanation of the folder and file structure for
 Contains shared logic and components used across all features.
 
 - **`constants/`**: Holds global constants like API endpoints (`api_constants.dart`) and string keys.
+- **`entities/`**: Contains core business entities shared across multiple features (e.g., `UserEntity`).
 - **`errors/`**: Defines custom error and failure classes (`failures.dart`) for consistent error handling.
 - **`network/`**: Logic for network monitoring and HTTP interceptors.
+- **`presentation/`**: Shared UI models and complex global widgets that don't belong to a specific feature.
 - **`theme/`**: Manages the application's look and feel, supporting Light and Dark modes (`app_theme.dart`).
 - **`usecases/`**: Provides a base template (`usecase.dart`) that all feature-specific logic must follow.
 - **`utils/`**: Small, reusable helper functions (e.g., date formatters, validators).
@@ -23,7 +26,7 @@ Contains shared logic and components used across all features.
 ---
 
 ## Features Folder (`lib/features/`)
-The application is divided into 13 modules that strictly mirror the backend services.
+The application is divided into 14 modules that strictly mirror the backend services.
 
 ### Feature List:
 1.  **`auth`**: Login, registration, and logout logic.
@@ -35,10 +38,11 @@ The application is divided into 13 modules that strictly mirror the backend serv
 7.  **`departments`**: Organizational structure management.
 8.  **`celebrations`**: Handling birthdays, anniversaries, and holidays.
 9.  **`catalog`**: The "Store" where users can view and redeem rewards.
-10. **`inbox`**: System notifications and personal alerts.
+10. **`notifications`**: System notifications and personal alerts.
 11. **`analytics`**: Data visualization and activity dashboards.
 12. **`reports`**: Logic for generating and viewing activity reports.
 13. **`config`**: System-wide feature toggles and settings.
+14. **`hr`**: Administrative tools for Human Resources to manage employee data and system overrides.
 
 ---
 

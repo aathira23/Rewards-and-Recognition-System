@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 import '../../domain/entities/analytics_entity.dart';
 import '../bloc/analytics_bloc.dart';
 import '../bloc/analytics_event.dart';
@@ -66,58 +67,26 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surfaceContainer,
       body: BlocBuilder<AnalyticsBloc, AnalyticsState>(
         builder: (context, state) {
           if (state.status == AnalyticsStatus.loading) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Loading analytics…',
-                      style: AppTextStyles.body(color: Colors.grey.shade500)),
-                ],
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(100),
+                child: CircularProgressIndicator(),
               ),
             );
           }
 
           if (state.status == AnalyticsStatus.failure) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.cloud_off_rounded,
-                      size: 44, color: Colors.grey.shade300),
-                  const SizedBox(height: 12),
-                  Text('Unable to load analytics',
-                      style: AppTextStyles.label()),
-                  if (state.errorMessage != null) ...[
-                    const SizedBox(height: 4),
-                    Text(state.errorMessage!,
-                        style:
-                            AppTextStyles.small(color: Colors.grey.shade400)),
-                  ],
-                  const SizedBox(height: 20),
-                  TextButton.icon(
-                    onPressed: _refresh,
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Try again'),
-                    style: TextButton.styleFrom(minimumSize: Size.zero),
-                  ),
-                ],
-              ),
+            return EmptyStateView(
+              icon: Icons.cloud_off_rounded,
+              title: 'Unable to load analytics',
+              message: state.errorMessage,
+              onRetry: _refresh,
             );
           }
 
@@ -284,7 +253,11 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
           ),
           const SizedBox(height: 20),
           if (trends.isEmpty)
-            _emptyState(Icons.insights_rounded, 'No activity data yet')
+            const EmptyStateView(
+              icon: Icons.insights_rounded,
+              title: 'No activity data yet',
+              padding: 24,
+            )
           else
             _TrendChart(trends: trends, color: theme.colorScheme.primary),
         ],
@@ -314,7 +287,11 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
               style: AppTextStyles.caption(color: Colors.grey.shade400)),
           const SizedBox(height: 16),
           if (items.isEmpty)
-            _emptyState(emptyIcon, 'No data available')
+            EmptyStateView(
+              icon: emptyIcon,
+              title: 'No data available',
+              padding: 24,
+            )
           else
             ...items.asMap().entries.map((entry) {
               final rank = entry.key + 1;
@@ -342,7 +319,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: primary.withValues(alpha: 0.08),
+                        color: primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
@@ -372,9 +349,8 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                               minHeight: 3,
                               backgroundColor: Colors.grey.shade100,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                primary.withValues(
-                                    alpha: 0.25 +
-                                        (count / math.max(maxCount, 1)) * 0.6),
+                                primary.withOpacity(0.25 +
+                                    (count / math.max(maxCount, 1)) * 0.6),
                               ),
                             ),
                           ),
@@ -402,21 +378,6 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
   // ───────────────────────────────────────────────────────────────
   // HELPERS
   // ───────────────────────────────────────────────────────────────
-  Widget _emptyState(IconData icon, String text) {
-    return SizedBox(
-      height: 120,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 28, color: Colors.grey.shade300),
-            const SizedBox(height: 8),
-            Text(text, style: AppTextStyles.small(color: Colors.grey.shade400)),
-          ],
-        ),
-      ),
-    );
-  }
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';

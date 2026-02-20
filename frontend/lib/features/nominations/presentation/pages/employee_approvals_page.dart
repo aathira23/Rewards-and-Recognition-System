@@ -10,6 +10,10 @@ import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
 import '../widgets/nominate_employee_dialog.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/utils/date_formatter.dart';
 
 /// Employee Nomination Tracker — read-only view.
 ///
@@ -85,19 +89,6 @@ class _ApprovalsViewState extends State<_ApprovalsView>
         'Unknown';
   }
 
-  Color _statusColor(String s) {
-    switch (s.toUpperCase()) {
-      case 'APPROVED':
-        return const Color(0xFF16A34A);
-      case 'REJECTED':
-        return const Color(0xFFDC2626);
-      case 'PENDING':
-        return const Color(0xFFF59E0B);
-      default:
-        return Colors.grey;
-    }
-  }
-
   String _statusLabel(NominationEntity n) {
     if (n.status.toUpperCase() != 'PENDING' || n.nextRequiredLevel == null) {
       return n.status;
@@ -111,29 +102,6 @@ class _ApprovalsViewState extends State<_ApprovalsView>
         return 'Awaiting HR';
       default:
         return 'Pending';
-    }
-  }
-
-  String _fmtDate(String d) {
-    try {
-      final dt = DateTime.parse(d);
-      const months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
-    } catch (_) {
-      return d;
     }
   }
 
@@ -166,42 +134,28 @@ class _ApprovalsViewState extends State<_ApprovalsView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header ──────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('My Nominations',
-                            style: AppTextStyles.pageTitle()),
-                        const SizedBox(height: 2),
-                        Text('Track your nominations and awards',
-                            style: AppTextStyles.body(
-                                color: Colors.grey.shade500)),
-                      ],
-                    ),
-                  ),
-                  BlocBuilder<NominationsBloc, NominationsState>(
-                    builder: (context, state) {
-                      return ElevatedButton.icon(
-                        onPressed: state.awardTypes.isEmpty
-                            ? null
-                            : () => showDialog(
-                                  context: context,
-                                  builder: (_) => NominateEmployeeDialog(
-                                    awardTypes: state.awardTypes,
-                                    users: state.users,
-                                    bloc: context.read<NominationsBloc>(),
-                                  ),
+              AppPageHeader(
+                title: 'My Nominations',
+                subtitle: 'Track your nominations and awards',
+                action: BlocBuilder<NominationsBloc, NominationsState>(
+                  builder: (context, state) {
+                    return ElevatedButton.icon(
+                      onPressed: state.awardTypes.isEmpty
+                          ? null
+                          : () => showDialog(
+                                context: context,
+                                builder: (_) => NominateEmployeeDialog(
+                                  awardTypes: state.awardTypes,
+                                  users: state.users,
+                                  bloc: context.read<NominationsBloc>(),
                                 ),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Nominate'),
-                      );
-                    },
-                  ),
-                ],
+                              ),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Nominate'),
+                    );
+                  },
+                ),
               ),
-              const SizedBox(height: 24),
 
               // ── Tabs ────────────────────────────────────────────
               Container(
@@ -298,16 +252,9 @@ class _ApprovalsViewState extends State<_ApprovalsView>
   Widget _buildList(List<NominationEntity> items, List<UserEntity> users,
       String emptyMsg, IconData emptyIcon) {
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(emptyIcon, size: 48, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text(emptyMsg,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-          ],
-        ),
+      return EmptyStateView(
+        icon: emptyIcon,
+        title: emptyMsg,
       );
     }
 
@@ -320,7 +267,6 @@ class _ApprovalsViewState extends State<_ApprovalsView>
   }
 
   Widget _buildCard(NominationEntity n, List<UserEntity> users) {
-    final color = _statusColor(n.status);
     final nominee = _resolveName(n, true, users);
     final nominator = _resolveName(n, false, users);
 
@@ -343,7 +289,12 @@ class _ApprovalsViewState extends State<_ApprovalsView>
           Container(
             height: 3,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.6),
+              color: (n.status == 'APPROVED'
+                      ? const Color(0xFF16A34A)
+                      : n.status == 'REJECTED'
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFFF59E0B))
+                  .withValues(alpha: 0.6),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),
@@ -373,20 +324,9 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                         style: AppTextStyles.cardTitle(),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _statusLabel(n),
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600),
-                      ),
+                    StatusBadge(
+                      status: n.status,
+                      label: _statusLabel(n),
                     ),
                   ],
                 ),
@@ -421,7 +361,7 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                     Icon(Icons.schedule_rounded,
                         size: 12, color: Colors.grey.shade400),
                     const SizedBox(width: 4),
-                    Text(_fmtDate(n.createdAt),
+                    Text(AppDateFormatter.format(n.createdAt),
                         style: TextStyle(
                             fontSize: 11, color: Colors.grey.shade400)),
                     if (n.status == 'APPROVED' && n.pointsAwarded != null) ...[

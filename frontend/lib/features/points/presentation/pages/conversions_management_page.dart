@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/widgets/action_buttons.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../injection_container.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/utils/date_formatter.dart';
 
 class ConversionsManagementPage extends StatefulWidget {
   const ConversionsManagementPage({super.key});
@@ -77,17 +81,12 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Points Conversions', style: AppTextStyles.pageTitle()),
-                IconButton(
-                    icon: const Icon(Icons.refresh), onPressed: _loadPending),
-              ],
+            AppPageHeader(
+              title: 'Points Conversions',
+              subtitle: 'Approve or reject employee points conversion requests',
+              action: IconButton(
+                  icon: const Icon(Icons.refresh), onPressed: _loadPending),
             ),
-            const SizedBox(height: 8),
-            Text('Approve or reject employee points conversion requests',
-                style: AppTextStyles.body(color: Colors.grey.shade600)),
             const SizedBox(height: 24),
             if (_isLoading)
               const Center(
@@ -95,24 +94,17 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
                       padding: EdgeInsets.all(48.0),
                       child: CircularProgressIndicator())),
             if (_error != null)
-              Center(
-                  child: Text('Error: $_error',
-                      style: AppTextStyles.body(color: Colors.red.shade700))),
-            if (!_isLoading && _pending.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(64.0),
-                  child: Column(
-                    children: [
-                      Icon(Icons.check_circle_outline,
-                          size: 48, color: Colors.green.shade300),
-                      const SizedBox(height: 16),
-                      Text('No pending conversions',
-                          style:
-                              AppTextStyles.body(color: Colors.grey.shade600)),
-                    ],
-                  ),
-                ),
+              EmptyStateView(
+                icon: Icons.error_outline_rounded,
+                title: 'Unable to load conversions',
+                message: _error,
+                onRetry: _loadPending,
+              ),
+            if (!_isLoading && _pending.isEmpty && _error == null)
+              const EmptyStateView(
+                icon: Icons.check_circle_outline,
+                title: 'No pending conversions',
+                message: 'All requests have been processed.',
               ),
             if (!_isLoading && _pending.isNotEmpty)
               ..._pending.map((conv) => _buildConversionCard(conv, theme)),
@@ -169,22 +161,20 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
                   '$type • $points pts → ₹$amount',
                   style: AppTextStyles.small(color: Colors.grey.shade600),
                 ),
-                Text(date,
+                Text(AppDateFormatter.format(date),
                     style: AppTextStyles.caption(color: Colors.grey.shade400)),
               ],
             ),
           ),
           if (status == 'PENDING') ...[
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.red),
+            RejectButton(
+              isCompact: true,
               onPressed: () => _actionConversion(id, 'REJECTED'),
-              tooltip: 'Reject',
             ),
             const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.check, color: Colors.green),
+            ApproveButton(
+              isCompact: true,
               onPressed: () => _actionConversion(id, 'APPROVED'),
-              tooltip: 'Approve',
             ),
           ] else
             Container(

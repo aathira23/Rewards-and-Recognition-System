@@ -5,6 +5,10 @@ import '../../../../injection_container.dart';
 import '../bloc/payroll_bloc.dart';
 import '../bloc/payroll_event.dart';
 import '../bloc/payroll_state.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/utils/date_formatter.dart';
 
 class PayrollEncashmentPage extends StatelessWidget {
   const PayrollEncashmentPage({super.key});
@@ -14,8 +18,7 @@ class PayrollEncashmentPage extends StatelessWidget {
     final now = DateTime.now();
     final initialMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     return BlocProvider(
-      create: (_) =>
-          sl<PayrollBloc>()..add(LoadPayroll(month: initialMonth)),
+      create: (_) => sl<PayrollBloc>()..add(LoadPayroll(month: initialMonth)),
       child: _PayrollView(initialMonth: initialMonth),
     );
   }
@@ -84,66 +87,54 @@ class _PayrollViewState extends State<_PayrollView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Payroll Encashment',
-                              style: AppTextStyles.pageTitle()),
-                          const SizedBox(height: 2),
-                          Text('View and export points encashment requests',
-                              style: AppTextStyles.body(
-                                  color: Colors.grey.shade500)),
-                        ],
+                AppPageHeader(
+                  title: 'Payroll Encashment',
+                  subtitle: 'View and export points encashment requests',
+                  action: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Month picker
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left, size: 18),
+                              onPressed: () => _changeMonth(-1),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(_selectedMonth,
+                                  style: AppTextStyles.bodyBold()),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right, size: 18),
+                              onPressed: () => _changeMonth(1),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    // Month picker
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 2),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => context
+                            .read<PayrollBloc>()
+                            .add(ExportPayrollCsv(month: _selectedMonth)),
+                        icon: const Icon(Icons.download_rounded, size: 15),
+                        label: const Text('Export to CSV/Excel'),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chevron_left, size: 18),
-                            onPressed: () => _changeMonth(-1),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(_selectedMonth,
-                                style: AppTextStyles.bodyBold()),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.chevron_right, size: 18),
-                            onPressed: () => _changeMonth(1),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => context
-                          .read<PayrollBloc>()
-                          .add(ExportPayrollCsv(month: _selectedMonth)),
-                      icon: const Icon(Icons.download_rounded, size: 15),
-                      label: const Text('Export to CSV/Excel'),
-                      style: ElevatedButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -164,20 +155,11 @@ class _PayrollViewState extends State<_PayrollView> {
 
   Widget _buildTable(List<Map<String, dynamic>> data, ThemeData theme) {
     if (data.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(60),
-          child: Column(
-            children: [
-              Icon(Icons.receipt_long_rounded,
-                  size: 40, color: Colors.grey.shade300),
-              const SizedBox(height: 10),
-              Text('No encashment records for $_selectedMonth',
-                  style:
-                      TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-            ],
-          ),
-        ),
+      return EmptyStateView(
+        icon: Icons.receipt_long_rounded,
+        title: 'No records for $_selectedMonth',
+        message: 'No encashment requests were made during this period.',
+        padding: 60,
       );
     }
 
@@ -190,8 +172,7 @@ class _PayrollViewState extends State<_PayrollView> {
       child: Column(
         children: [
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius:
@@ -246,13 +227,12 @@ class _PayrollViewState extends State<_PayrollView> {
           ...data.map((row) => _buildRow(row, theme)),
           const Divider(height: 1),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
                 Text('Showing ${data.length} results',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500)),
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -264,8 +244,7 @@ class _PayrollViewState extends State<_PayrollView> {
   Widget _buildRow(Map<String, dynamic> row, ThemeData theme) {
     final name = row['user_name']?.toString() ?? 'Unknown';
     final points = row['points_converted'] ?? 0;
-    final cash =
-        double.tryParse(row['cash_amount']?.toString() ?? '0') ?? 0;
+    final cash = double.tryParse(row['cash_amount']?.toString() ?? '0') ?? 0;
     final status = row['status']?.toString() ?? '';
     final approvedAt = row['approved_at']?.toString() ?? '\u2014';
     final isApproved = status == 'APPROVED';
@@ -303,8 +282,8 @@ class _PayrollViewState extends State<_PayrollView> {
           Expanded(
             flex: 2,
             child: Text('$points pts',
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
           Expanded(
             flex: 2,
@@ -316,34 +295,15 @@ class _PayrollViewState extends State<_PayrollView> {
           ),
           Expanded(
             flex: 2,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: isApproved
-                    ? Colors.green.shade50
-                    : Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                isApproved ? 'Processed' : status,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isApproved
-                        ? Colors.green.shade700
-                        : Colors.amber.shade700),
-              ),
+            child: StatusBadge(
+              status: status,
+              label: isApproved ? 'Processed' : status,
             ),
           ),
           Expanded(
             flex: 2,
-            child: Text(
-                approvedAt.length >= 10
-                    ? approvedAt.substring(0, 10)
-                    : approvedAt,
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            child: Text(AppDateFormatter.format(approvedAt),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
           ),
         ],
       ),

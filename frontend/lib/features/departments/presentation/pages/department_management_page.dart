@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/department_entity.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 import '../bloc/department_bloc.dart';
 import '../bloc/department_event.dart';
 import '../bloc/department_state.dart';
@@ -55,33 +57,26 @@ class _DepartmentManagementView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Department Management',
-                        style: AppTextStyles.pageTitle()),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.refresh),
-                          onPressed: () => context
-                              .read<DepartmentBloc>()
-                              .add(LoadDepartments()),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: () => _showCreateDialog(context),
-                          icon: const Icon(Icons.add_business, size: 18),
-                          label: const Text('Add Department'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: Size.zero,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                AppPageHeader(
+                  title: 'Department Management',
+                  subtitle: 'Create and manage organizational departments',
+                  action: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => context
+                            .read<DepartmentBloc>()
+                            .add(LoadDepartments()),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _showCreateDialog(context),
+                        icon: const Icon(Icons.add_business, size: 18),
+                        label: const Text('Add Department'),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
                 if (state.isLoading)
@@ -91,7 +86,13 @@ class _DepartmentManagementView extends StatelessWidget {
                       child: CircularProgressIndicator(),
                     ),
                   ),
-                if (!state.isLoading)
+                if (!state.isLoading && state.departments.isEmpty)
+                  const EmptyStateView(
+                    icon: Icons.business_outlined,
+                    title: 'No departments found',
+                    message: 'Click "Add Department" to create your first one.',
+                  ),
+                if (!state.isLoading && state.departments.isNotEmpty)
                   Wrap(
                     spacing: 16,
                     runSpacing: 16,

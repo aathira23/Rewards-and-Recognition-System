@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
@@ -51,11 +53,10 @@ class EmployeeRecognitionsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Recognitions Center',
-                  style: AppTextStyles.pageTitle(),
+                const AppPageHeader(
+                  title: 'Recognitions Center',
+                  subtitle: 'Appreciate and celebrate your colleagues',
                 ),
-                const SizedBox(height: 24),
                 BlocBuilder<RecognitionsBloc, RecognitionsState>(
                   builder: (context, state) {
                     if (state.status == RecognitionStatus.loading &&
@@ -65,8 +66,14 @@ class EmployeeRecognitionsPage extends StatelessWidget {
 
                     if (state.status == RecognitionStatus.failure &&
                         state.badges.isEmpty) {
-                      return Center(
-                          child: Text('Error: ${state.errorMessage}'));
+                      return EmptyStateView(
+                        icon: Icons.error_outline_rounded,
+                        title: 'Unable to load recognitions',
+                        message: state.errorMessage,
+                        onRetry: () => context
+                            .read<RecognitionsBloc>()
+                            .add(GetBadgesRequested()),
+                      );
                     }
 
                     return Row(
@@ -115,29 +122,29 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          'Recognition Feed',
-                                          style: AppTextStyles.sectionHeader(),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        'Recognition Feed',
+                                        style: AppTextStyles.sectionHeader(),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.refresh,
-                                            size: 20, color: Colors.grey),
-                                        onPressed: () {
-                                          context
-                                              .read<RecognitionsBloc>()
-                                              .add(GetRecognitionFeedRequested());
-                                        },
-                                        tooltip: 'Refresh Feed',
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh,
+                                          size: 20, color: Colors.grey),
+                                      onPressed: () {
+                                        context
+                                            .read<RecognitionsBloc>()
+                                            .add(GetRecognitionFeedRequested());
+                                      },
+                                      tooltip: 'Refresh Feed',
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 16),
                                 Expanded(
                                   child: RecognitionFeedList(feed: state.feed),

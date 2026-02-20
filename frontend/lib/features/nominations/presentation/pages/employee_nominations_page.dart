@@ -10,6 +10,10 @@ import '../bloc/nominations_state.dart';
 import '../widgets/nominate_employee_dialog.dart';
 import '../../domain/entities/nomination_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/utils/date_formatter.dart';
 
 /// Employee-only nominations page.
 ///
@@ -105,44 +109,27 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header ────────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Nominations',
-                          style: AppTextStyles.pageTitle(),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Nominate a colleague or check your award status',
-                          style:
-                              AppTextStyles.body(color: Colors.grey.shade500),
-                        ),
-                      ],
-                    ),
-                  ),
-                  BlocBuilder<NominationsBloc, NominationsState>(
-                    builder: (context, state) {
-                      return ElevatedButton.icon(
-                        onPressed: state.awardTypes.isEmpty
-                            ? null
-                            : () => showDialog(
-                                  context: context,
-                                  builder: (_) => NominateEmployeeDialog(
-                                    awardTypes: state.awardTypes,
-                                    users: state.users,
-                                    bloc: context.read<NominationsBloc>(),
-                                  ),
+              AppPageHeader(
+                title: 'Nominations',
+                subtitle: 'Nominate a colleague or check your award status',
+                action: BlocBuilder<NominationsBloc, NominationsState>(
+                  builder: (context, state) {
+                    return ElevatedButton.icon(
+                      onPressed: state.awardTypes.isEmpty
+                          ? null
+                          : () => showDialog(
+                                context: context,
+                                builder: (_) => NominateEmployeeDialog(
+                                  awardTypes: state.awardTypes,
+                                  users: state.users,
+                                  bloc: context.read<NominationsBloc>(),
                                 ),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Nominate Someone'),
-                      );
-                    },
-                  ),
-                ],
+                              ),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Nominate Someone'),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -227,20 +214,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
   Widget _buildSubmittedList(BuildContext context, NominationsState state,
       List<NominationEntity> nominations, List<UserEntity> users) {
     if (nominations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.emoji_events_outlined,
-                size: 52, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text('No nominations submitted yet',
-                style: TextStyle(color: Colors.grey.shade500)),
-            const SizedBox(height: 6),
-            Text('Tap "Nominate Someone" to get started',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-          ],
-        ),
+      return const EmptyStateView(
+        icon: Icons.emoji_events_outlined,
+        title: 'No nominations submitted yet',
+        message: 'Tap "Nominate Someone" to get started',
       );
     }
 
@@ -257,20 +234,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
   Widget _buildReceivedList(BuildContext context,
       List<NominationEntity> received, List<UserEntity> users) {
     if (received.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.workspace_premium_rounded,
-                size: 52, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text('No awards received yet',
-                style: TextStyle(color: Colors.grey.shade500)),
-            const SizedBox(height: 6),
-            Text('Keep up the great work!',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-          ],
-        ),
+      return const EmptyStateView(
+        icon: Icons.workspace_premium_rounded,
+        title: 'No awards received yet',
+        message: 'Keep up the great work!',
       );
     }
 
@@ -351,7 +318,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                         style: AppTextStyles.cardTitle(),
                       ),
                     ),
-                    _statusBadge(nom),
+                    StatusBadge(
+                      status: nom.status,
+                      label: _statusLabel(nom),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -388,7 +358,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                         size: 12, color: Colors.grey.shade400),
                     const SizedBox(width: 4),
                     Text(
-                      _formatDate(nom.createdAt),
+                      AppDateFormatter.format(nom.createdAt),
                       style:
                           TextStyle(fontSize: 11, color: Colors.grey.shade500),
                     ),
@@ -525,7 +495,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                               size: 12, color: Colors.grey.shade400),
                           const SizedBox(width: 4),
                           Text(
-                            _formatDate(nom.createdAt),
+                            AppDateFormatter.format(nom.createdAt),
                             style: TextStyle(
                                 fontSize: 11, color: Colors.grey.shade400),
                           ),
@@ -558,32 +528,15 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
     );
   }
 
-  Widget _statusBadge(NominationEntity nom) {
+  String _statusLabel(NominationEntity nom) {
     final status = nom.status.toUpperCase();
-    final color = _statusColor(status);
-
-    String label = status;
     if (status == 'PENDING' && nom.nextRequiredLevel != null) {
       final level = nom.nextRequiredLevel!.toUpperCase();
-      if (level == 'MANAGER')
-        label = 'Pending Mgr';
-      else if (level == 'DEPT_HEAD')
-        label = 'Pending Head';
-      else if (level == 'HR') label = 'Pending HR';
+      if (level == 'MANAGER') return 'Pending Mgr';
+      if (level == 'DEPT_HEAD') return 'Pending Head';
+      if (level == 'HR') return 'Pending HR';
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style:
-            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
+    return status;
   }
 
   Color _statusColor(String status) {
@@ -596,15 +549,6 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
         return Colors.orange;
       default:
         return Colors.grey;
-    }
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final dt = DateTime.parse(dateStr);
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
-      return dateStr;
     }
   }
 }

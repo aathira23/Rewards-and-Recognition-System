@@ -6,6 +6,9 @@ import '../../domain/entities/notification_entity.dart';
 import '../bloc/notifications_bloc.dart';
 import '../bloc/notifications_event.dart';
 import '../bloc/notifications_state.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/utils/date_formatter.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -37,53 +40,39 @@ class _NotificationsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Notifications',
-                            style: AppTextStyles.pageTitle()),
-                        if (state.unreadCount > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              '${state.unreadCount} unread',
-                              style: AppTextStyles.body(
-                                  color: theme.colorScheme.primary),
-                            ),
-                          ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        if (state.unreadCount > 0)
-                          TextButton.icon(
-                            onPressed: () {
-                              context
-                                  .read<NotificationsBloc>()
-                                  .add(MarkAllAsReadRequested());
-                            },
-                            icon: const Icon(Icons.done_all, size: 18),
-                            label: const Text('Mark all read'),
-                          ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.refresh, size: 20),
+                AppPageHeader(
+                  title: 'Notifications',
+                  subtitle: state.unreadCount > 0
+                      ? '${state.unreadCount} unread'
+                      : 'You are all caught up',
+                  action: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (state.unreadCount > 0)
+                        TextButton.icon(
                           onPressed: () {
                             context
                                 .read<NotificationsBloc>()
-                                .add(GetNotificationsRequested());
-                            context
-                                .read<NotificationsBloc>()
-                                .add(GetUnreadCountRequested());
+                                .add(MarkAllAsReadRequested());
                           },
-                          tooltip: 'Refresh',
+                          icon: const Icon(Icons.done_all, size: 18),
+                          label: const Text('Mark all read'),
                         ),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 20),
+                        onPressed: () {
+                          context
+                              .read<NotificationsBloc>()
+                              .add(GetNotificationsRequested());
+                          context
+                              .read<NotificationsBloc>()
+                              .add(GetUnreadCountRequested());
+                        },
+                        tooltip: 'Refresh',
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
                 if (state.status == NotificationsStatus.loading)
@@ -93,27 +82,20 @@ class _NotificationsView extends StatelessWidget {
                     child: CircularProgressIndicator(),
                   )),
                 if (state.status == NotificationsStatus.failure)
-                  Center(
-                      child: Padding(
-                    padding: const EdgeInsets.all(48.0),
-                    child: Text('Error: ${state.errorMessage}',
-                        style: TextStyle(color: Colors.red.shade700)),
-                  )),
+                  EmptyStateView(
+                    icon: Icons.error_outline_rounded,
+                    title: 'Failed to load notifications',
+                    message: state.errorMessage,
+                    onRetry: () => context
+                        .read<NotificationsBloc>()
+                        .add(GetNotificationsRequested()),
+                  ),
                 if (state.status == NotificationsStatus.success &&
                     state.notifications.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(64.0),
-                      child: Column(
-                        children: [
-                          Icon(Icons.notifications_off_outlined,
-                              size: 48, color: Colors.grey.shade400),
-                          const SizedBox(height: 16),
-                          Text('No notifications yet',
-                              style: TextStyle(color: Colors.grey.shade600)),
-                        ],
-                      ),
-                    ),
+                  const EmptyStateView(
+                    icon: Icons.notifications_off_outlined,
+                    title: 'No notifications yet',
+                    message: 'Stay tuned! We\'ll notify you here.',
                   ),
                 if (state.notifications.isNotEmpty)
                   ...state.notifications
@@ -176,7 +158,7 @@ class _NotificationsView extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _formatDate(notification.createdAt),
+                  AppDateFormatter.format(notification.createdAt),
                   style: AppTextStyles.caption(color: Colors.grey.shade400),
                 ),
               ],
@@ -227,20 +209,6 @@ class _NotificationsView extends StatelessWidget {
         return Colors.orange.shade600;
       default:
         return Colors.grey.shade600;
-    }
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final dt = DateTime.parse(dateStr);
-      final now = DateTime.now();
-      final diff = now.difference(dt);
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-      if (diff.inHours < 24) return '${diff.inHours}h ago';
-      if (diff.inDays < 7) return '${diff.inDays}d ago';
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
-      return dateStr;
     }
   }
 }

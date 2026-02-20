@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import 'package:intl/intl.dart';
+import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../../../injection_container.dart';
 import '../bloc/points_bloc.dart';
 import '../bloc/points_event.dart';
@@ -53,11 +56,8 @@ class _PointsPageState extends State<PointsPage> {
     _bloc.add(GetPointsHistoryRequested(
       page: page,
       category: _category,
-      startDate: _startDate != null
-          ? DateFormat('yyyy-MM-dd').format(_startDate!)
-          : null,
-      endDate:
-          _endDate != null ? DateFormat('yyyy-MM-dd').format(_endDate!) : null,
+      startDate: AppDateFormatter.api(_startDate),
+      endDate: AppDateFormatter.api(_endDate),
     ));
   }
 
@@ -82,11 +82,14 @@ class _PointsPageState extends State<PointsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Points Overview',
-                      style: AppTextStyles.pageTitle(),
+                    AppPageHeader(
+                      title: 'Points Overview',
+                      subtitle: 'Track your earnings and influence',
+                      action: IconButton.filledTonal(
+                        onPressed: _refreshAll,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
                     ),
-                    const SizedBox(height: 24),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -154,14 +157,10 @@ class _PointsPageState extends State<PointsPage> {
               child: Center(child: CircularProgressIndicator()),
             )
           else if (state.history.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 48),
-              child: Center(
-                child: Text(
-                  'No transactions found',
-                  style: AppTextStyles.body(color: Colors.grey.shade500),
-                ),
-              ),
+            const EmptyStateView(
+              icon: Icons.history_rounded,
+              title: 'No transactions found',
+              padding: 48,
             )
           else
             ...state.history.asMap().entries.map(
@@ -185,7 +184,7 @@ class _PointsPageState extends State<PointsPage> {
           // From date
           _DateChip(
             label: _startDate != null
-                ? DateFormat('dd/MM/yyyy').format(_startDate!)
+                ? AppDateFormatter.short(_startDate)
                 : 'mm/dd/yyyy',
             isSet: _startDate != null,
             onTap: () async {
@@ -215,7 +214,7 @@ class _PointsPageState extends State<PointsPage> {
           // To date
           _DateChip(
             label: _endDate != null
-                ? DateFormat('dd/MM/yyyy').format(_endDate!)
+                ? AppDateFormatter.short(_endDate)
                 : 'mm/dd/yyyy',
             isSet: _endDate != null,
             onTap: () async {
@@ -291,7 +290,7 @@ class _PointsPageState extends State<PointsPage> {
           Expanded(
             flex: 2,
             child: Text(
-              tx.date,
+              AppDateFormatter.format(tx.date),
               style: AppTextStyles.smallMedium(),
             ),
           ),
@@ -307,7 +306,7 @@ class _PointsPageState extends State<PointsPage> {
             flex: 2,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: _TypeBadge(type: tx.type),
+              child: StatusBadge(status: tx.type),
             ),
           ),
           Expanded(
@@ -383,43 +382,6 @@ class _PointsPageState extends State<PointsPage> {
 // ═══════════════════════════════════════════════════════════════════
 //  Private widgets
 // ═══════════════════════════════════════════════════════════════════
-
-class _TypeBadge extends StatelessWidget {
-  final String type;
-  const _TypeBadge({required this.type});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = type.toLowerCase();
-    final Color bg;
-    final Color fg;
-    if (t == 'earned' || t == 'received') {
-      bg = const Color(0xFFDCFCE7);
-      fg = const Color(0xFF16A34A);
-    } else if (t == 'redeemed' || t == 'spent') {
-      bg = const Color(0xFFFEF3C7);
-      fg = const Color(0xFFD97706);
-    } else if (t == 'pending') {
-      bg = const Color(0xFFDBEAFE);
-      fg = const Color(0xFF2563EB);
-    } else {
-      bg = Colors.grey.shade100;
-      fg = Colors.grey.shade600;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        type,
-        style: AppTextStyles.captionBold(color: fg),
-      ),
-    );
-  }
-}
 
 class _DateChip extends StatelessWidget {
   final String label;

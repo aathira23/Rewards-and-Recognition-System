@@ -4,6 +4,8 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/system_config_entity.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 import '../bloc/config_bloc.dart';
 import '../bloc/config_event.dart';
 import '../bloc/config_state.dart';
@@ -52,25 +54,14 @@ class _SystemConfigView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Configuration', style: AppTextStyles.pageTitle()),
-                        const SizedBox(height: 4),
-                        Text('Manage system settings and point rules',
-                            style: AppTextStyles.body(
-                                color: Colors.grey.shade500)),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () =>
-                          context.read<ConfigBloc>().add(LoadConfig()),
-                    ),
-                  ],
+                AppPageHeader(
+                  title: 'Configuration',
+                  subtitle: 'Manage system settings and point rules',
+                  action: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () =>
+                        context.read<ConfigBloc>().add(LoadConfig()),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 if (state.isLoading)
@@ -99,12 +90,15 @@ class _SystemConfigView extends StatelessWidget {
                       ),
                     ),
                   if (state.configs.isEmpty)
-                    _buildEmptyState(
-                        Icons.settings_outlined, 'No configuration entries'),
+                    const EmptyStateView(
+                      icon: Icons.settings_outlined,
+                      title: 'No configuration entries',
+                    ),
                   const SizedBox(height: 32),
 
                   // Point Rules & Eligibility Section
-                  _buildSectionHeader('Point Rules & Eligibility',
+                  _buildSectionHeader(
+                      'Point Rules & Eligibility',
                       'Define point values for different actions',
                       Icons.rule_rounded),
                   const SizedBox(height: 12),
@@ -122,8 +116,10 @@ class _SystemConfigView extends StatelessWidget {
                       ),
                     ),
                   if (state.rules.isEmpty)
-                    _buildEmptyState(
-                        Icons.rule_rounded, 'No point rules configured'),
+                    const EmptyStateView(
+                      icon: Icons.rule_rounded,
+                      title: 'No point rules configured',
+                    ),
                 ],
               ],
             ),
@@ -147,21 +143,6 @@ class _SystemConfigView extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildEmptyState(IconData icon, String text) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48.0),
-        child: Column(
-          children: [
-            Icon(icon, size: 48, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            Text(text, style: TextStyle(color: Colors.grey.shade500)),
-          ],
-        ),
-      ),
     );
   }
 
@@ -278,8 +259,8 @@ class _SystemConfigView extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              bloc.add(UpdateConfigEntry(
-                  key: config.key, value: controller.text));
+              bloc.add(
+                  UpdateConfigEntry(key: config.key, value: controller.text));
             },
             child: const Text('Save'),
           ),

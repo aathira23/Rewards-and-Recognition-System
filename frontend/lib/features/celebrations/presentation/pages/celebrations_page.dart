@@ -6,6 +6,9 @@ import '../../domain/entities/celebration_entity.dart';
 import '../bloc/celebrations_bloc.dart';
 import '../bloc/celebrations_event.dart';
 import '../bloc/celebrations_state.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/utils/date_formatter.dart';
 
 class CelebrationsPage extends StatelessWidget {
   const CelebrationsPage({super.key});
@@ -42,9 +45,10 @@ class _CelebrationsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Celebrations',
-                    style: AppTextStyles.pageTitle()),
-                const SizedBox(height: 24),
+                AppPageHeader(
+                  title: 'Celebrations',
+                  subtitle: 'Celebrate birthdays and work anniversaries',
+                ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -65,8 +69,11 @@ class _CelebrationsView extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           if (state.upcoming.isEmpty)
-                            _buildEmptyState(
-                                'No upcoming celebrations', Icons.event_busy),
+                            const EmptyStateView(
+                              icon: Icons.event_busy,
+                              title: 'No upcoming celebrations',
+                              padding: 32,
+                            ),
                           ...state.upcoming
                               .map((c) => _buildCelebrationCard(c, theme)),
                         ],
@@ -90,8 +97,11 @@ class _CelebrationsView extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           if (state.history.isEmpty)
-                            _buildEmptyState(
-                                'No celebration history', Icons.history),
+                            const EmptyStateView(
+                              icon: Icons.history,
+                              title: 'No celebration history',
+                              padding: 32,
+                            ),
                           ...state.history
                               .map((c) => _buildHistoryTile(c, theme)),
                         ],
@@ -136,8 +146,7 @@ class _CelebrationsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c.userName,
-                    style: AppTextStyles.cardTitle()),
+                Text(c.userName, style: AppTextStyles.cardTitle()),
                 const SizedBox(height: 4),
                 Container(
                   padding:
@@ -147,8 +156,7 @@ class _CelebrationsView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(label,
-                      style: AppTextStyles.captionBold(
-                          color: color)),
+                      style: AppTextStyles.captionBold(color: color)),
                 ),
               ],
             ),
@@ -156,7 +164,7 @@ class _CelebrationsView extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(c.celebrationDate,
+              Text(AppDateFormatter.format(c.celebrationDate),
                   style: AppTextStyles.small(color: Colors.grey.shade600)),
               if (c.pointsAwarded > 0)
                 Padding(
@@ -191,28 +199,11 @@ class _CelebrationsView extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(c.userName,
-                style: AppTextStyles.bodyMedium()),
+            child: Text(c.userName, style: AppTextStyles.bodyMedium()),
           ),
           Text('+${c.pointsAwarded}',
-              style: AppTextStyles.smallBold(
-                  color: Colors.green.shade600)),
+              style: AppTextStyles.smallBold(color: Colors.green.shade600)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String text, IconData icon) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          children: [
-            Icon(icon, size: 40, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            Text(text, style: TextStyle(color: Colors.grey.shade500)),
-          ],
-        ),
       ),
     );
   }

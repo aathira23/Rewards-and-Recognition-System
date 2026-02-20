@@ -7,7 +7,13 @@ import '../../../../injection_container.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
+import '../../../../core/widgets/action_buttons.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../widgets/nominate_employee_dialog.dart';
+import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/nomination_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -89,7 +95,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     }
   }
 
-
   @override
   void dispose() {
     _tabController.dispose();
@@ -106,19 +111,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         'Unknown';
   }
 
-  Color _statusColor(String s) {
-    switch (s.toUpperCase()) {
-      case 'APPROVED':
-        return const Color(0xFF16A34A);
-      case 'REJECTED':
-        return const Color(0xFFDC2626);
-      case 'PENDING':
-        return const Color(0xFFF59E0B);
-      default:
-        return Colors.grey;
-    }
-  }
-
   String _statusLabel(NominationEntity n) {
     if (n.status.toUpperCase() != 'PENDING' || n.nextRequiredLevel == null) {
       return n.status;
@@ -132,29 +124,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         return 'Pending HR';
       default:
         return 'Pending';
-    }
-  }
-
-  String _fmtDate(String d) {
-    try {
-      final dt = DateTime.parse(d);
-      const months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
-    } catch (_) {
-      return d;
     }
   }
 
@@ -189,42 +158,28 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header ──────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Nomination Approvals',
-                            style: AppTextStyles.pageTitle()),
-                        const SizedBox(height: 2),
-                        Text('Review and action pending award nominations',
-                            style: AppTextStyles.body(
-                                color: Colors.grey.shade500)),
-                      ],
-                    ),
-                  ),
-                  BlocBuilder<NominationsBloc, NominationsState>(
-                    builder: (context, state) {
-                      return ElevatedButton.icon(
-                        onPressed: state.awardTypes.isEmpty
-                            ? null
-                            : () => showDialog(
-                                  context: context,
-                                  builder: (_) => NominateEmployeeDialog(
-                                    awardTypes: state.awardTypes,
-                                    users: state.users,
-                                    bloc: context.read<NominationsBloc>(),
-                                  ),
+              AppPageHeader(
+                title: 'Nomination Approvals',
+                subtitle: 'Review and action pending award nominations',
+                action: BlocBuilder<NominationsBloc, NominationsState>(
+                  builder: (context, state) {
+                    return ElevatedButton.icon(
+                      onPressed: state.awardTypes.isEmpty
+                          ? null
+                          : () => showDialog(
+                                context: context,
+                                builder: (_) => NominateEmployeeDialog(
+                                  awardTypes: state.awardTypes,
+                                  users: state.users,
+                                  bloc: context.read<NominationsBloc>(),
                                 ),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Nominate'),
-                      );
-                    },
-                  ),
-                ],
+                              ),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Nominate'),
+                    );
+                  },
+                ),
               ),
-              const SizedBox(height: 24),
 
               // ── Tabs ────────────────────────────────────────────
               BlocBuilder<NominationsBloc, NominationsState>(
@@ -359,16 +314,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
       return const Center(child: CircularProgressIndicator());
     }
     if (_approvalHistory.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inbox_rounded, size: 48, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text('No approvals given yet',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-          ],
-        ),
+      return const EmptyStateView(
+        icon: Icons.inbox_rounded,
+        title: 'No approvals given yet',
       );
     }
     return ListView.separated(
@@ -451,18 +399,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     Expanded(
                       child: Text(awardName, style: AppTextStyles.cardTitle()),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(statusLabel,
-                          style: TextStyle(
-                              color: statusColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600)),
+                    StatusBadge(
+                      status: nomStatus,
+                      label: statusLabel,
                     ),
                   ],
                 ),
@@ -497,7 +436,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     Icon(Icons.schedule_rounded,
                         size: 12, color: Colors.grey.shade400),
                     const SizedBox(width: 4),
-                    Text(_fmtDate(actionAt),
+                    Text(AppDateFormatter.format(actionAt),
                         style: TextStyle(
                             fontSize: 11, color: Colors.grey.shade400)),
                     if (nomStatus == 'APPROVED' && pts != null) ...[
@@ -585,17 +524,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     String userRole = 'MANAGER',
   }) {
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(emptyIcon, size: 48, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text(emptyMsg,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                textAlign: TextAlign.center),
-          ],
-        ),
+      return EmptyStateView(
+        icon: emptyIcon,
+        title: emptyMsg,
       );
     }
 
@@ -618,7 +549,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     bool showActions = false,
     String userRole = 'MANAGER',
   }) {
-    final color = _statusColor(n.status);
     final nominee = _resolveName(n, true, users);
     final nominator = _resolveName(n, false, users);
     final isPending = n.status == 'PENDING';
@@ -648,7 +578,12 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           Container(
             height: 3,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.6),
+              color: (n.status == 'APPROVED'
+                      ? const Color(0xFF16A34A)
+                      : n.status == 'REJECTED'
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFFF59E0B))
+                  .withValues(alpha: 0.6),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),
@@ -678,20 +613,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         style: AppTextStyles.cardTitle(),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _statusLabel(n),
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600),
-                      ),
+                    StatusBadge(
+                      status: n.status,
+                      label: _statusLabel(n),
                     ),
                   ],
                 ),
@@ -726,7 +650,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     Icon(Icons.schedule_rounded,
                         size: 12, color: Colors.grey.shade400),
                     const SizedBox(width: 4),
-                    Text(_fmtDate(n.createdAt),
+                    Text(AppDateFormatter.format(n.createdAt),
                         style: TextStyle(
                             fontSize: 11, color: Colors.grey.shade400)),
                     if (n.status == 'APPROVED' && n.pointsAwarded != null) ...[
@@ -759,25 +683,13 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      OutlinedButton.icon(
+                      RejectButton(
                         onPressed: () =>
                             _showActionDialog(context, n.id, false),
-                        icon: const Icon(Icons.close_rounded, size: 16),
-                        label: const Text('Reject'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
                       ),
                       const SizedBox(width: 10),
-                      ElevatedButton.icon(
+                      ApproveButton(
                         onPressed: () => _showActionDialog(context, n.id, true),
-                        icon: const Icon(Icons.check_rounded, size: 16),
-                        label: const Text('Approve'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
                       ),
                     ],
                   ),
@@ -824,72 +736,67 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Text(
-            isApprove ? 'Approve Nomination' : 'Reject Nomination',
-            style: AppTextStyles.sectionHeader(),
-          ),
-          content: SizedBox(
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isApprove
-                      ? 'Once approved, the nomination moves to the next stage in the workflow.'
-                      : 'Please provide a reason for rejecting this nomination.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        return AppDialog(
+          title: isApprove ? 'Approve Nomination' : 'Reject Nomination',
+          maxWidth: 460,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isApprove
+                    ? 'Once approved, the nomination moves to the next stage in the workflow.'
+                    : 'Please provide a reason for rejecting this nomination.',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentsController,
+                decoration: InputDecoration(
+                  labelText: isApprove
+                      ? 'Comments (optional)'
+                      : 'Reason for rejection',
+                  hintText:
+                      isApprove ? 'Add any feedback...' : 'Required reason',
+                  hintStyle:
+                      TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: commentsController,
-                  decoration: InputDecoration(
-                    labelText: isApprove
-                        ? 'Comments (optional)'
-                        : 'Reason for rejection',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
+                maxLines: 3,
+              ),
+            ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (isApprove) {
-                  context.read<NominationsBloc>().add(
-                      ApproveNominationRequested(
-                          nominationId: nominationId,
-                          comments: commentsController.text.isEmpty
-                              ? null
-                              : commentsController.text));
-                } else {
-                  context.read<NominationsBloc>().add(RejectNominationRequested(
-                      nominationId: nominationId,
-                      comments: commentsController.text.isEmpty
-                          ? null
-                          : commentsController.text));
-                }
-                Navigator.of(dialogContext).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isApprove ? Colors.green : Colors.red,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              ),
-              child: Text(isApprove ? 'Approve' : 'Reject'),
-            ),
+            const SizedBox(width: 8),
+            isApprove
+                ? ApproveButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      context.read<NominationsBloc>().add(
+                          ApproveNominationRequested(
+                              nominationId: nominationId,
+                              comments: commentsController.text.trim()));
+                    },
+                  )
+                : RejectButton(
+                    useFilledStyle: true,
+                    onPressed: () {
+                      if (commentsController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Reason is required')),
+                        );
+                        return;
+                      }
+                      Navigator.of(dialogContext).pop();
+                      context.read<NominationsBloc>().add(
+                          RejectNominationRequested(
+                              nominationId: nominationId,
+                              comments: commentsController.text.trim()));
+                    },
+                  ),
           ],
         );
       },

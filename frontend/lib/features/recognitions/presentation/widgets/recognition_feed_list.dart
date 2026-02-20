@@ -3,6 +3,7 @@ import '../../../../core/utils/badge_utils.dart';
 import '../../domain/entities/recognition_entity.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 
 class RecognitionFeedList extends StatelessWidget {
   final List<RecognitionEntity> feed;
@@ -12,30 +13,11 @@ class RecognitionFeedList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (feed.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.feed_outlined, size: 48, color: Colors.grey[300]),
-              const SizedBox(height: 16),
-              Text(
-                'No recognitions yet',
-                style: AppTextStyles.sectionTitle(
-                  color: Colors.grey[500],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Be the first to appreciate someone!',
-                style: AppTextStyles.bodyLarge(
-                  color: Colors.grey[400],
-                ),
-              ),
-            ],
-          ),
-        ),
+      return const EmptyStateView(
+        icon: Icons.feed_outlined,
+        title: 'No recognitions yet',
+        message: 'Be the first to appreciate someone!',
+        padding: 40,
       );
     }
 

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/reward_entity.dart';
 import '../../../points/presentation/bloc/points_bloc.dart';
@@ -95,34 +100,16 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title Area
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Rewards Store',
-                            style: AppTextStyles.pageTitle(),
-                          ),
-                          Text(
-                            'Redeem your hard-earned points',
-                            style: AppTextStyles.cardTitle(
-                              color: Theme.of(innerContext).hintColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton.filledTonal(
-                        onPressed: () => context
-                            .read<CatalogBloc>()
-                            .add(GetCatalogItemsRequested()),
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
-                    ],
+                  AppPageHeader(
+                    title: 'Rewards Store',
+                    subtitle: 'Redeem your hard-earned points',
+                    action: IconButton.filledTonal(
+                      onPressed: () => context
+                          .read<CatalogBloc>()
+                          .add(GetCatalogItemsRequested()),
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
                   ),
-                  const SizedBox(height: 32),
 
                   // Balance Card
                   BlocBuilder<PointsBloc, PointsState>(
@@ -170,61 +157,47 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
 
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 340),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.orange.withValues(alpha: 0.12),
-                  child: const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: Colors.orange,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Not Enough Points',
-                  style: AppTextStyles.sectionTitle(),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  shortfall != null
-                      ? 'You need $shortfall more points.'
-                      : "You don't have enough points for this.",
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body(color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
-                if (have != null && need != null)
-                  Text(
-                    '$have / $need',
-                    style: AppTextStyles.cardTitle(),
-                  ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 38,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Got it', style: AppTextStyles.cardTitle()),
-                  ),
-                ),
-              ],
+      builder: (_) => AppDialog(
+        title: 'Not Enough Points',
+        maxWidth: 340,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.orange.withValues(alpha: 0.12),
+              child: const Icon(
+                Icons.account_balance_wallet_outlined,
+                color: Colors.orange,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              shortfall != null
+                  ? 'You need $shortfall more points.'
+                  : "You don't have enough points for this.",
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(color: Colors.grey),
+            ),
+            if (have != null && need != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                '$have / $need',
+                style: AppTextStyles.cardTitle(),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Got it'),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -232,27 +205,26 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
   void _showSuccessOverlay(BuildContext context, String title, String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      builder: (context) => AppDialog(
+        title: title,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle_outline_rounded,
                 color: Colors.green, size: 80),
-            const SizedBox(height: 16),
-            Text(title, style: AppTextStyles.pageTitle()),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
             Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Great!'),
-              ),
-            ),
           ],
         ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Great!'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -283,11 +255,11 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         final conversions = state.conversions;
 
         if (redemptions.isEmpty && conversions.isEmpty) {
-          return _buildEmptyState(
-            context,
-            Icons.history_edu_rounded,
-            'No Activities Yet',
-            'Your redemption and conversion history will appear here once you perform actions.',
+          return const EmptyStateView(
+            icon: Icons.history_edu_rounded,
+            title: 'No Activities Yet',
+            message:
+                'Your redemption and conversion history will appear here once you perform actions.',
           );
         }
 
@@ -355,7 +327,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   style: AppTextStyles.bodyBold(),
                 ),
                 subtitle: Text(
-                  '${item.subtitle} • ${_formatDate(item.date)}',
+                  '${item.subtitle} • ${AppDateFormatter.short(item.date)}',
                   style: AppTextStyles.small(
                     color: Theme.of(context).hintColor,
                   ),
@@ -371,7 +343,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             item.isConversion ? Colors.green : Colors.redAccent,
                       ),
                     ),
-                    _buildStatusBadge(context, item.status),
+                    StatusBadge(status: item.status),
                   ],
                 ),
               ),
@@ -379,60 +351,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
           },
         );
       },
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day} ${_getMonth(date.month)} ${date.year}';
-  }
-
-  String _getMonth(int month) {
-    const list = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return list[month];
-  }
-
-  Widget _buildStatusBadge(BuildContext context, String status) {
-    Color color;
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        color = Colors.orange;
-        break;
-      case 'APPROVED':
-      case 'COMPLETED':
-        color = Colors.green;
-        break;
-      case 'REJECTED':
-      case 'CANCELLED':
-        color = Colors.red;
-        break;
-      default:
-        color = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        status,
-        style: AppTextStyles.tiny(color: color),
-      ),
     );
   }
 
@@ -606,13 +524,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
               ],
             ),
             const SizedBox(height: 16),
-            // Conversion list
             state.conversions.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('No conversion history found.'),
-                    ),
+                ? const EmptyStateView(
+                    icon: Icons.history_rounded,
+                    title: 'No conversion history',
+                    message: 'Your point conversion requests will appear here.',
+                    padding: 40,
                   )
                 : ListView.builder(
                     shrinkWrap: true,
@@ -630,24 +547,36 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: req.status == 'APPROVED'
+                              color: req.status == 'APPROVED' ||
+                                      req.status == 'COMPLETED'
                                   ? Colors.green.withValues(alpha: 0.1)
-                                  : Colors.orange.withValues(alpha: 0.1),
+                                  : req.status == 'REJECTED' ||
+                                          req.status == 'CANCELLED'
+                                      ? Colors.red.withValues(alpha: 0.1)
+                                      : Colors.orange.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              req.status == 'APPROVED'
+                              req.status == 'APPROVED' ||
+                                      req.status == 'COMPLETED'
                                   ? Icons.check_rounded
-                                  : Icons.access_time_rounded,
-                              color: req.status == 'APPROVED'
+                                  : req.status == 'REJECTED' ||
+                                          req.status == 'CANCELLED'
+                                      ? Icons.close_rounded
+                                      : Icons.access_time_rounded,
+                              color: req.status == 'APPROVED' ||
+                                      req.status == 'COMPLETED'
                                   ? Colors.green
-                                  : Colors.orange,
+                                  : req.status == 'REJECTED' ||
+                                          req.status == 'CANCELLED'
+                                      ? Colors.red
+                                      : Colors.orange,
                             ),
                           ),
                           title: Text('${req.pointsConverted} Points',
                               style: AppTextStyles.bodyBold()),
                           subtitle: Text(
-                              'To ${req.conversionType} • ${_formatDate(req.createdAt)}'),
+                              'To ${req.conversionType} • ${AppDateFormatter.short(req.createdAt)}'),
                           trailing: Text(
                             '\$${req.cashAmount.toStringAsFixed(2)}',
                             style: AppTextStyles.sectionTitle(),
@@ -673,29 +602,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     context.read<CatalogBloc>().add(
         SubmitConversionRequested(points: pts, type: _selectedConversionType));
     _pointsController.clear();
-  }
-
-  Widget _buildEmptyState(
-      BuildContext context, IconData icon, String title, String sub) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 64, color: Theme.of(context).hintColor),
-            const SizedBox(height: 16),
-            Text(title, style: AppTextStyles.sectionHeader()),
-            const SizedBox(height: 8),
-            Text(sub,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body(
-                  color: Theme.of(context).hintColor,
-                )),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildCatalogTab(BuildContext context) {
@@ -796,11 +702,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             }).toList();
 
             if (items.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: Text('No rewards available in the catalog yet.'),
-                ),
+              return const EmptyStateView(
+                icon: Icons.search_off_rounded,
+                title: 'No rewards found',
+                message: 'Try adjusting your search or filters.',
               );
             }
 
@@ -840,8 +745,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
   void _showRedemptionConfirm(BuildContext context, RewardEntity reward) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirm Redemption'),
+      builder: (dialogContext) => AppDialog(
+        title: 'Confirm Redemption',
         content: Text(
             'Are you sure you want to redeem "${reward.name}" for ${reward.pointsCost} points?'),
         actions: [

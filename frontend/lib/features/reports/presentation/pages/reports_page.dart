@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import 'package:intl/intl.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../injection_container.dart';
 import '../bloc/reports_bloc.dart';
 import '../bloc/reports_event.dart';
@@ -177,16 +179,18 @@ class _ReportsViewState extends State<_ReportsView> {
       }
     }
 
-    context.read<ReportsBloc>().add(LoadReport(queryParams: _buildQueryParams(type)));
+    context
+        .read<ReportsBloc>()
+        .add(LoadReport(queryParams: _buildQueryParams(type)));
   }
 
   Map<String, dynamic> _buildQueryParams(_ReportType type) {
     final qp = <String, dynamic>{'report_type': type.backendType};
     if (type.hasDateFilter && _fromDate != null) {
-      qp['from_date'] = DateFormat('yyyy-MM-dd').format(_fromDate!);
+      qp['from_date'] = AppDateFormatter.api(_fromDate);
     }
     if (type.hasDateFilter && _toDate != null) {
-      qp['to_date'] = DateFormat('yyyy-MM-dd').format(_toDate!);
+      qp['to_date'] = AppDateFormatter.api(_toDate);
     }
     if (type.hasDeptFilter && _deptId != null) {
       qp['department_id'] = _deptId;
@@ -202,8 +206,9 @@ class _ReportsViewState extends State<_ReportsView> {
 
   void _exportCsv() {
     if (_active == null) return;
-    context.read<ReportsBloc>().add(
-        ExportReportCsv(queryParams: _buildQueryParams(_active!)));
+    context
+        .read<ReportsBloc>()
+        .add(ExportReportCsv(queryParams: _buildQueryParams(_active!)));
   }
 
   /// Add computed columns for display (utilization %, days remaining).
@@ -271,11 +276,11 @@ class _ReportsViewState extends State<_ReportsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Reports', style: AppTextStyles.pageTitle()),
-          const SizedBox(height: 4),
-          Text('Generate, filter and export detailed organizational reports',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-          const SizedBox(height: 28),
+          const AppPageHeader(
+            title: 'Reports',
+            subtitle:
+                'Generate, filter and export detailed organizational reports',
+          ),
           LayoutBuilder(builder: (ctx, constraints) {
             final cardWidth = (constraints.maxWidth - 40) / 3;
             return Wrap(
@@ -394,34 +399,20 @@ class _ReportsViewState extends State<_ReportsView> {
                     padding: EdgeInsets.all(60),
                     child: CircularProgressIndicator())),
           if (state.error != null)
-            Center(
-                child: Padding(
-              padding: const EdgeInsets.all(48),
-              child: Column(children: [
-                Icon(Icons.error_outline, color: Colors.red.shade300),
-                const SizedBox(height: 8),
-                Text(state.error!,
-                    style: TextStyle(fontSize: 13, color: Colors.red.shade600)),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                    onPressed: () => _fetchReport(type),
-                    child: const Text('Retry')),
-              ]),
-            )),
+            EmptyStateView(
+              icon: Icons.error_outline_rounded,
+              title: 'Failed to load report',
+              message: state.error!,
+              onRetry: () => _fetchReport(type),
+            ),
           if (!state.isLoading && state.error == null && data.isEmpty)
-            Center(
-                child: Padding(
-              padding: const EdgeInsets.all(60),
-              child: Column(children: [
-                Icon(Icons.inbox_rounded,
-                    size: 40, color: Colors.grey.shade300),
-                const SizedBox(height: 10),
-                Text('No records found for the selected filters',
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-              ]),
-            )),
-          if (!state.isLoading && data.isNotEmpty) _buildTable(type, data, theme),
+            const EmptyStateView(
+              icon: Icons.inbox_rounded,
+              title: 'No records found',
+              message: 'Try adjusting your filters to see more results.',
+            ),
+          if (!state.isLoading && data.isNotEmpty)
+            _buildTable(type, data, theme),
         ],
       ),
     );
@@ -430,8 +421,8 @@ class _ReportsViewState extends State<_ReportsView> {
   // ═══════════════════════════════════════════════════════════════════
   //  FILTERS
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildFilters(
-      _ReportType type, ReportsState state, List<Map<String, dynamic>> data, ThemeData theme) {
+  Widget _buildFilters(_ReportType type, ReportsState state,
+      List<Map<String, dynamic>> data, ThemeData theme) {
     if (!type.hasDateFilter &&
         !type.hasDeptFilter &&
         type != _ReportType.payrollEncashment &&
@@ -456,7 +447,7 @@ class _ReportsViewState extends State<_ReportsView> {
           if (type.hasDateFilter) ...[
             _FilterChip(
               label: _fromDate != null
-                  ? DateFormat('dd MMM yyyy').format(_fromDate!)
+                  ? AppDateFormatter.short(_fromDate)
                   : 'From Date',
               icon: Icons.calendar_today,
               isSet: _fromDate != null,
@@ -483,9 +474,8 @@ class _ReportsViewState extends State<_ReportsView> {
             Text('\u2192', style: TextStyle(color: Colors.grey.shade400)),
             const SizedBox(width: 8),
             _FilterChip(
-              label: _toDate != null
-                  ? DateFormat('dd MMM yyyy').format(_toDate!)
-                  : 'To Date',
+              label:
+                  _toDate != null ? AppDateFormatter.short(_toDate) : 'To Date',
               icon: Icons.calendar_today,
               isSet: _toDate != null,
               onTap: () async {
@@ -592,7 +582,8 @@ class _ReportsViewState extends State<_ReportsView> {
           // Payroll month picker
           if (type == _ReportType.payrollEncashment) ...[
             _FilterChip(
-              label: _payrollMonth,
+              label: AppDateFormatter.monthYear(
+                  DateTime.tryParse('$_payrollMonth-01')),
               icon: Icons.date_range_rounded,
               isSet: true,
               onTap: () async {
@@ -663,8 +654,7 @@ class _ReportsViewState extends State<_ReportsView> {
     );
   }
 
-  List<_Stat> _computeStats(
-      _ReportType type, List<Map<String, dynamic>> data) {
+  List<_Stat> _computeStats(_ReportType type, List<Map<String, dynamic>> data) {
     switch (type) {
       case _ReportType.recognitions:
         return _recognitionStats(data);
@@ -916,8 +906,8 @@ class _ReportsViewState extends State<_ReportsView> {
       final dt = DateTime.tryParse(val.toString());
       if (dt != null) {
         final formatted = key == 'expiry_date'
-            ? DateFormat('dd MMM yyyy').format(dt)
-            : DateFormat('dd MMM yyyy, HH:mm').format(dt);
+            ? AppDateFormatter.short(dt)
+            : AppDateFormatter.dateTime(dt);
         return Text(formatted,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade700));
       }

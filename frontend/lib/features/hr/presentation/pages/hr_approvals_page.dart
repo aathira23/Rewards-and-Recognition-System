@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/action_buttons.dart';
+import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
 import '../bloc/hr_approvals_bloc.dart';
 import '../bloc/hr_approvals_event.dart';
@@ -69,33 +74,18 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
               // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Approvals & Allocation',
-                              style: AppTextStyles.pageTitle()),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Review nominations, conversion requests & allocate budgets',
-                            style:
-                                AppTextStyles.body(color: Colors.grey.shade500),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _RefreshBtn(onTap: () {
-                      context.read<HrApprovalsBloc>()
-                        ..add(LoadNominations())
-                        ..add(LoadConversions())
-                        ..add(LoadManagers());
-                    }),
-                  ],
+                child: AppPageHeader(
+                  title: 'Approvals & Allocation',
+                  subtitle:
+                      'Review nominations, conversion requests & allocate budgets',
+                  action: _RefreshBtn(onTap: () {
+                    context.read<HrApprovalsBloc>()
+                      ..add(LoadNominations())
+                      ..add(LoadConversions())
+                      ..add(LoadManagers());
+                  }),
                 ),
               ),
-              const SizedBox(height: 16),
 
               // Tabs
               Padding(
@@ -214,9 +204,9 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           ),
           const SizedBox(height: 16),
           if (filtered.isEmpty)
-            _EmptyBlock(
+            EmptyStateView(
                 icon: Icons.inbox_rounded,
-                text: 'No ${_nomFilter.toLowerCase()} nominations'),
+                title: 'No ${_nomFilter.toLowerCase()} nominations'),
           ...filtered.map((nom) => _buildNominationCard(context, nom, theme)),
         ],
       ),
@@ -311,30 +301,18 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
             children: [
               Icon(Icons.schedule, size: 13, color: Colors.grey.shade400),
               const SizedBox(width: 4),
-              Text(_formatDate(createdAt),
+              Text(AppDateFormatter.format(createdAt),
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
               const Spacer(),
               if (isForHR) ...[
-                OutlinedButton.icon(
+                RejectButton(
                   onPressed: () =>
                       _showNomActionDialog(context, nom['id'], false),
-                  icon: const Icon(Icons.close, size: 14),
-                  label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                  ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton.icon(
+                ApproveButton(
                   onPressed: () =>
                       _showNomActionDialog(context, nom['id'], true),
-                  icon: const Icon(Icons.check, size: 14),
-                  label: const Text('Approve'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
                 ),
               ],
             ],
@@ -364,21 +342,30 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           OutlinedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<HrApprovalsBloc>().add(ActionNomination(
-                    id: nominationId,
-                    isApprove: isApprove,
-                    comments: commentsC.text.isNotEmpty ? commentsC.text : null,
-                  ));
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isApprove ? Colors.green : Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(isApprove ? 'Approve' : 'Reject'),
-          ),
+          isApprove
+              ? ApproveButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.read<HrApprovalsBloc>().add(ActionNomination(
+                          id: nominationId,
+                          isApprove: isApprove,
+                          comments:
+                              commentsC.text.isNotEmpty ? commentsC.text : null,
+                        ));
+                  },
+                )
+              : RejectButton(
+                  useFilledStyle: true,
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.read<HrApprovalsBloc>().add(ActionNomination(
+                          id: nominationId,
+                          isApprove: isApprove,
+                          comments:
+                              commentsC.text.isNotEmpty ? commentsC.text : null,
+                        ));
+                  },
+                ),
         ],
       ),
     );
@@ -393,8 +380,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
       return const Center(child: CircularProgressIndicator());
     }
     if (state.conversions.isEmpty) {
-      return const _EmptyBlock(
-          icon: Icons.swap_horiz_rounded, text: 'No conversion requests');
+      return const EmptyStateView(
+          icon: Icons.swap_horiz_rounded, title: 'No conversion requests');
     }
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -446,36 +433,28 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                     style: AppTextStyles.bodyBold(
                         color: theme.colorScheme.primary)),
                 const SizedBox(height: 4),
-                Text(_formatDate(createdAt),
+                Text(AppDateFormatter.format(createdAt),
                     style:
                         TextStyle(fontSize: 11, color: Colors.grey.shade400)),
               ],
             ),
           ),
           if (isPending) ...[
-            IconButton(
-              tooltip: 'Reject',
-              icon: const Icon(Icons.close, color: Colors.red),
+            RejectButton(
+              isCompact: true,
               onPressed: () => context
                   .read<HrApprovalsBloc>()
                   .add(ActionConversion(id: c['id'], action: 'reject')),
             ),
             const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Approve',
-              icon: const Icon(Icons.check, color: Colors.green),
+            ApproveButton(
+              isCompact: true,
               onPressed: () => context
                   .read<HrApprovalsBloc>()
                   .add(ActionConversion(id: c['id'], action: 'approve')),
             ),
           ] else
-            Chip(
-              label: Text(status, style: const TextStyle(fontSize: 11)),
-              backgroundColor: status == 'APPROVED'
-                  ? Colors.green.shade50
-                  : Colors.red.shade50,
-              side: BorderSide.none,
-            ),
+            StatusBadge(status: status),
         ],
       ),
     );
@@ -498,8 +477,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           if (state.mgLoading)
             const Center(child: CircularProgressIndicator())
           else if (state.managers.isEmpty)
-            const _EmptyBlock(
-                icon: Icons.people_outline, text: 'No managers found')
+            const EmptyStateView(
+                icon: Icons.people_outline, title: 'No managers found')
           else
             ...state.managers.map((m) => _buildManagerCard(context, m, theme)),
         ],
@@ -700,16 +679,6 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
       behavior: SnackBarBehavior.floating,
     ));
   }
-
-  String _formatDate(String iso) {
-    if (iso.isEmpty) return '';
-    try {
-      final d = DateTime.parse(iso);
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -806,58 +775,21 @@ class _NomStatusBadge extends StatelessWidget {
     final isPending = status == 'PENDING';
     final nextLevel =
         nom['next_required_level']?.toString().toUpperCase() ?? '';
-    Color bg;
-    Color fg;
+
     String label;
     if (status == 'APPROVED') {
-      bg = Colors.green.shade50;
-      fg = Colors.green.shade700;
       label = 'Approved';
     } else if (status == 'REJECTED') {
-      bg = Colors.red.shade50;
-      fg = Colors.red.shade700;
       label = 'Rejected';
     } else if (isPending && nextLevel == 'HR') {
-      bg = Colors.orange.shade50;
-      fg = Colors.orange.shade700;
       label = 'Pending HR';
     } else {
-      bg = Colors.blue.shade50;
-      fg = Colors.blue.shade700;
       label = 'Pending $nextLevel';
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(label,
-          style:
-              TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: fg)),
-    );
-  }
-}
 
-class _EmptyBlock extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _EmptyBlock({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
-        child: Column(
-          children: [
-            Icon(icon, size: 48, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text(text,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade400)),
-          ],
-        ),
-      ),
+    return StatusBadge(
+      status: status,
+      label: label,
     );
   }
 }

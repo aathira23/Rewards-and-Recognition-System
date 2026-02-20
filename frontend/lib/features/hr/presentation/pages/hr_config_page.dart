@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../../../injection_container.dart';
 import '../../data/datasources/hr_config_remote_data_source.dart';
 import '../bloc/hr_config_bloc.dart';
@@ -67,28 +71,14 @@ class _HrConfigViewState extends State<_HrConfigView>
               // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Configuration',
-                              style: AppTextStyles.pageTitle()),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Manage awards, badges, catalog, point rules & system settings',
-                            style:
-                                AppTextStyles.body(color: Colors.grey.shade500),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _RefreshBtn(
-                      onTap: () =>
-                          context.read<HrConfigBloc>().add(LoadAllHrConfig()),
-                    ),
-                  ],
+                child: AppPageHeader(
+                  title: 'Configuration',
+                  subtitle:
+                      'Manage awards, badges, catalog, point rules & system settings',
+                  action: _RefreshBtn(
+                    onTap: () =>
+                        context.read<HrConfigBloc>().add(LoadAllHrConfig()),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -128,7 +118,9 @@ class _HrConfigViewState extends State<_HrConfigView>
                 child: state.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : state.error != null && state.awardTypes.isEmpty
-                        ? _ErrorState(
+                        ? EmptyStateView(
+                            icon: Icons.error_outline_rounded,
+                            title: 'Failed to load data',
                             message: state.error!,
                             onRetry: () => context
                                 .read<HrConfigBloc>()
@@ -170,8 +162,10 @@ class _HrConfigViewState extends State<_HrConfigView>
           ),
           const SizedBox(height: 12),
           if (state.awardTypes.isEmpty)
-            const _EmptyState(
-                icon: Icons.emoji_events_outlined, text: 'No award types yet'),
+            const EmptyStateView(
+              icon: Icons.emoji_events_outlined,
+              title: 'No award types yet',
+            ),
           if (state.awardTypes.isNotEmpty)
             _DataCard(
               columns: const [
@@ -197,7 +191,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Text(a['frequency']?.toString() ?? '',
                       style:
                           TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                  _StatusChip(isActive: isActive),
+                  StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -312,8 +306,10 @@ class _HrConfigViewState extends State<_HrConfigView>
           ),
           const SizedBox(height: 12),
           if (state.badges.isEmpty)
-            const _EmptyState(
-                icon: Icons.military_tech_outlined, text: 'No badges yet'),
+            const EmptyStateView(
+              icon: Icons.military_tech_outlined,
+              title: 'No badges yet',
+            ),
           if (state.badges.isNotEmpty)
             _DataCard(
               columns: const ['Name', 'Description', 'Points', 'Status', ''],
@@ -360,7 +356,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Text('${b['points'] ?? 50} pts',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w700)),
-                  _StatusChip(isActive: isActive),
+                  StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -447,8 +443,10 @@ class _HrConfigViewState extends State<_HrConfigView>
           ),
           const SizedBox(height: 12),
           if (state.rewards.isEmpty)
-            const _EmptyState(
-                icon: Icons.card_giftcard_outlined, text: 'No rewards yet'),
+            const EmptyStateView(
+              icon: Icons.card_giftcard_outlined,
+              title: 'No rewards yet',
+            ),
           if (state.rewards.isNotEmpty)
             _DataCard(
               columns: const [
@@ -472,7 +470,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                               fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
-                  _TypeBadge(type: r['reward_type']?.toString() ?? ''),
+                  StatusBadge(status: r['reward_type']?.toString() ?? ''),
                   Text('${r['points_required'] ?? r['points_cost'] ?? 0} pts',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w700)),
@@ -482,7 +480,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                           color: stock != null && stock <= 5
                               ? Colors.red.shade600
                               : Colors.grey.shade700)),
-                  _StatusChip(isActive: isActive),
+                  StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -574,8 +572,10 @@ class _HrConfigViewState extends State<_HrConfigView>
           ),
           const SizedBox(height: 12),
           if (state.policies.isEmpty)
-            const _EmptyState(
-                icon: Icons.rule_outlined, text: 'No rules configured'),
+            const EmptyStateView(
+              icon: Icons.rule_outlined,
+              title: 'No rules configured',
+            ),
           if (state.policies.isNotEmpty)
             _DataCard(
               columns: const [
@@ -616,7 +616,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Text(p['conversion_rate']?.toString() ?? '—',
                       style:
                           TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                  _StatusChip(isActive: isActive),
+                  StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
                   _IconBtn(
                     icon: Icons.edit_outlined,
                     color: theme.colorScheme.primary,
@@ -742,8 +742,10 @@ class _HrConfigViewState extends State<_HrConfigView>
           ),
           const SizedBox(height: 12),
           if (state.configs.isEmpty)
-            const _EmptyState(
-                icon: Icons.settings_outlined, text: 'No settings configured'),
+            const EmptyStateView(
+              icon: Icons.settings_outlined,
+              title: 'No settings configured',
+            ),
           if (state.configs.isNotEmpty)
             Container(
               decoration: BoxDecoration(
@@ -769,8 +771,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.08),
+                            color: theme.colorScheme.primary.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(Icons.tune_rounded,
@@ -879,85 +880,78 @@ class _HrConfigViewState extends State<_HrConfigView>
   }) {
     showDialog(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: Text(title, style: AppTextStyles.sectionTitle()),
-            content: SizedBox(
-              width: 420,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (subtitle != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(subtitle,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade500)),
-                      ),
-                    ...fields.map((f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: f.dropdownOptions != null
-                              ? DropdownButtonFormField<String>(
-                                  initialValue: f.dropdownOptions!
-                                          .contains(f.controller.text)
-                                      ? f.controller.text
-                                      : null,
-                                  decoration: InputDecoration(
-                                    labelText: f.label,
-                                    hintText: f.hint ?? 'Select an option',
-                                    hintStyle: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade400),
-                                  ),
-                                  items: f.dropdownOptions!
-                                      .map((o) => DropdownMenuItem(
-                                          value: o, child: Text(o)))
-                                      .toList(),
-                                  onChanged: (v) {
-                                    if (v != null) {
-                                      f.controller.text = v;
-                                      setDialogState(() {});
-                                    }
-                                  },
-                                )
-                              : TextField(
-                                  controller: f.controller,
-                                  keyboardType: f.isNumber
-                                      ? TextInputType.number
-                                      : TextInputType.text,
-                                  maxLines: f.maxLines,
-                                  decoration: InputDecoration(
-                                    labelText: f.label,
-                                    hintText: f.hint,
-                                    hintStyle: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade400),
-                                  ),
-                                ),
-                        )),
-                  ],
+      builder: (_) => AppDialog(
+        title: title,
+        maxWidth: 500,
+        content: StatefulBuilder(builder: (ctx, setDialogState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (subtitle != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(subtitle,
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                 ),
-              ),
-            ),
-            actions: [
-              OutlinedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  onSave();
-                },
-                child: const Text('Save'),
-              ),
+              ...fields.map((f) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: f.dropdownOptions != null
+                        ? DropdownButtonFormField<String>(
+                            value:
+                                f.dropdownOptions!.contains(f.controller.text)
+                                    ? f.controller.text
+                                    : null,
+                            decoration: InputDecoration(
+                              labelText: f.label,
+                              hintText: f.hint ?? 'Select an option',
+                              hintStyle: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade400),
+                            ),
+                            items: f.dropdownOptions!
+                                .map((o) =>
+                                    DropdownMenuItem(value: o, child: Text(o)))
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null) {
+                                f.controller.text = v;
+                                setDialogState(() {});
+                              }
+                            },
+                          )
+                        : TextField(
+                            controller: f.controller,
+                            keyboardType: f.isNumber
+                                ? TextInputType.number
+                                : TextInputType.text,
+                            maxLines: f.maxLines,
+                            decoration: InputDecoration(
+                              labelText: f.label,
+                              hintText: f.hint,
+                              hintStyle: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade400),
+                            ),
+                          ),
+                  )),
             ],
           );
-        });
-      },
+        }),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              onSave();
+              Navigator.pop(context);
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1014,105 +1008,6 @@ class _RefreshBtn extends StatelessWidget {
           child: Icon(Icons.refresh_rounded,
               size: 18, color: Colors.grey.shade500),
         ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.cloud_off_rounded, size: 40, color: Colors.grey.shade300),
-          const SizedBox(height: 12),
-          Text('Failed to load data', style: AppTextStyles.cardTitle()),
-          const SizedBox(height: 4),
-          Text(message,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-          const SizedBox(height: 16),
-          TextButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _EmptyState({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(60),
-        child: Column(
-          children: [
-            Icon(icon, size: 40, color: Colors.grey.shade300),
-            const SizedBox(height: 10),
-            Text(text,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final bool isActive;
-  const _StatusChip({required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.green.shade50 : Colors.red.shade50,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        isActive ? 'Active' : 'Inactive',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: isActive ? Colors.green.shade700 : Colors.red.shade600,
-        ),
-      ),
-    );
-  }
-}
-
-class _TypeBadge extends StatelessWidget {
-  final String type;
-  const _TypeBadge({required this.type});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        type,
-        style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.blue.shade700),
       ),
     );
   }
