@@ -31,6 +31,17 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveToken(authModel.token);
 
       return Right(authModel);
+    } on UnauthorizedException catch (e) {
+      // 401 from backend — wrong email or password
+      final raw = e.message.toLowerCase();
+      final friendly = raw.contains('password')
+          ? 'Incorrect password. Please try again.'
+          : raw.contains('user') ||
+                  raw.contains('email') ||
+                  raw.contains('not found')
+              ? 'No account found with that email.'
+              : 'Incorrect email or password. Please try again.';
+      return Left(ServerFailure(friendly));
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {
@@ -38,7 +49,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on CacheException {
       return const Left(CacheFailure('Failed to cache login credentials'));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('Something went wrong. Please try again.'));
     }
   }
 

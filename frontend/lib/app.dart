@@ -22,11 +22,22 @@ class RRApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         home: BlocBuilder<AuthBloc, AuthState>(
+          // Only rebuild for real routing decisions.
+          // AuthLoading / AuthFailure during a login attempt must NOT
+          // rebuild this widget — that would replace LoginPage with a
+          // fresh instance and clear the text fields.
+          buildWhen: (previous, current) =>
+              current is AuthAuthenticated ||
+              current is AuthUnauthenticated ||
+              current is AuthInitial ||
+              // Show the initial app-start spinner only when the very
+              // first check is in progress (previous is AuthInitial).
+              (previous is AuthInitial && current is AuthLoading),
           builder: (context, state) {
             if (state is AuthAuthenticated) {
               return const DashboardPage();
             }
-            if (state is AuthLoading) {
+            if (state is AuthInitial || (state is AuthLoading)) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );

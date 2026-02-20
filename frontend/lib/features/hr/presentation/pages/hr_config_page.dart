@@ -284,15 +284,25 @@ class _HrConfigPageState extends State<HrConfigPage>
         _Field(
             label: 'Frequency',
             controller: freqC,
-            hint: 'MONTHLY / QUARTERLY / YEARLY'),
+            dropdownOptions: const ['MONTHLY', 'QUARTERLY', 'YEARLY']),
         _Field(
             label: 'Eligibility Rule',
             controller: eligC,
-            hint: 'ALL / MANAGER_ONLY'),
+            dropdownOptions: const [
+              'PEER',
+              'MANAGER_ONLY',
+              'SENIOR_MGMT',
+            ]),
         _Field(
             label: 'Approval Workflow',
             controller: workflowC,
-            hint: 'MANAGER,DEPT_HEAD,HR'),
+            dropdownOptions: const [
+              'MANAGER',
+              'MANAGER,DEPT_HEAD',
+              'MANAGER,DEPT_HEAD,HR',
+              'DEPT_HEAD,HR',
+              'HR',
+            ]),
         _Field(label: 'Description', controller: descC, maxLines: 2),
       ],
       onSave: () async {
@@ -597,7 +607,7 @@ class _HrConfigPageState extends State<HrConfigPage>
         _Field(
             label: 'Reward Type',
             controller: typeC,
-            hint: 'GIFT_CARD / MERCHANDISE / EXPERIENCE'),
+            dropdownOptions: const ['GIFT_CARD', 'MERCHANDISE', 'EXPERIENCE']),
         _Field(label: 'Points Cost', controller: pointsC, isNumber: true),
         _Field(
             label: 'Stock Quantity',
@@ -720,7 +730,7 @@ class _HrConfigPageState extends State<HrConfigPage>
           _Field(
               label: 'Recognition Type',
               controller: typeC,
-              hint: 'PEER / BADGE / CONVERSION / AWARD'),
+              dropdownOptions: const ['PEER', 'BADGE', 'CONVERSION', 'AWARD']),
         if (!isEdit)
           _Field(label: 'Event Key', controller: eventC, hint: 'Optional'),
         _Field(label: 'Points', controller: pointsC, isNumber: true),
@@ -742,7 +752,7 @@ class _HrConfigPageState extends State<HrConfigPage>
           _Field(
               label: 'Conversion Reward Type',
               controller: convTypeC,
-              hint: 'PAYROLL / CHARITY (optional)'),
+              dropdownOptions: const ['PAYROLL', 'CHARITY']),
       ],
       onSave: () async {
         final client = sl<ApiClient>();
@@ -940,37 +950,66 @@ class _HrConfigPageState extends State<HrConfigPage>
       builder: (ctx) {
         bool saving = false;
         return StatefulBuilder(builder: (ctx, setDialogState) {
-          return AppDialog(
-            title: title,
-            maxWidth: 460,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(subtitle,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500)),
-                  ),
-                ...fields.map((f) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: TextField(
-                        controller: f.controller,
-                        keyboardType: f.isNumber
-                            ? TextInputType.number
-                            : TextInputType.text,
-                        maxLines: f.maxLines,
-                        decoration: InputDecoration(
-                          labelText: f.label,
-                          hintText: f.hint,
-                          hintStyle: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade400),
-                        ),
+          return AlertDialog(
+            title: Text(title, style: AppTextStyles.sectionTitle()),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (subtitle != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(subtitle,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade500)),
                       ),
-                    )),
-              ],
+                    ...fields.map((f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: f.dropdownOptions != null
+                              ? DropdownButtonFormField<String>(
+                                  value: f.dropdownOptions!
+                                          .contains(f.controller.text)
+                                      ? f.controller.text
+                                      : null,
+                                  decoration: InputDecoration(
+                                    labelText: f.label,
+                                    hintText: f.hint ?? 'Select an option',
+                                    hintStyle: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade400),
+                                  ),
+                                  items: f.dropdownOptions!
+                                      .map((o) => DropdownMenuItem(
+                                          value: o, child: Text(o)))
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      f.controller.text = v;
+                                      setDialogState(() {});
+                                    }
+                                  },
+                                )
+                              : TextField(
+                                  controller: f.controller,
+                                  keyboardType: f.isNumber
+                                      ? TextInputType.number
+                                      : TextInputType.text,
+                                  maxLines: f.maxLines,
+                                  decoration: InputDecoration(
+                                    labelText: f.label,
+                                    hintText: f.hint,
+                                    hintStyle: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade400),
+                                  ),
+                                ),
+                        )),
+                  ],
+                ),
+              ),
             ),
             actions: [
               OutlinedButton(
@@ -1029,12 +1068,14 @@ class _Field {
   final String? hint;
   final bool isNumber;
   final int maxLines;
-  const _Field({
+  final List<String>? dropdownOptions;
+  _Field({
     required this.label,
     required this.controller,
     this.hint,
     this.isNumber = false,
     this.maxLines = 1,
+    this.dropdownOptions,
   });
 }
 

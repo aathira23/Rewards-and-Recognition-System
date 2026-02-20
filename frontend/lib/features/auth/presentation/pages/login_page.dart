@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -18,9 +19,25 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  String? _loginError;
+  Timer? _errorTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_clearLoginError);
+    _passwordController.addListener(_clearLoginError);
+  }
+
+  void _clearLoginError() {
+    if (_loginError != null) {
+      setState(() => _loginError = null);
+    }
+  }
 
   @override
   void dispose() {
+    _errorTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -52,13 +69,11 @@ class _LoginPageState extends State<LoginPage> {
               MaterialPageRoute(builder: (_) => const DashboardPage()),
             );
           } else if (state is AuthFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.redAccent,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            _errorTimer?.cancel();
+            setState(() => _loginError = state.message);
+            _errorTimer = Timer(const Duration(seconds: 4), () {
+              if (mounted) setState(() => _loginError = null);
+            });
           }
         },
         child: Row(
@@ -253,7 +268,38 @@ class _LoginPageState extends State<LoginPage> {
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 16),
+                              if (_loginError != null)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    border: Border.all(
+                                        color: Colors.red.shade300, width: 1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.error_outline,
+                                          color: Colors.red.shade700, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _loginError!,
+                                          style: TextStyle(
+                                              color: Colors.red.shade800,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              const SizedBox(height: 16),
                               BlocBuilder<AuthBloc, AuthState>(
                                 builder: (context, state) {
                                   final isLoading = state is AuthLoading;
