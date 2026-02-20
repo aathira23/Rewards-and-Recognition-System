@@ -81,6 +81,62 @@ import 'features/analytics/domain/repositories/analytics_repository.dart';
 import 'features/analytics/domain/usecases/get_analytics_usecase.dart';
 import 'features/analytics/presentation/bloc/analytics_bloc.dart';
 
+// Departments
+import 'features/departments/data/datasources/department_remote_data_source.dart';
+import 'features/departments/data/repositories/department_repository_impl.dart';
+import 'features/departments/domain/repositories/department_repository.dart';
+import 'features/departments/domain/usecases/get_departments_usecase.dart';
+import 'features/departments/domain/usecases/create_department_usecase.dart';
+import 'features/departments/domain/usecases/update_department_usecase.dart';
+import 'features/departments/domain/usecases/delete_department_usecase.dart';
+import 'features/departments/presentation/bloc/department_bloc.dart';
+
+// Config
+import 'features/config/data/datasources/config_remote_data_source.dart';
+import 'features/config/data/repositories/config_repository_impl.dart';
+import 'features/config/domain/repositories/config_repository.dart';
+import 'features/config/domain/usecases/get_system_configs_usecase.dart';
+import 'features/config/domain/usecases/get_points_rules_config_usecase.dart';
+import 'features/config/domain/usecases/update_system_config_usecase.dart';
+import 'features/config/presentation/bloc/config_bloc.dart';
+
+// Budgets
+import 'features/budgets/data/datasources/budget_remote_data_source.dart';
+import 'features/budgets/data/repositories/budget_repository_impl.dart';
+import 'features/budgets/domain/repositories/budget_repository.dart';
+import 'features/budgets/domain/usecases/get_budget_wallet_usecase.dart';
+import 'features/budgets/domain/usecases/allocate_budget_usecase.dart';
+import 'features/budgets/domain/usecases/reward_employee_usecase.dart';
+import 'features/budgets/presentation/bloc/budget_bloc.dart';
+
+// Reports & Payroll
+import 'features/reports/data/datasources/reports_remote_data_source.dart';
+import 'features/reports/data/repositories/reports_repository_impl.dart';
+import 'features/reports/domain/repositories/reports_repository.dart';
+import 'features/reports/domain/usecases/fetch_report_usecase.dart';
+import 'features/reports/domain/usecases/export_report_csv_usecase.dart';
+import 'features/reports/domain/usecases/fetch_payroll_usecase.dart';
+import 'features/reports/domain/usecases/export_payroll_csv_usecase.dart';
+import 'features/reports/domain/usecases/fetch_departments_for_reports_usecase.dart';
+import 'features/reports/presentation/bloc/reports_bloc.dart';
+import 'features/reports/presentation/bloc/payroll_bloc.dart';
+
+// HR Config
+import 'features/hr/data/datasources/hr_config_remote_data_source.dart';
+import 'features/hr/data/repositories/hr_config_repository_impl.dart';
+import 'features/hr/domain/repositories/hr_config_repository.dart';
+import 'features/hr/domain/usecases/load_all_hr_config_usecase.dart';
+import 'features/hr/domain/usecases/save_hr_config_item_usecase.dart';
+import 'features/hr/domain/usecases/toggle_hr_config_item_usecase.dart';
+import 'features/hr/domain/usecases/update_hr_config_setting_usecase.dart';
+import 'features/hr/presentation/bloc/hr_config_bloc.dart';
+
+// HR Approvals
+import 'features/hr/data/datasources/hr_approvals_remote_data_source.dart';
+import 'features/hr/data/repositories/hr_approvals_repository_impl.dart';
+import 'features/hr/domain/repositories/hr_approvals_repository.dart';
+import 'features/hr/presentation/bloc/hr_approvals_bloc.dart';
+
 final sl = GetIt.instance; // sl stands for Service Locator
 
 Future<void> init() async {
@@ -309,5 +365,141 @@ Future<void> init() async {
   // Data sources
   sl.registerLazySingleton<AnalyticsRemoteDataSource>(
     () => AnalyticsRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - Departments
+  // Bloc
+  sl.registerFactory(
+    () => DepartmentBloc(
+      getDepartmentsUseCase: sl(),
+      createDepartmentUseCase: sl(),
+      updateDepartmentUseCase: sl(),
+      deleteDepartmentUseCase: sl(),
+    ),
+  );
+  // Use cases
+  sl.registerLazySingleton(() => GetDepartmentsUseCase(sl()));
+  sl.registerLazySingleton(() => CreateDepartmentUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateDepartmentUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteDepartmentUseCase(sl()));
+  // Repository
+  sl.registerLazySingleton<DepartmentRepository>(
+    () => DepartmentRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<DepartmentRemoteDataSource>(
+    () => DepartmentRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - Config
+  // Bloc
+  sl.registerFactory(
+    () => ConfigBloc(
+      getSystemConfigsUseCase: sl(),
+      getPointsRulesConfigUseCase: sl(),
+      updateSystemConfigUseCase: sl(),
+    ),
+  );
+  // Use cases
+  sl.registerLazySingleton(() => GetSystemConfigsUseCase(sl()));
+  sl.registerLazySingleton(() => GetPointsRulesConfigUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateSystemConfigUseCase(sl()));
+  // Repository
+  sl.registerLazySingleton<ConfigRepository>(
+    () => ConfigRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<ConfigRemoteDataSource>(
+    () => ConfigRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - Budgets
+  // Bloc
+  sl.registerFactory(
+    () => BudgetBloc(
+      getBudgetWalletUseCase: sl(),
+      allocateBudgetUseCase: sl(),
+      rewardEmployeeUseCase: sl(),
+    ),
+  );
+  // Use cases
+  sl.registerLazySingleton(() => GetBudgetWalletUseCase(sl()));
+  sl.registerLazySingleton(() => AllocateBudgetUseCase(sl()));
+  sl.registerLazySingleton(() => RewardEmployeeUseCase(sl()));
+  // Repository
+  sl.registerLazySingleton<BudgetRepository>(
+    () => BudgetRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<BudgetRemoteDataSource>(
+    () => BudgetRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - Reports & Payroll
+  // Blocs
+  sl.registerFactory(
+    () => ReportsBloc(
+      fetchReportUseCase: sl(),
+      exportReportCsvUseCase: sl(),
+      fetchDepartmentsUseCase: sl(),
+    ),
+  );
+  sl.registerFactory(
+    () => PayrollBloc(
+      fetchPayrollUseCase: sl(),
+      exportPayrollCsvUseCase: sl(),
+    ),
+  );
+  // Use cases
+  sl.registerLazySingleton(() => FetchReportUseCase(sl()));
+  sl.registerLazySingleton(() => ExportReportCsvUseCase(sl()));
+  sl.registerLazySingleton(() => FetchPayrollUseCase(sl()));
+  sl.registerLazySingleton(() => ExportPayrollCsvUseCase(sl()));
+  sl.registerLazySingleton(() => FetchDepartmentsForReportsUseCase(sl()));
+  // Repository
+  sl.registerLazySingleton<ReportsRepository>(
+    () => ReportsRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<ReportsRemoteDataSource>(
+    () => ReportsRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - HR Config
+  // Bloc
+  sl.registerFactory(
+    () => HrConfigBloc(
+      loadAllUseCase: sl(),
+      saveItemUseCase: sl(),
+      toggleItemUseCase: sl(),
+      updateSettingUseCase: sl(),
+    ),
+  );
+  // Use cases
+  sl.registerLazySingleton(() => LoadAllHrConfigUseCase(sl()));
+  sl.registerLazySingleton(() => SaveHrConfigItemUseCase(sl()));
+  sl.registerLazySingleton(() => ToggleHrConfigItemUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateHrConfigSettingUseCase(sl()));
+  // Repository
+  sl.registerLazySingleton<HrConfigRepository>(
+    () => HrConfigRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<HrConfigRemoteDataSource>(
+    () => HrConfigRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - HR Approvals
+  // Bloc
+  sl.registerFactory(
+    () => HrApprovalsBloc(repository: sl()),
+  );
+  // Repository
+  sl.registerLazySingleton<HrApprovalsRepository>(
+    () => HrApprovalsRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<HrApprovalsRemoteDataSource>(
+    () => HrApprovalsRemoteDataSourceImpl(client: sl()),
   );
 }

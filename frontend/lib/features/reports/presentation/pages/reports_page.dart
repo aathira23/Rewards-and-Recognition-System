@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../bloc/reports_bloc.dart';
+import '../bloc/reports_event.dart';
+import '../bloc/reports_state.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 //  REPORT DEFINITIONS
@@ -39,7 +41,7 @@ enum _ReportType {
     backendType: 'REDEMPTIONS',
     title: 'Redemptions & Rewards',
     subtitle:
-        'Track every reward redemption — who redeemed what, points spent, fulfillment status and timestamps',
+        'Track every reward redemption \u2014 who redeemed what, points spent, fulfillment status and timestamps',
     icon: Icons.card_giftcard_rounded,
     color: Color(0xFF10B981),
     hasDateFilter: true,
@@ -56,7 +58,7 @@ enum _ReportType {
     backendType: 'WALLET_UTILIZATION',
     title: 'Budget & Wallet Utilization',
     subtitle:
-        'Manager-level budget snapshot — total allocated, spent, remaining balance and utilization percentage',
+        'Manager-level budget snapshot \u2014 total allocated, spent, remaining balance and utilization percentage',
     icon: Icons.account_balance_wallet_rounded,
     color: Color(0xFF8B5CF6),
     hasDateFilter: false,
@@ -73,7 +75,7 @@ enum _ReportType {
     backendType: 'EXPIRY_FORECAST',
     title: 'Points Expiry Forecast',
     subtitle:
-        'Forecast of employee points expiring in a selected window — dates, amounts and number of affected users',
+        'Forecast of employee points expiring in a selected window \u2014 dates, amounts and number of affected users',
     icon: Icons.timer_outlined,
     color: Color(0xFFEF4444),
     hasDateFilter: false,
@@ -89,7 +91,7 @@ enum _ReportType {
     backendType: 'PAYROLL',
     title: 'Payroll Encashment',
     subtitle:
-        'Monthly points-to-cash conversion report — employee, points converted, cash value, approval status',
+        'Monthly points-to-cash conversion report \u2014 employee, points converted, cash value, approval status',
     icon: Icons.payments_rounded,
     color: Color(0xFF6366F1),
     hasDateFilter: false,
@@ -127,25 +129,32 @@ enum _ReportType {
 //  PAGE
 // ═══════════════════════════════════════════════════════════════════════
 
-class ReportsPage extends StatefulWidget {
+class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});
 
   @override
-  State<ReportsPage> createState() => _ReportsPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ReportsBloc>(),
+      child: const _ReportsView(),
+    );
+  }
 }
 
-class _ReportsPageState extends State<ReportsPage> {
-  // Active state
-  _ReportType? _active;
-  List<Map<String, dynamic>> _data = [];
-  bool _loading = false;
-  String? _error;
+class _ReportsView extends StatefulWidget {
+  const _ReportsView();
 
-  // Filters
+  @override
+  State<_ReportsView> createState() => _ReportsViewState();
+}
+
+class _ReportsViewState extends State<_ReportsView> {
+  _ReportType? _active;
+
+  // Filters (local UI state)
   DateTime? _fromDate;
   DateTime? _toDate;
   int? _deptId;
-  List<Map<String, dynamic>> _departments = [];
   String _payrollMonth = '';
   int _expiryDays = 30;
 
@@ -157,156 +166,99 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   // ── fetch report data ────────────────────────────────────────────
-  Future<void> _fetchReport(_ReportType type) async {
-    setState(() {
-      _active = type;
-      _loading = true;
-      _error = null;
-      _data = [];
-    });
+  void _fetchReport(_ReportType type) {
+    setState(() => _active = type);
 
-    // Load department list if needed (once)
-    if (type.hasDeptFilter && _departments.isEmpty) {
-      try {
-        final client = sl<ApiClient>();
-        final res = await client.get(ApiConstants.departments);
-        final body = res.data;
-        final list = body is Map ? (body['data'] ?? []) : body;
-        if (list is List) {
-          _departments = list.cast<Map<String, dynamic>>();
-        }
-      } catch (_) {}
+    // Load departments if needed (lazy, one-time)
+    if (type.hasDeptFilter) {
+      final bloc = context.read<ReportsBloc>();
+      if (bloc.state.departments.isEmpty) {
+        bloc.add(const LoadDepartmentsForFilter());
+      }
     }
 
-    try {
-      final client = sl<ApiClient>();
-      late final dynamic response;
-
-      if (type == _ReportType.payrollEncashment) {
-        response =
-            await client.get(ApiConstants.reportsPayroll, queryParameters: {
-          'month': _payrollMonth,
-          'export_format': 'json',
-        });
-      } else {
-        final qp = <String, dynamic>{
-          'report_type': type.backendType,
-          'export_format': 'json',
-        };
-        if (type.hasDateFilter && _fromDate != null) {
-          qp['from_date'] = DateFormat('yyyy-MM-dd').format(_fromDate!);
-        }
-        if (type.hasDateFilter && _toDate != null) {
-          qp['to_date'] = DateFormat('yyyy-MM-dd').format(_toDate!);
-        }
-        if (type.hasDeptFilter && _deptId != null) {
-          qp['department_id'] = _deptId;
-        }
-        if (type == _ReportType.expiryForecast) {
-          qp['days'] = _expiryDays;
-        }
-        response = await client.get(ApiConstants.reports, queryParameters: qp);
-      }
-
-      if (response.statusCode == 200) {
-        final body = response.data;
-        final raw = body['data']?['data'] ?? body['data'] ?? [];
-        final list = raw is List
-            ? raw.cast<Map<String, dynamic>>()
-            : <Map<String, dynamic>>[];
-
-        // Post-process: add computed fields
-        for (final row in list) {
-          // wallet utilization %
-          if (type == _ReportType.walletUtilization) {
-            final alloc = (row['total_allocated'] ?? 0) as num;
-            final spent = (row['total_spent'] ?? 0) as num;
-            row['utilization_pct'] =
-                alloc > 0 ? ((spent / alloc) * 100).toStringAsFixed(1) : '0.0';
-          }
-          // expiry days remaining
-          if (type == _ReportType.expiryForecast &&
-              row['expiry_date'] != null) {
-            final expiry = DateTime.tryParse(row['expiry_date'].toString());
-            if (expiry != null) {
-              row['days_remaining'] =
-                  expiry.difference(DateTime.now()).inDays.clamp(0, 9999);
-            }
-          }
-        }
-
-        setState(() {
-          _data = list;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'Server returned ${response.statusCode}';
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
+    context.read<ReportsBloc>().add(LoadReport(queryParams: _buildQueryParams(type)));
   }
 
-  Future<void> _exportCsv() async {
+  Map<String, dynamic> _buildQueryParams(_ReportType type) {
+    final qp = <String, dynamic>{'report_type': type.backendType};
+    if (type.hasDateFilter && _fromDate != null) {
+      qp['from_date'] = DateFormat('yyyy-MM-dd').format(_fromDate!);
+    }
+    if (type.hasDateFilter && _toDate != null) {
+      qp['to_date'] = DateFormat('yyyy-MM-dd').format(_toDate!);
+    }
+    if (type.hasDeptFilter && _deptId != null) {
+      qp['department_id'] = _deptId;
+    }
+    if (type == _ReportType.expiryForecast) {
+      qp['days'] = _expiryDays;
+    }
+    if (type == _ReportType.payrollEncashment) {
+      qp['month'] = _payrollMonth;
+    }
+    return qp;
+  }
+
+  void _exportCsv() {
     if (_active == null) return;
-    try {
-      final client = sl<ApiClient>();
-      if (_active == _ReportType.payrollEncashment) {
-        await client.get(ApiConstants.reportsPayroll, queryParameters: {
-          'month': _payrollMonth,
-          'export_format': 'csv',
-        });
-      } else {
-        final qp = <String, dynamic>{
-          'report_type': _active!.backendType,
-          'export_format': 'csv',
-        };
-        if (_active!.hasDateFilter && _fromDate != null) {
-          qp['from_date'] = DateFormat('yyyy-MM-dd').format(_fromDate!);
-        }
-        if (_active!.hasDateFilter && _toDate != null) {
-          qp['to_date'] = DateFormat('yyyy-MM-dd').format(_toDate!);
-        }
-        if (_active!.hasDeptFilter && _deptId != null) {
-          qp['department_id'] = _deptId;
-        }
-        if (_active == _ReportType.expiryForecast) {
-          qp['days'] = _expiryDays;
-        }
-        await client.get(ApiConstants.reports, queryParameters: qp);
-      }
-      _snack('CSV export initiated');
-    } catch (_) {
-      _snack('Export failed', error: true);
+    context.read<ReportsBloc>().add(
+        ExportReportCsv(queryParams: _buildQueryParams(_active!)));
+  }
+
+  /// Add computed columns for display (utilization %, days remaining).
+  List<Map<String, dynamic>> _processData(
+      List<Map<String, dynamic>> raw, _ReportType type) {
+    if (type != _ReportType.walletUtilization &&
+        type != _ReportType.expiryForecast) {
+      return raw;
     }
+    return raw.map((row) {
+      final r = Map<String, dynamic>.from(row);
+      if (type == _ReportType.walletUtilization) {
+        final alloc = (r['total_allocated'] ?? 0) as num;
+        final spent = (r['total_spent'] ?? 0) as num;
+        r['utilization_pct'] =
+            alloc > 0 ? ((spent / alloc) * 100).toStringAsFixed(1) : '0.0';
+      }
+      if (type == _ReportType.expiryForecast && r['expiry_date'] != null) {
+        final expiry = DateTime.tryParse(r['expiry_date'].toString());
+        if (expiry != null) {
+          r['days_remaining'] =
+              expiry.difference(DateTime.now()).inDays.clamp(0, 9999);
+        }
+      }
+      return r;
+    }).toList();
   }
 
-  void _snack(String msg, {bool error = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? Colors.red.shade600 : null,
-    ));
-  }
-
-  void _goBack() => setState(() {
-        _active = null;
-        _data = [];
-        _error = null;
-      });
+  void _goBack() => setState(() => _active = null);
 
   // ── build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: _active == null ? _buildGrid() : _buildDetail(),
+    return BlocConsumer<ReportsBloc, ReportsState>(
+      listener: (context, state) {
+        if (state.successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.successMessage!),
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+        if (state.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${state.error}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: _active == null ? _buildGrid() : _buildDetail(state),
+        );
+      },
     );
   }
 
@@ -325,8 +277,7 @@ class _ReportsPageState extends State<ReportsPage> {
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           const SizedBox(height: 28),
           LayoutBuilder(builder: (ctx, constraints) {
-            final cardWidth =
-                (constraints.maxWidth - 40) / 3; // 3 cols with gaps
+            final cardWidth = (constraints.maxWidth - 40) / 3;
             return Wrap(
               spacing: 20,
               runSpacing: 20,
@@ -346,8 +297,11 @@ class _ReportsPageState extends State<ReportsPage> {
   // ═══════════════════════════════════════════════════════════════════
   //  DETAIL VIEW
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildDetail() {
+  Widget _buildDetail(ReportsState state) {
     final type = _active!;
+    final data = _processData(state.data, type);
+    final theme = Theme.of(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -414,7 +368,7 @@ class _ReportsPageState extends State<ReportsPage> {
               ),
               const SizedBox(width: 10),
               ElevatedButton.icon(
-                onPressed: _data.isNotEmpty ? _exportCsv : null,
+                onPressed: data.isNotEmpty ? _exportCsv : null,
                 icon: const Icon(Icons.download_rounded, size: 15),
                 label: const Text('Export CSV'),
               ),
@@ -423,30 +377,30 @@ class _ReportsPageState extends State<ReportsPage> {
           const SizedBox(height: 20),
 
           // ── filters ──
-          _buildFilters(type),
+          _buildFilters(type, state, data, theme),
 
           // ── summary cards ──
-          if (!_loading && _data.isNotEmpty) ...[
+          if (!state.isLoading && data.isNotEmpty) ...[
             const SizedBox(height: 20),
-            _buildSummary(type),
+            _buildSummary(type, data, theme),
           ],
 
           const SizedBox(height: 20),
 
           // ── content ──
-          if (_loading)
+          if (state.isLoading)
             const Center(
                 child: Padding(
                     padding: EdgeInsets.all(60),
                     child: CircularProgressIndicator())),
-          if (_error != null)
+          if (state.error != null)
             Center(
                 child: Padding(
               padding: const EdgeInsets.all(48),
               child: Column(children: [
                 Icon(Icons.error_outline, color: Colors.red.shade300),
                 const SizedBox(height: 8),
-                Text(_error!,
+                Text(state.error!,
                     style: TextStyle(fontSize: 13, color: Colors.red.shade600)),
                 const SizedBox(height: 12),
                 OutlinedButton(
@@ -454,7 +408,7 @@ class _ReportsPageState extends State<ReportsPage> {
                     child: const Text('Retry')),
               ]),
             )),
-          if (!_loading && _error == null && _data.isEmpty)
+          if (!state.isLoading && state.error == null && data.isEmpty)
             Center(
                 child: Padding(
               padding: const EdgeInsets.all(60),
@@ -467,7 +421,7 @@ class _ReportsPageState extends State<ReportsPage> {
                         TextStyle(fontSize: 13, color: Colors.grey.shade500)),
               ]),
             )),
-          if (!_loading && _data.isNotEmpty) _buildTable(type),
+          if (!state.isLoading && data.isNotEmpty) _buildTable(type, data, theme),
         ],
       ),
     );
@@ -476,7 +430,8 @@ class _ReportsPageState extends State<ReportsPage> {
   // ═══════════════════════════════════════════════════════════════════
   //  FILTERS
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildFilters(_ReportType type) {
+  Widget _buildFilters(
+      _ReportType type, ReportsState state, List<Map<String, dynamic>> data, ThemeData theme) {
     if (!type.hasDateFilter &&
         !type.hasDeptFilter &&
         type != _ReportType.payrollEncashment &&
@@ -487,7 +442,7 @@ class _ReportsPageState extends State<ReportsPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -525,7 +480,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   : null,
             ),
             const SizedBox(width: 8),
-            Text('→', style: TextStyle(color: Colors.grey.shade400)),
+            Text('\u2192', style: TextStyle(color: Colors.grey.shade400)),
             const SizedBox(width: 8),
             _FilterChip(
               label: _toDate != null
@@ -555,7 +510,7 @@ class _ReportsPageState extends State<ReportsPage> {
           ],
 
           // Department filter
-          if (type.hasDeptFilter && _departments.isNotEmpty) ...[
+          if (type.hasDeptFilter && state.departments.isNotEmpty) ...[
             Container(
               height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -579,7 +534,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   items: [
                     const DropdownMenuItem(
                         value: null, child: Text('All Departments')),
-                    ..._departments.map((d) => DropdownMenuItem(
+                    ...state.departments.map((d) => DropdownMenuItem(
                         value: d['id'] as int?,
                         child: Text(d['name']?.toString() ?? ''))),
                   ],
@@ -659,7 +614,7 @@ class _ReportsPageState extends State<ReportsPage> {
           ],
 
           const Spacer(),
-          Text('${_data.length} records',
+          Text('${data.length} records',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
         ],
       ),
@@ -669,8 +624,9 @@ class _ReportsPageState extends State<ReportsPage> {
   // ═══════════════════════════════════════════════════════════════════
   //  SUMMARY STAT CARDS
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildSummary(_ReportType type) {
-    final stats = _computeStats(type);
+  Widget _buildSummary(
+      _ReportType type, List<Map<String, dynamic>> data, ThemeData theme) {
+    final stats = _computeStats(type, data);
     return Row(
       children: stats
           .map((s) => Expanded(
@@ -678,7 +634,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   margin: const EdgeInsets.only(right: 14),
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
@@ -707,40 +663,38 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  List<_Stat> _computeStats(_ReportType type) {
+  List<_Stat> _computeStats(
+      _ReportType type, List<Map<String, dynamic>> data) {
     switch (type) {
       case _ReportType.recognitions:
-        return _recognitionStats();
+        return _recognitionStats(data);
       case _ReportType.redemptions:
-        return _redemptionStats();
+        return _redemptionStats(data);
       case _ReportType.walletUtilization:
-        return _walletStats();
+        return _walletStats(data);
       case _ReportType.expiryForecast:
-        return _expiryStats();
+        return _expiryStats(data);
       case _ReportType.payrollEncashment:
-        return _payrollStats();
+        return _payrollStats(data);
     }
   }
 
-  List<_Stat> _recognitionStats() {
-    final total = _data.length;
+  List<_Stat> _recognitionStats(List<Map<String, dynamic>> data) {
+    final total = data.length;
     final totalPts =
-        _data.fold<int>(0, (s, r) => s + ((r['points'] as num?)?.toInt() ?? 0));
-    final senders = _data.map((r) => r['actor_name']).toSet().length;
-    final receivers = _data.map((r) => r['receiver_name']).toSet().length;
-
-    // Top source type
+        data.fold<int>(0, (s, r) => s + ((r['points'] as num?)?.toInt() ?? 0));
+    final senders = data.map((r) => r['actor_name']).toSet().length;
+    final receivers = data.map((r) => r['receiver_name']).toSet().length;
     final typeCounts = <String, int>{};
-    for (final r in _data) {
+    for (final r in data) {
       final t = r['source_type']?.toString() ?? '';
       typeCounts[t] = (typeCounts[t] ?? 0) + 1;
     }
-    String topType = '—';
+    String topType = '\u2014';
     if (typeCounts.isNotEmpty) {
       topType =
           typeCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
     }
-
     return [
       _Stat('Total Recognitions', _fmt(total), Icons.receipt_long_rounded,
           const Color(0xFF3B82F6)),
@@ -755,25 +709,22 @@ class _ReportsPageState extends State<ReportsPage> {
     ];
   }
 
-  List<_Stat> _redemptionStats() {
-    final total = _data.length;
-    final totalPts = _data.fold<int>(
+  List<_Stat> _redemptionStats(List<Map<String, dynamic>> data) {
+    final total = data.length;
+    final totalPts = data.fold<int>(
         0, (s, r) => s + ((r['points_used'] as num?)?.toInt() ?? 0));
-    final employees = _data.map((r) => r['user_name']).toSet().length;
-    final fulfilled = _data.where((r) => r['status'] == 'FULFILLED').length;
-
-    // Most popular reward
+    final employees = data.map((r) => r['user_name']).toSet().length;
+    final fulfilled = data.where((r) => r['status'] == 'FULFILLED').length;
     final rwdCounts = <String, int>{};
-    for (final r in _data) {
+    for (final r in data) {
       final rw = r['reward_name']?.toString() ?? '';
       rwdCounts[rw] = (rwdCounts[rw] ?? 0) + 1;
     }
-    String topReward = '—';
+    String topReward = '\u2014';
     if (rwdCounts.isNotEmpty) {
       topReward =
           rwdCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
     }
-
     return [
       _Stat('Total Redemptions', _fmt(total), Icons.card_giftcard_rounded,
           const Color(0xFF10B981)),
@@ -793,14 +744,14 @@ class _ReportsPageState extends State<ReportsPage> {
     ];
   }
 
-  List<_Stat> _walletStats() {
-    final count = _data.length;
-    final totalAlloc = _data.fold<int>(
+  List<_Stat> _walletStats(List<Map<String, dynamic>> data) {
+    final count = data.length;
+    final totalAlloc = data.fold<int>(
         0, (s, r) => s + ((r['total_allocated'] as num?)?.toInt() ?? 0));
-    final totalSpent = _data.fold<int>(
+    final totalSpent = data.fold<int>(
         0, (s, r) => s + ((r['total_spent'] as num?)?.toInt() ?? 0));
     final avgUtil = count > 0
-        ? _data.fold<double>(
+        ? data.fold<double>(
                 0,
                 (s, r) =>
                     s +
@@ -809,7 +760,6 @@ class _ReportsPageState extends State<ReportsPage> {
             count
         : 0;
     final totalRemaining = totalAlloc - totalSpent;
-
     return [
       _Stat('Total Managers', _fmt(count), Icons.manage_accounts_rounded,
           const Color(0xFF8B5CF6)),
@@ -824,22 +774,17 @@ class _ReportsPageState extends State<ReportsPage> {
     ];
   }
 
-  List<_Stat> _expiryStats() {
-    final totalPts = _data.fold<int>(
+  List<_Stat> _expiryStats(List<Map<String, dynamic>> data) {
+    final totalPts = data.fold<int>(
         0, (s, r) => s + ((r['total_points'] as num?)?.toInt() ?? 0));
-    final totalUsers = _data.fold<int>(
+    final totalUsers = data.fold<int>(
         0, (s, r) => s + ((r['user_count'] as num?)?.toInt() ?? 0));
-    final dates = _data.length;
-
-    // Earliest expiry
+    final dates = data.length;
     int minDays = 999;
-    for (final r in _data) {
+    for (final r in data) {
       final d = (r['days_remaining'] as num?)?.toInt() ?? 999;
-      if (d < minDays) {
-        minDays = d;
-      }
+      if (d < minDays) minDays = d;
     }
-
     return [
       _Stat('Points at Risk', '${_fmt(totalPts)} pts',
           Icons.warning_amber_rounded, const Color(0xFFEF4444)),
@@ -847,19 +792,18 @@ class _ReportsPageState extends State<ReportsPage> {
           const Color(0xFFF59E0B)),
       _Stat('Expiry Dates', _fmt(dates), Icons.event_rounded,
           const Color(0xFF3B82F6)),
-      _Stat('Earliest Expiry', minDays < 999 ? '$minDays days' : '—',
+      _Stat('Earliest Expiry', minDays < 999 ? '$minDays days' : '\u2014',
           Icons.timer_outlined, const Color(0xFF8B5CF6)),
     ];
   }
 
-  List<_Stat> _payrollStats() {
-    final total = _data.length;
-    final totalPts = _data.fold<int>(
+  List<_Stat> _payrollStats(List<Map<String, dynamic>> data) {
+    final total = data.length;
+    final totalPts = data.fold<int>(
         0, (s, r) => s + ((r['points_converted'] as num?)?.toInt() ?? 0));
-    final totalCash = _data.fold<double>(
+    final totalCash = data.fold<double>(
         0, (s, r) => s + ((r['cash_amount'] as num?)?.toDouble() ?? 0));
     final avgRate = totalPts > 0 ? (totalCash / totalPts) : 0.0;
-
     return [
       _Stat('Total Conversions', _fmt(total), Icons.sync_alt_rounded,
           const Color(0xFF6366F1)),
@@ -881,14 +825,15 @@ class _ReportsPageState extends State<ReportsPage> {
   // ═══════════════════════════════════════════════════════════════════
   //  DATA TABLE
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildTable(_ReportType type) {
+  Widget _buildTable(
+      _ReportType type, List<Map<String, dynamic>> data, ThemeData theme) {
     final cols = type.columns;
     const maxRows = 100;
-    final rows = _data.take(maxRows).toList();
+    final rows = data.take(maxRows).toList();
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -943,11 +888,11 @@ class _ReportsPageState extends State<ReportsPage> {
             child: Row(
               children: [
                 Text(
-                  'Showing ${rows.length} of ${_data.length} records',
+                  'Showing ${rows.length} of ${data.length} records',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
                 ),
                 const Spacer(),
-                if (_data.length > maxRows)
+                if (data.length > maxRows)
                   Text(
                     'Export CSV for full data',
                     style: TextStyle(fontSize: 11, color: Colors.blue.shade400),
@@ -962,7 +907,7 @@ class _ReportsPageState extends State<ReportsPage> {
 
   Widget _renderCell(String key, dynamic val, _ReportType type) {
     if (val == null) {
-      return Text('—',
+      return Text('\u2014',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade400));
     }
 
@@ -1122,6 +1067,7 @@ class _ReportCardState extends State<_ReportCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -1129,7 +1075,7 @@ class _ReportCardState extends State<_ReportCard> {
         duration: const Duration(milliseconds: 200),
         transform: Matrix4.translationValues(0, _hovered ? -2.0 : 0, 0),
         child: Material(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           elevation: _hovered ? 4 : 0,
           shadowColor: widget.type.color.withValues(alpha: 0.2),

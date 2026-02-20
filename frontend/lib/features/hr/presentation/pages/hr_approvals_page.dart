@@ -1,44 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
 import '../../../../core/widgets/app_dialog.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../bloc/hr_approvals_bloc.dart';
+import '../bloc/hr_approvals_event.dart';
+import '../bloc/hr_approvals_state.dart';
 
 /// HR Approvals & Allocation page — three tabs:
 ///  1. Award Approvals  (approve / reject nominations)
 ///  2. Conversion Requests  (approve / reject point conversions)
 ///  3. Budget Allocation  (allocate budget to managers)
-class HrApprovalsPage extends StatefulWidget {
+class HrApprovalsPage extends StatelessWidget {
   const HrApprovalsPage({super.key});
 
   @override
-  State<HrApprovalsPage> createState() => _HrApprovalsPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<HrApprovalsBloc>()
+        ..add(LoadNominations())
+        ..add(LoadConversions())
+        ..add(LoadManagers()),
+      child: const _HrApprovalsView(),
+    );
+  }
 }
 
-class _HrApprovalsPageState extends State<HrApprovalsPage>
+class _HrApprovalsView extends StatefulWidget {
+  const _HrApprovalsView();
+
+  @override
+  State<_HrApprovalsView> createState() => _HrApprovalsViewState();
+}
+
+class _HrApprovalsViewState extends State<_HrApprovalsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // Award nominations
-  List<Map<String, dynamic>> _nominations = [];
-  bool _nomLoading = true;
-
-  // Conversion requests
-  List<Map<String, dynamic>> _conversions = [];
-  bool _convLoading = true;
-
-  // Managers for budget allocation
-  List<Map<String, dynamic>> _managers = [];
-  bool _mgLoading = true;
-
-  String _nomFilter = 'ALL'; // ALL, PENDING, APPROVED, REJECTED
+  String _nomFilter = 'ALL';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadAll();
   }
 
   @override
@@ -47,179 +50,134 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
     super.dispose();
   }
 
-  Future<void> _loadAll() async {
-    _loadNominations();
-    _loadConversions();
-    _loadManagers();
-  }
-
-  Future<void> _loadNominations() async {
-    setState(() => _nomLoading = true);
-    try {
-      final client = sl<ApiClient>();
-      final res = await client.get(ApiConstants.nominations);
-      final data = res.data['data'] ?? [];
-      setState(() {
-        _nominations = (data is List) ? data.cast<Map<String, dynamic>>() : [];
-        _nomLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _nomLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadConversions() async {
-    setState(() => _convLoading = true);
-    try {
-      final client = sl<ApiClient>();
-      final res = await client.get(ApiConstants.pointsConversions);
-      final data = res.data['data'] ?? [];
-      setState(() {
-        _conversions = (data is List) ? data.cast<Map<String, dynamic>>() : [];
-        _convLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _convLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadManagers() async {
-    setState(() => _mgLoading = true);
-    try {
-      final client = sl<ApiClient>();
-      final res = await client.get(ApiConstants.users);
-      final data = res.data['data'] ?? res.data ?? [];
-      final all = (data is List)
-          ? data.cast<Map<String, dynamic>>()
-          : <Map<String, dynamic>>[];
-      setState(() {
-        _managers = all
-            .where((u) =>
-                (u['role']?.toString().toUpperCase() == 'MANAGER') ||
-                (u['role']?.toString().toUpperCase() == 'DEPT_HEAD'))
-            .toList();
-        _mgLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _mgLoading = false;
-      });
-    }
-  }
-
   // ─── Build ───────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainer,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Approvals & Allocation',
-                          style: AppTextStyles.pageTitle()),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Review nominations, conversion requests & allocate budgets',
-                        style: AppTextStyles.body(color: Colors.grey.shade500),
+    return BlocConsumer<HrApprovalsBloc, HrApprovalsState>(
+      listener: (context, state) {
+        if (state.error != null) _snack(state.error!, isError: true);
+        if (state.successMessage != null) _snack(state.successMessage!);
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Approvals & Allocation',
+                              style: AppTextStyles.pageTitle()),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Review nominations, conversion requests & allocate budgets',
+                            style:
+                                AppTextStyles.body(color: Colors.grey.shade500),
+                          ),
+                        ],
                       ),
+                    ),
+                    _RefreshBtn(onTap: () {
+                      context.read<HrApprovalsBloc>()
+                        ..add(LoadNominations())
+                        ..add(LoadConversions())
+                        ..add(LoadManagers());
+                    }),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Tabs
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: theme.colorScheme.primary,
+                    unselectedLabelColor: Colors.grey.shade500,
+                    indicatorColor: theme.colorScheme.primary,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelStyle: AppTextStyles.bodyBold(),
+                    unselectedLabelStyle: AppTextStyles.bodyMedium(),
+                    dividerHeight: 0,
+                    tabs: [
+                      _TabWithBadge(
+                          label: 'Award Approvals',
+                          count: state.nominations
+                              .where((n) =>
+                                  n['status'] == 'PENDING' &&
+                                  n['next_required_level']
+                                          ?.toString()
+                                          .toUpperCase() ==
+                                      'HR')
+                              .length),
+                      _TabWithBadge(
+                          label: 'Payroll Encashment',
+                          count: state.conversions
+                              .where((c) => c['status'] == 'PENDING')
+                              .length),
+                      const Tab(text: 'Budget Allocation'),
                     ],
                   ),
                 ),
-                _RefreshBtn(onTap: _loadAll),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Tabs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
               ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: theme.colorScheme.primary,
-                unselectedLabelColor: Colors.grey.shade500,
-                indicatorColor: theme.colorScheme.primary,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: AppTextStyles.bodyBold(),
-                unselectedLabelStyle: AppTextStyles.bodyMedium(),
-                dividerHeight: 0,
-                tabs: [
-                  _TabWithBadge(
-                      label: 'Award Approvals',
-                      count: _nominations
-                          .where((n) =>
-                              n['status'] == 'PENDING' &&
-                              n['next_required_level']
-                                      ?.toString()
-                                      .toUpperCase() ==
-                                  'HR')
-                          .length),
-                  _TabWithBadge(
-                      label: 'Payroll Encashment',
-                      count: _conversions
-                          .where((c) => c['status'] == 'PENDING')
-                          .length),
-                  const Tab(text: 'Budget Allocation'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          // Content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAwardApprovalsTab(theme),
-                _buildConversionsTab(theme),
-                _buildBudgetAllocationTab(theme),
-              ],
-            ),
+              // Content
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildAwardApprovalsTab(context, theme, state),
+                    _buildConversionsTab(context, theme, state),
+                    _buildBudgetAllocationTab(context, theme, state),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  TAB 1 — Award Approvals
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildAwardApprovalsTab(ThemeData theme) {
-    if (_nomLoading) return const Center(child: CircularProgressIndicator());
+  Widget _buildAwardApprovalsTab(
+      BuildContext context, ThemeData theme, HrApprovalsState state) {
+    if (state.nomLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     final filtered = _nomFilter == 'ALL'
-        ? _nominations
+        ? state.nominations
         : _nomFilter == 'PENDING'
-            ? _nominations
+            ? state.nominations
                 .where((n) =>
                     n['status'] == 'PENDING' &&
                     n['next_required_level']?.toString().toUpperCase() == 'HR')
                 .toList()
-            : _nominations.where((n) => n['status'] == _nomFilter).toList();
+            : state.nominations
+                .where((n) => n['status'] == _nomFilter)
+                .toList();
 
-    final pendingCount = _nominations
+    final pendingCount = state.nominations
         .where((n) =>
             n['status'] == 'PENDING' &&
             n['next_required_level']?.toString().toUpperCase() == 'HR')
@@ -234,7 +192,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
           Row(
             children: [
               _FilterChip(
-                  label: 'All (${_nominations.length})',
+                  label: 'All (${state.nominations.length})',
                   isActive: _nomFilter == 'ALL',
                   onTap: () => setState(() => _nomFilter = 'ALL')),
               const SizedBox(width: 8),
@@ -255,22 +213,20 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
             ],
           ),
           const SizedBox(height: 16),
-
           if (filtered.isEmpty)
             _EmptyBlock(
                 icon: Icons.inbox_rounded,
                 text: 'No ${_nomFilter.toLowerCase()} nominations'),
-
-          ...filtered.map((nom) => _buildNominationCard(nom, theme)),
+          ...filtered.map((nom) => _buildNominationCard(context, nom, theme)),
         ],
       ),
     );
   }
 
-  Widget _buildNominationCard(Map<String, dynamic> nom, ThemeData theme) {
+  Widget _buildNominationCard(
+      BuildContext context, Map<String, dynamic> nom, ThemeData theme) {
     final status = nom['status']?.toString() ?? 'PENDING';
     final isPending = status == 'PENDING';
-    // Only show action buttons when it is specifically HR's turn to act
     final isForHR = isPending &&
         nom['next_required_level']?.toString().toUpperCase() == 'HR';
     final nomineeName = nom['nominee']?['name'] ??
@@ -290,7 +246,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
             color: isPending ? Colors.orange.shade100 : Colors.grey.shade200),
@@ -360,7 +316,8 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
               const Spacer(),
               if (isForHR) ...[
                 OutlinedButton.icon(
-                  onPressed: () => _showNomActionDialog(nom['id'], false),
+                  onPressed: () =>
+                      _showNomActionDialog(context, nom['id'], false),
                   icon: const Icon(Icons.close, size: 14),
                   label: const Text('Reject'),
                   style: OutlinedButton.styleFrom(
@@ -370,7 +327,8 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: () => _showNomActionDialog(nom['id'], true),
+                  onPressed: () =>
+                      _showNomActionDialog(context, nom['id'], true),
                   icon: const Icon(Icons.check, size: 14),
                   label: const Text('Approve'),
                   style: ElevatedButton.styleFrom(
@@ -386,7 +344,8 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
     );
   }
 
-  void _showNomActionDialog(int nominationId, bool isApprove) {
+  void _showNomActionDialog(
+      BuildContext context, int nominationId, bool isApprove) {
     final commentsC = TextEditingController();
     showDialog(
       context: context,
@@ -406,23 +365,13 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.of(ctx).pop();
-              try {
-                final client = sl<ApiClient>();
-                await client.post(
-                  '${ApiConstants.nominations}/$nominationId/action',
-                  data: {
-                    'action': isApprove ? 'APPROVE' : 'REJECT',
-                    if (commentsC.text.isNotEmpty) 'comments': commentsC.text,
-                  },
-                );
-                _loadNominations();
-                _snack(
-                    isApprove ? 'Nomination approved' : 'Nomination rejected');
-              } catch (e) {
-                _snack('Error: $e', isError: true);
-              }
+              context.read<HrApprovalsBloc>().add(ActionNomination(
+                    id: nominationId,
+                    isApprove: isApprove,
+                    comments: commentsC.text.isNotEmpty ? commentsC.text : null,
+                  ));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: isApprove ? Colors.green : Colors.red,
@@ -438,298 +387,134 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
   // ═══════════════════════════════════════════════════════════════════
   //  TAB 2 — Conversion Requests
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildConversionsTab(ThemeData theme) {
-    if (_convLoading) return const Center(child: CircularProgressIndicator());
-
-    final pending =
-        _conversions.where((c) => c['status'] == 'PENDING').toList();
-    final resolved =
-        _conversions.where((c) => c['status'] != 'PENDING').toList();
-
+  Widget _buildConversionsTab(
+      BuildContext context, ThemeData theme, HrApprovalsState state) {
+    if (state.convLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.conversions.isEmpty) {
+      return const _EmptyBlock(
+          icon: Icons.swap_horiz_rounded, text: 'No conversion requests');
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Pending section
-          Row(
-            children: [
-              Text('Pending Requests', style: AppTextStyles.label()),
-              const SizedBox(width: 8),
-              if (pending.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('${pending.length}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.orange.shade700)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          if (pending.isEmpty)
-            _EmptyBlock(
-                icon: Icons.check_circle_outline,
-                text: 'All caught up — no pending requests'),
-
-          ...pending
-              .map((c) => _buildConversionCard(c, theme, isPending: true)),
-
-          if (resolved.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Resolved', style: AppTextStyles.label()),
-            const SizedBox(height: 12),
-            ...resolved
-                .take(20)
-                .map((c) => _buildConversionCard(c, theme, isPending: false)),
-            if (resolved.length > 20)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                    'Showing 20 of ${resolved.length} resolved requests',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-              ),
-          ],
-        ],
+        children: state.conversions
+            .map((c) => _buildConversionCard(context, c, theme))
+            .toList(),
       ),
     );
   }
 
-  Widget _buildConversionCard(Map<String, dynamic> c, ThemeData theme,
-      {required bool isPending}) {
-    final id = c['id'] ?? 0;
-    final userName = c['user_name'] ?? 'Unknown';
-    final type = c['conversion_type'] ?? '';
-    final points = c['points_converted'] ?? 0;
-    final cash = c['cash_amount'] ?? 0;
-    final status = c['status'] ?? 'PENDING';
-    final date = c['requested_at']?.toString() ?? '';
-
-    final isPayroll = type.toString().toUpperCase() == 'PAYROLL';
+  Widget _buildConversionCard(
+      BuildContext context, Map<String, dynamic> c, ThemeData theme) {
+    final status = c['status']?.toString() ?? 'PENDING';
+    final isPending = status == 'PENDING';
+    final userName = c['user']?['name'] ?? 'User #${c['user_id']}';
+    final points = c['points'] ?? 0;
+    final amount = c['amount'] ?? 0;
+    final createdAt = c['created_at']?.toString() ?? '';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-            color: isPending ? Colors.orange.shade100 : Colors.grey.shade200),
+            color: isPending ? Colors.blue.shade100 : Colors.grey.shade200),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: (isPayroll ? Colors.green : Colors.blue)
-                  .withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              isPayroll ? Icons.payments_rounded : Icons.volunteer_activism,
-              color: isPayroll ? Colors.green : Colors.blue,
-              size: 20,
-            ),
+            child: Icon(Icons.swap_horiz_rounded,
+                color: Colors.blue.shade700, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(userName,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 3),
-                Text('$type  •  $points pts  →  \$${_fmtMoney(cash)}',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                Text(_formatDate(date),
+                Text(userName, style: AppTextStyles.cardTitle()),
+                const SizedBox(height: 4),
+                Text('$points pts → ₹$amount',
+                    style: AppTextStyles.bodyBold(
+                        color: theme.colorScheme.primary)),
+                const SizedBox(height: 4),
+                Text(_formatDate(createdAt),
                     style:
                         TextStyle(fontSize: 11, color: Colors.grey.shade400)),
               ],
             ),
           ),
           if (isPending) ...[
-            OutlinedButton(
-              onPressed: () => _actionConversion(id, 'REJECT'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-              ),
-              child: const Text('Reject'),
+            IconButton(
+              tooltip: 'Reject',
+              icon: const Icon(Icons.close, color: Colors.red),
+              onPressed: () => context
+                  .read<HrApprovalsBloc>()
+                  .add(ActionConversion(id: c['id'], action: 'reject')),
             ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () => _actionConversion(id, 'APPROVE'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Approve'),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Approve',
+              icon: const Icon(Icons.check, color: Colors.green),
+              onPressed: () => context
+                  .read<HrApprovalsBloc>()
+                  .add(ActionConversion(id: c['id'], action: 'approve')),
             ),
           ] else
-            _NomStatusBadge(nom: {'status': status}),
+            Chip(
+              label: Text(status, style: const TextStyle(fontSize: 11)),
+              backgroundColor: status == 'APPROVED'
+                  ? Colors.green.shade50
+                  : Colors.red.shade50,
+              side: BorderSide.none,
+            ),
         ],
       ),
     );
-  }
-
-  Future<void> _actionConversion(int id, String action) async {
-    try {
-      final client = sl<ApiClient>();
-      await client.post('${ApiConstants.pointsConversions}/$id/action',
-          data: {'action': action});
-      _loadConversions();
-      _snack('Conversion ${action.toLowerCase()}d');
-    } catch (e) {
-      _snack('Error: $e', isError: true);
-    }
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  TAB 3 — Budget Allocation
   // ═══════════════════════════════════════════════════════════════════
-  Widget _buildBudgetAllocationTab(ThemeData theme) {
-    if (_mgLoading) return const Center(child: CircularProgressIndicator());
-
+  Widget _buildBudgetAllocationTab(
+      BuildContext context, ThemeData theme, HrApprovalsState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline,
-                    size: 18, color: theme.colorScheme.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Allocate points to manager wallets. Only managers can reward employees from their budget.',
-                    style: TextStyle(
-                        fontSize: 12, color: theme.colorScheme.primary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Individual allocation
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildIndividualAllocationCard(theme)),
-              const SizedBox(width: 20),
-              Expanded(child: _buildBulkAllocationCard(theme)),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Manager list
-          Text('Managers', style: AppTextStyles.label()),
-          const SizedBox(height: 4),
-          Text('Select a manager below to quickly allocate budget',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          _buildBulkAllocationCard(context, theme),
+          const SizedBox(height: 20),
+          Text('Manager Wallets', style: AppTextStyles.cardTitle()),
           const SizedBox(height: 12),
-
-          if (_managers.isEmpty)
-            _EmptyBlock(icon: Icons.people_outline, text: 'No managers found'),
-
-          if (_managers.isNotEmpty)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                children: _managers.asMap().entries.map((entry) {
-                  final m = entry.value;
-                  final isLast = entry.key == _managers.length - 1;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
-                    decoration: BoxDecoration(
-                      border: isLast
-                          ? null
-                          : Border(
-                              bottom: BorderSide(color: Colors.grey.shade100)),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor:
-                              theme.colorScheme.primary.withValues(alpha: 0.1),
-                          child: Text(
-                            (m['name']?.toString() ?? '?')[0].toUpperCase(),
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: theme.colorScheme.primary),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(m['name']?.toString() ?? '',
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600)),
-                              Text(
-                                '${m['email'] ?? ''} • ${m['role'] ?? ''}',
-                                style: TextStyle(
-                                    fontSize: 11, color: Colors.grey.shade500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _showQuickAllocateDialog(m),
-                          icon: const Icon(Icons.add_rounded, size: 14),
-                          label: const Text('Allocate'),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          const SizedBox(height: 24),
+          if (state.mgLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (state.managers.isEmpty)
+            const _EmptyBlock(
+                icon: Icons.people_outline, text: 'No managers found')
+          else
+            ...state.managers.map((m) => _buildManagerCard(context, m, theme)),
         ],
       ),
     );
   }
 
-  Widget _buildIndividualAllocationCard(ThemeData theme) {
-    final managerIdC = TextEditingController();
+  Widget _buildBulkAllocationCard(BuildContext context, ThemeData theme) {
     final pointsC = TextEditingController();
+    String? selectedRole;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -738,60 +523,64 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
         children: [
           Row(
             children: [
-              Icon(Icons.person_rounded,
-                  size: 18, color: theme.colorScheme.primary),
+              Icon(Icons.group_add_rounded,
+                  color: theme.colorScheme.primary, size: 20),
               const SizedBox(width: 8),
-              Text('Individual Allocation', style: AppTextStyles.cardTitle()),
+              Text('Bulk Budget Allocation', style: AppTextStyles.cardTitle()),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: managerIdC,
-            decoration: const InputDecoration(
-              labelText: 'Manager User ID',
-              hintText: 'Enter ID',
-              isDense: true,
-            ),
-            keyboardType: TextInputType.number,
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: pointsC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Points per manager',
+                    prefixIcon: Icon(Icons.stars_rounded),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatefulBuilder(
+                  builder: (ctx, setLocal) {
+                    return DropdownButtonFormField<String>(
+                      initialValue: selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: 'Role filter (optional)',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'MANAGER', child: Text('Manager')),
+                        DropdownMenuItem(
+                            value: 'DEPT_HEAD', child: Text('Dept Head')),
+                      ],
+                      onChanged: (v) => setLocal(() => selectedRole = v),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: pointsC,
-            decoration: const InputDecoration(
-              labelText: 'Points to Allocate',
-              hintText: 'e.g. 500',
-              isDense: true,
-            ),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final mId = int.tryParse(managerIdC.text);
-                final pts = int.tryParse(pointsC.text);
-                if (mId == null || pts == null || pts <= 0) {
-                  _snack('Please enter valid values', isError: true);
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                final pts = int.tryParse(pointsC.text.trim());
+                if (pts == null || pts <= 0) {
+                  _snack('Enter a valid point amount', isError: true);
                   return;
                 }
-                try {
-                  final client = sl<ApiClient>();
-                  await client.post(ApiConstants.managerAllocate,
-                      data: {'manager_id': mId, 'points': pts});
-                  managerIdC.clear();
-                  pointsC.clear();
-                  _snack('Allocated $pts points to manager');
-                } catch (e) {
-                  _snack('Error: $e', isError: true);
-                }
+                context.read<HrApprovalsBloc>().add(BulkAllocateBudgets(
+                      points: pts,
+                      roleFilter: selectedRole,
+                    ));
               },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 44),
-                textStyle:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              child: const Text('Allocate Budget'),
+              icon: const Icon(Icons.send_rounded, size: 16),
+              label: const Text('Allocate to All'),
             ),
           ),
         ],
@@ -799,151 +588,102 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
     );
   }
 
-  Widget _buildBulkAllocationCard(ThemeData theme) {
-    final pointsC = TextEditingController();
-    final deptIdC = TextEditingController();
-    String? roleFilter;
+  Widget _buildManagerCard(
+      BuildContext context, Map<String, dynamic> m, ThemeData theme) {
+    final name = m['name'] ?? 'Manager #${m['id']}';
+    final email = m['email'] ?? '';
+    final role = m['role'] ?? '';
+    final walletBal = m['wallet']?['balance'] ?? 0;
 
-    return StatefulBuilder(builder: (ctx, setLocalState) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: AppTextStyles.bodyBold()),
+                Text('$email  ·  $role',
+                    style:
+                        TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text('$walletBal pts',
+                style:
+                    AppTextStyles.smallBold(color: theme.colorScheme.primary)),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Allocate budget',
+            icon: Icon(Icons.add_circle_outline,
+                color: theme.colorScheme.primary),
+            onPressed: () => _showAllocateDialog(context, m),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAllocateDialog(BuildContext context, Map<String, dynamic> manager) {
+    final pointsC = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: 'Allocate Budget',
+        maxWidth: 380,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.groups_rounded,
-                    size: 18, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text('Bulk Allocation', style: AppTextStyles.cardTitle()),
-              ],
-            ),
-            const SizedBox(height: 16),
+            Text('Manager: ${manager['name']}'),
+            const SizedBox(height: 12),
             TextField(
               controller: pointsC,
-              decoration: const InputDecoration(
-                labelText: 'Points per Manager',
-                hintText: 'e.g. 1000',
-                isDense: true,
-              ),
               keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: deptIdC,
               decoration: const InputDecoration(
-                labelText: 'Department ID (optional)',
-                hintText: 'Filter by department',
-                isDense: true,
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: roleFilter,
-              decoration: const InputDecoration(
-                labelText: 'Role Filter',
-                isDense: true,
-              ),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All Managers')),
-                DropdownMenuItem(value: 'MANAGER', child: Text('Managers')),
-                DropdownMenuItem(value: 'DEPT_HEAD', child: Text('Dept Heads')),
-              ],
-              onChanged: (v) => setLocalState(() => roleFilter = v),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final pts = int.tryParse(pointsC.text);
-                  if (pts == null || pts <= 0) {
-                    _snack('Enter valid points', isError: true);
-                    return;
-                  }
-                  try {
-                    final client = sl<ApiClient>();
-                    final data = <String, dynamic>{'points': pts};
-                    if (deptIdC.text.isNotEmpty) {
-                      data['department_id'] = int.tryParse(deptIdC.text);
-                    }
-                    if (roleFilter != null) {
-                      data['role_filter'] = roleFilter;
-                    }
-                    final res = await client
-                        .post(ApiConstants.managerBulkAllocate, data: data);
-                    final count = res.data['data']?['updated_wallets'] ?? 0;
-                    pointsC.clear();
-                    deptIdC.clear();
-                    _snack('Allocated to $count wallets');
-                  } catch (e) {
-                    _snack('Error: $e', isError: true);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44),
-                  textStyle: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                child: const Text('Bulk Allocate'),
+                labelText: 'Points',
+                prefixIcon: Icon(Icons.stars_rounded),
               ),
             ),
           ],
         ),
-      );
-    });
-  }
-
-  void _showQuickAllocateDialog(Map<String, dynamic> manager) {
-    final pointsC = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Allocate to ${manager['name']}',
-            style: AppTextStyles.sectionTitle()),
-        content: SizedBox(
-          width: 340,
-          child: TextField(
-            controller: pointsC,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Points',
-              hintText: 'Enter amount to allocate',
-            ),
-          ),
-        ),
         actions: [
-          TextButton(
+          OutlinedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () async {
-              final pts = int.tryParse(pointsC.text);
-              if (pts == null || pts <= 0) {
-                _snack('Enter valid points', isError: true);
-                return;
-              }
+            onPressed: () {
+              final pts = int.tryParse(pointsC.text.trim());
+              if (pts == null || pts <= 0) return;
               Navigator.of(ctx).pop();
-              try {
-                final client = sl<ApiClient>();
-                await client.post(ApiConstants.managerAllocate,
-                    data: {'manager_id': manager['id'], 'points': pts});
-                _snack('Allocated $pts pts to ${manager['name']}');
-              } catch (e) {
-                _snack('Error: $e', isError: true);
-              }
+              context.read<HrApprovalsBloc>().add(AllocateBudgetToManager(
+                    managerId: manager['id'],
+                    points: pts,
+                  ));
             },
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
             child: const Text('Allocate'),
           ),
         ],
@@ -951,21 +691,7 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
     );
   }
 
-  // ─── Helpers ─────────────────────────────────────────────────────
-  String _formatDate(String dateStr) {
-    try {
-      final dt = DateTime.parse(dateStr);
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
-      return dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
-    }
-  }
-
-  String _fmtMoney(dynamic val) {
-    final n = double.tryParse(val.toString()) ?? 0;
-    return n.toStringAsFixed(2);
-  }
-
+  // ─── Helpers ────────────────────────────────────────────────────
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -974,11 +700,21 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
       behavior: SnackBarBehavior.floating,
     ));
   }
+
+  String _formatDate(String iso) {
+    if (iso.isEmpty) return '';
+    try {
+      final d = DateTime.parse(iso);
+      return '${d.day}/${d.month}/${d.year}';
+    } catch (_) {
+      return iso;
+    }
+  }
 }
 
-// ═════════════════════════════════════════════════════════════════════
-//  Reusable private widgets
-// ═════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  Private helper widgets
+// ═══════════════════════════════════════════════════════════════════
 
 class _RefreshBtn extends StatelessWidget {
   final VoidCallback onTap;
@@ -986,22 +722,10 @@ class _RefreshBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Icon(Icons.refresh_rounded,
-              size: 18, color: Colors.grey.shade500),
-        ),
-      ),
+    return IconButton(
+      tooltip: 'Refresh all',
+      icon: const Icon(Icons.refresh_rounded),
+      onPressed: onTap,
     );
   }
 }
@@ -1010,37 +734,30 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
-  const _FilterChip({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
+  const _FilterChip(
+      {required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Material(
-      color: isActive ? primary : Colors.white,
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            border:
-                Border.all(color: isActive ? primary : Colors.grey.shade200),
-          ),
-          child: Text(
-            label,
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color:
+              isActive ? theme.colorScheme.primary : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color:
+                  isActive ? theme.colorScheme.primary : Colors.grey.shade300),
+        ),
+        child: Text(label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: isActive ? Colors.white : Colors.grey.shade600,
-            ),
-          ),
-        ),
+            )),
       ),
     );
   }
@@ -1061,16 +778,16 @@ class _TabWithBadge extends StatelessWidget {
           if (count > 0) ...[
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text('$count',
-                  style: TextStyle(
+                  style: const TextStyle(
+                      color: Colors.white,
                       fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.orange.shade800)),
+                      fontWeight: FontWeight.bold)),
             ),
           ],
         ],
@@ -1086,38 +803,38 @@ class _NomStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = nom['status']?.toString() ?? 'PENDING';
-    final nextLevel = nom['next_required_level']?.toString().toUpperCase();
-
-    Color color;
-    String label = status;
-
-    switch (status.toUpperCase()) {
-      case 'APPROVED':
-        color = Colors.green;
-        break;
-      case 'REJECTED':
-        color = Colors.red;
-        break;
-      case 'PENDING':
-        color = Colors.orange;
-        if (nextLevel == 'MANAGER')
-          label = 'Pending Mgr';
-        else if (nextLevel == 'DEPT_HEAD')
-          label = 'Pending Head';
-        else if (nextLevel == 'HR') label = 'Pending HR';
-        break;
-      default:
-        color = Colors.grey;
+    final isPending = status == 'PENDING';
+    final nextLevel =
+        nom['next_required_level']?.toString().toUpperCase() ?? '';
+    Color bg;
+    Color fg;
+    String label;
+    if (status == 'APPROVED') {
+      bg = Colors.green.shade50;
+      fg = Colors.green.shade700;
+      label = 'Approved';
+    } else if (status == 'REJECTED') {
+      bg = Colors.red.shade50;
+      fg = Colors.red.shade700;
+      label = 'Rejected';
+    } else if (isPending && nextLevel == 'HR') {
+      bg = Colors.orange.shade50;
+      fg = Colors.orange.shade700;
+      label = 'Pending HR';
+    } else {
+      bg = Colors.blue.shade50;
+      fg = Colors.blue.shade700;
+      label = 'Pending $nextLevel';
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(label,
-          style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          style:
+              TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: fg)),
     );
   }
 }
@@ -1131,13 +848,13 @@ class _EmptyBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
+        padding: const EdgeInsets.symmetric(vertical: 60),
         child: Column(
           children: [
-            Icon(icon, size: 40, color: Colors.grey.shade300),
-            const SizedBox(height: 10),
+            Icon(icon, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 12),
             Text(text,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade400)),
           ],
         ),
       ),

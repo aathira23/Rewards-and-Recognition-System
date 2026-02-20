@@ -1,75 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../bloc/payroll_bloc.dart';
+import '../bloc/payroll_event.dart';
+import '../bloc/payroll_state.dart';
 
-class PayrollEncashmentPage extends StatefulWidget {
+class PayrollEncashmentPage extends StatelessWidget {
   const PayrollEncashmentPage({super.key});
 
   @override
-  State<PayrollEncashmentPage> createState() => _PayrollEncashmentPageState();
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final initialMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    return BlocProvider(
+      create: (_) =>
+          sl<PayrollBloc>()..add(LoadPayroll(month: initialMonth)),
+      child: _PayrollView(initialMonth: initialMonth),
+    );
+  }
 }
 
-class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
-  List<Map<String, dynamic>> _data = [];
-  bool _isLoading = true;
-  String? _error;
+class _PayrollView extends StatefulWidget {
+  final String initialMonth;
+  const _PayrollView({required this.initialMonth});
+
+  @override
+  State<_PayrollView> createState() => _PayrollViewState();
+}
+
+class _PayrollViewState extends State<_PayrollView> {
   late String _selectedMonth;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    _fetchData();
-  }
-
-  Future<void> _fetchData() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final client = sl<ApiClient>();
-      final response = await client.get(ApiConstants.reportsPayroll,
-          queryParameters: {'month': _selectedMonth, 'export_format': 'json'});
-
-      if (response.statusCode == 200) {
-        final body = response.data;
-        final rawData = body['data']?['data'] ?? body['data'] ?? [];
-        setState(() {
-          _data = (rawData is List)
-              ? rawData.cast<Map<String, dynamic>>()
-              : <Map<String, dynamic>>[];
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _exportCsv() async {
-    try {
-      final client = sl<ApiClient>();
-      await client.get(ApiConstants.reportsPayroll,
-          queryParameters: {'month': _selectedMonth, 'export_format': 'csv'});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('CSV export initiated')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Export failed')),
-        );
-      }
-    }
+    _selectedMonth = widget.initialMonth;
   }
 
   void _changeMonth(int offset) {
@@ -86,120 +52,118 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
     setState(() {
       _selectedMonth = '$year-${month.toString().padLeft(2, '0')}';
     });
-    _fetchData();
+    context.read<PayrollBloc>().add(LoadPayroll(month: _selectedMonth));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
+    return BlocConsumer<PayrollBloc, PayrollState>(
+      listener: (context, state) {
+        if (state.successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.successMessage!),
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+        if (state.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${state.error}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Payroll Encashment',
-                          style: AppTextStyles.pageTitle()),
-                      const SizedBox(height: 2),
-                      Text('View and export points encashment requests',
-                          style:
-                              AppTextStyles.body(color: Colors.grey.shade500)),
-                    ],
-                  ),
-                ),
-                // Month picker
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left, size: 18),
-                        onPressed: () => _changeMonth(-1),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(_selectedMonth,
-                            style: AppTextStyles.bodyBold()),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right, size: 18),
-                        onPressed: () => _changeMonth(1),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _exportCsv,
-                  icon: const Icon(Icons.download_rounded, size: 15),
-                  label: const Text('Export to CSV/Excel'),
-                  style: ElevatedButton.styleFrom(
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Table
-            if (_isLoading)
-              const Center(
-                  child: Padding(
-                      padding: EdgeInsets.all(60),
-                      child: CircularProgressIndicator())),
-            if (_error != null)
-              Center(
-                  child: Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
+                // Header
+                Row(
                   children: [
-                    Icon(Icons.error_outline, color: Colors.red.shade300),
-                    const SizedBox(height: 8),
-                    Text(_error!,
-                        style: TextStyle(
-                            fontSize: 13, color: Colors.red.shade600)),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _fetchData,
-                      icon: const Icon(Icons.refresh, size: 15),
-                      label: const Text('Retry'),
-                      style: OutlinedButton.styleFrom(
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Payroll Encashment',
+                              style: AppTextStyles.pageTitle()),
+                          const SizedBox(height: 2),
+                          Text('View and export points encashment requests',
+                              style: AppTextStyles.body(
+                                  color: Colors.grey.shade500)),
+                        ],
+                      ),
+                    ),
+                    // Month picker
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left, size: 18),
+                            onPressed: () => _changeMonth(-1),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(_selectedMonth,
+                                style: AppTextStyles.bodyBold()),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right, size: 18),
+                            onPressed: () => _changeMonth(1),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => context
+                          .read<PayrollBloc>()
+                          .add(ExportPayrollCsv(month: _selectedMonth)),
+                      icon: const Icon(Icons.download_rounded, size: 15),
+                      label: const Text('Export to CSV/Excel'),
+                      style: ElevatedButton.styleFrom(
                           minimumSize: Size.zero,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8)),
+                              horizontal: 16, vertical: 10)),
                     ),
                   ],
                 ),
-              )),
-            if (!_isLoading && _error == null) _buildTable(theme),
-          ],
-        ),
-      ),
+                const SizedBox(height: 24),
+
+                if (state.isLoading)
+                  const Center(
+                      child: Padding(
+                          padding: EdgeInsets.all(60),
+                          child: CircularProgressIndicator())),
+                if (!state.isLoading && state.error == null)
+                  _buildTable(state.data, theme),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildTable(ThemeData theme) {
-    if (_data.isEmpty) {
+  Widget _buildTable(List<Map<String, dynamic>> data, ThemeData theme) {
+    if (data.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(60),
@@ -209,7 +173,8 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
                   size: 40, color: Colors.grey.shade300),
               const SizedBox(height: 10),
               Text('No encashment records for $_selectedMonth',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                  style:
+                      TextStyle(fontSize: 13, color: Colors.grey.shade500)),
             ],
           ),
         ),
@@ -218,22 +183,22 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         children: [
-          // Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Expanded(
                     flex: 3,
                     child: Text('EMPLOYEE',
@@ -278,17 +243,16 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
             ),
           ),
           const Divider(height: 1),
-          // Data rows
-          ..._data.map((row) => _buildRow(row, theme)),
-          // Footer
+          ...data.map((row) => _buildRow(row, theme)),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                Text('Showing ${_data.length} results',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                Text('Showing ${data.length} results',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -300,9 +264,10 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
   Widget _buildRow(Map<String, dynamic> row, ThemeData theme) {
     final name = row['user_name']?.toString() ?? 'Unknown';
     final points = row['points_converted'] ?? 0;
-    final cash = double.tryParse(row['cash_amount']?.toString() ?? '0') ?? 0;
+    final cash =
+        double.tryParse(row['cash_amount']?.toString() ?? '0') ?? 0;
     final status = row['status']?.toString() ?? '';
-    final approvedAt = row['approved_at']?.toString() ?? '—';
+    final approvedAt = row['approved_at']?.toString() ?? '\u2014';
     final isApproved = status == 'APPROVED';
 
     return Container(
@@ -338,8 +303,8 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
           Expanded(
             flex: 2,
             child: Text('$points pts',
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600)),
           ),
           Expanded(
             flex: 2,
@@ -352,9 +317,12 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
           Expanded(
             flex: 2,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: isApproved ? Colors.green.shade50 : Colors.amber.shade50,
+                color: isApproved
+                    ? Colors.green.shade50
+                    : Colors.amber.shade50,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -374,7 +342,8 @@ class _PayrollEncashmentPageState extends State<PayrollEncashmentPage> {
                 approvedAt.length >= 10
                     ? approvedAt.substring(0, 10)
                     : approvedAt,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade600)),
           ),
         ],
       ),
