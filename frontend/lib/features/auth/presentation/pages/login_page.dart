@@ -258,8 +258,11 @@ class _LoginPageState extends State<LoginPage> {
                                 builder: (context, state) {
                                   final isLoading = state is AuthLoading;
                                   return ElevatedButton(
-                                    onPressed:
-                                        isLoading ? null : _onLoginPressed,
+                                    onPressed: isLoading ? null : _onLoginPressed,
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize:
+                                          const Size(double.infinity, 46),
+                                    ),
                                     child: isLoading
                                         ? const SizedBox(
                                             height: 20,

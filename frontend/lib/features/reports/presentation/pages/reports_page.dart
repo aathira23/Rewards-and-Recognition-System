@@ -348,8 +348,6 @@ class _ReportsPageState extends State<ReportsPage> {
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildDetail() {
     final type = _active!;
-    final theme = Theme.of(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -413,22 +411,12 @@ class _ReportsPageState extends State<ReportsPage> {
                 onPressed: () => _fetchReport(type),
                 icon: const Icon(Icons.refresh, size: 15),
                 label: const Text('Refresh'),
-                style: OutlinedButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8)),
               ),
               const SizedBox(width: 10),
               ElevatedButton.icon(
                 onPressed: _data.isNotEmpty ? _exportCsv : null,
                 icon: const Icon(Icons.download_rounded, size: 15),
                 label: const Text('Export CSV'),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8)),
               ),
             ],
           ),

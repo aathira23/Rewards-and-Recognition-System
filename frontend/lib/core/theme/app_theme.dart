@@ -39,6 +39,7 @@ class AppTheme {
       inputDecorationTheme:
           _inputDecoration(brandBlue, const Color(0xFFE0E0E0)),
       elevatedButtonTheme: _elevatedButtonTheme(brandBlue, surfaceWhite),
+      outlinedButtonTheme: _outlinedButtonTheme(brandBlue),
     );
   }
 
@@ -67,6 +68,7 @@ class AppTheme {
       ),
       inputDecorationTheme: _inputDecoration(brandBlue, Colors.white24),
       elevatedButtonTheme: _elevatedButtonTheme(brandBlue, Colors.white),
+      outlinedButtonTheme: _outlinedButtonTheme(Colors.white),
     );
   }
 
@@ -94,12 +96,32 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: bg,
         foregroundColor: fg,
-        minimumSize: const Size(double.infinity, 50),
+        minimumSize: const Size(88, 46),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 0,
+        textStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  static OutlinedButtonThemeData _outlinedButtonTheme(Color color) {
+    return OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        minimumSize: const Size(88, 46),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        side: BorderSide(color: color.withValues(alpha: 0.2)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
         textStyle: const TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
       ),

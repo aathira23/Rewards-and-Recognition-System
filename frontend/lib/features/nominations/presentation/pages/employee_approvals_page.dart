@@ -196,17 +196,6 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                                 ),
                         icon: const Icon(Icons.add_rounded, size: 18),
                         label: const Text('Nominate'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          textStyle: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
                       );
                     },
                   ),

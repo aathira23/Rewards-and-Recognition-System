@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -277,8 +278,9 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
         TextEditingController(text: config['value']?.toString() ?? '');
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Edit: ${config['key']}'),
+      builder: (ctx) => AppDialog(
+        title: 'Edit: ${config['key']}',
+        maxWidth: 420,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +299,7 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
           ],
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           ElevatedButton(
@@ -319,7 +321,6 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(minimumSize: Size.zero),
             child: const Text('Save'),
           ),
         ],

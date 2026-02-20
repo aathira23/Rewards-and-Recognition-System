@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
 
@@ -365,10 +366,6 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    minimumSize: Size.zero,
-                    textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -379,10 +376,6 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
-                    minimumSize: Size.zero,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
               ],
@@ -397,24 +390,19 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
     final commentsC = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          isApprove ? 'Approve Nomination' : 'Reject Nomination',
-          style: AppTextStyles.sectionTitle(),
-        ),
-        content: SizedBox(
-          width: 380,
-          child: TextField(
-            controller: commentsC,
-            decoration: const InputDecoration(
-              labelText: 'Comments (optional)',
-              hintText: 'Add a note...',
-            ),
-            maxLines: 3,
+      builder: (ctx) => AppDialog(
+        title: isApprove ? 'Approve Nomination' : 'Reject Nomination',
+        maxWidth: 420,
+        content: TextField(
+          controller: commentsC,
+          decoration: const InputDecoration(
+            labelText: 'Comments (optional)',
+            hintText: 'Add a note...',
           ),
+          maxLines: 3,
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           ElevatedButton(
@@ -439,8 +427,6 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
             style: ElevatedButton.styleFrom(
               backgroundColor: isApprove ? Colors.green : Colors.red,
               foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             child: Text(isApprove ? 'Approve' : 'Reject'),
           ),
@@ -577,10 +563,6 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
-                minimumSize: Size.zero,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                textStyle: const TextStyle(fontSize: 12),
               ),
               child: const Text('Reject'),
             ),
@@ -590,10 +572,6 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                textStyle: const TextStyle(fontSize: 12),
               ),
               child: const Text('Approve'),
             ),
@@ -731,12 +709,6 @@ class _HrApprovalsPageState extends State<HrApprovalsPage>
                           onPressed: () => _showQuickAllocateDialog(m),
                           icon: const Icon(Icons.add_rounded, size: 14),
                           label: const Text('Allocate'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: Size.zero,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 7),
-                            textStyle: const TextStyle(fontSize: 12),
-                          ),
                         ),
                       ],
                     ),

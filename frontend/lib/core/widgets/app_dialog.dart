@@ -40,6 +40,7 @@ class AppDialog extends StatelessWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(context),
             const Divider(height: 1),
@@ -50,12 +51,19 @@ class AppDialog extends StatelessWidget {
               ),
             ),
             if (actions != null && actions!.isNotEmpty) ...[
-              const Divider(height: 1),
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions!,
+                  children: actions!.map((action) {
+                    final index = actions!.indexOf(action);
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        left: index == 0 ? 0 : 12,
+                      ),
+                      child: action,
+                    );
+                  }).toList(),
                 ),
               ),
             ],

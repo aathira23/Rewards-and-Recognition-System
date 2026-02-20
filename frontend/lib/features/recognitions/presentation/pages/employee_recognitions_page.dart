@@ -225,51 +225,23 @@ class EmployeeRecognitionsPage extends StatelessWidget {
             ),
           ),
           actions: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: Colors.grey[300]!),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Cancel',
-                  style: AppTextStyles.bodyBold(
-                    color: Colors.black,
-                  ),
-                ),
-              ),
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    context
-                        .read<RecognitionsBloc>()
-                        .add(SendRecognitionRequested(
-                          receiverId: selectedReceiverId!,
-                          badgeId: badge.id,
-                          message: message,
-                        ));
-                    Navigator.of(dialogContext).pop();
-                  }
-                },
-                icon: const Icon(Icons.send_outlined, size: 18),
-                label: const Text('Send Recognition'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A60FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-              ),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  context.read<RecognitionsBloc>().add(SendRecognitionRequested(
+                        receiverId: selectedReceiverId!,
+                        badgeId: badge.id,
+                        message: message,
+                      ));
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              icon: const Icon(Icons.send_outlined, size: 18),
+              label: const Text('Send Recognition'),
             ),
           ],
         );

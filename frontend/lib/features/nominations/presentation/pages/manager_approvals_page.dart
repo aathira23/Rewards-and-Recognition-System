@@ -89,10 +89,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     }
   }
 
-  void _refresh() {
-    context.read<NominationsBloc>().add(GetNominationsRequested());
-    _loadApprovalHistory();
-  }
 
   @override
   void dispose() {
@@ -223,17 +219,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                 ),
                         icon: const Icon(Icons.add_rounded, size: 18),
                         label: const Text('Nominate'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          textStyle: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
                       );
                     },
                   ),
@@ -277,8 +262,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                           : all.where((n) => n.nominatorId == _myId).toList();
 
                       // History – resolved nominations
-                      final history =
-                          all.where((n) => n.status != 'PENDING').toList();
+                      // final history =
+                      //     all.where((n) => n.status != 'PENDING').toList();
 
                       return Container(
                         decoration: BoxDecoration(
@@ -782,10 +767,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 9),
-                          textStyle: const TextStyle(fontSize: 13),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -796,10 +777,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 9),
-                          textStyle: const TextStyle(fontSize: 13),
                         ),
                       ),
                     ],

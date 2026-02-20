@@ -4,6 +4,7 @@ import '../../domain/entities/award_type_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
+import '../../../../core/widgets/app_dialog.dart';
 
 /// Two-step dialog for nominating an employee for an award.
 ///
@@ -57,79 +58,27 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Header ──
-            _buildHeader(theme),
-            // ── Step indicator ──
-            _buildStepIndicator(theme),
-            // ── Body ──
-            Flexible(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _step == 0 ? _buildStep1(theme) : _buildStep2(theme),
-              ),
-            ),
-            // ── Footer buttons ──
-            _buildFooter(theme),
-          ],
-        ),
+    return AppDialog(
+      title: 'Nominate an Employee',
+      maxWidth: 560,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Step indicator ──
+          _buildStepIndicator(theme),
+          const SizedBox(height: 24),
+          // ── Body ──
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: _step == 0 ? _buildStep1(theme) : _buildStep2(theme),
+          ),
+        ],
       ),
+      actions: _buildFooterActions(theme),
     );
   }
 
   // ─── Header ─────────────────────────────────────────────────
-  Widget _buildHeader(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primary.withValues(alpha: 0.7),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.emoji_events_rounded,
-                color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nominate an Employee',
-                  style: AppTextStyles.sectionHeader(),
-                ),
-                Text(
-                  'Select an award and choose the nominee',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.close, color: Colors.grey.shade400),
-            onPressed: () => Navigator.pop(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ─── Step indicator ─────────────────────────────────────────
   Widget _buildStepIndicator(ThemeData theme) {
@@ -575,75 +524,36 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   }
 
   // ─── Footer ──────────────────────────────────────────────────
-  Widget _buildFooter(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.grey.shade100)),
-      ),
-      child: Row(
-        children: [
-          if (_step == 1)
-            TextButton.icon(
-              onPressed: () => setState(() => _step = 0),
-              icon: const Icon(Icons.arrow_back, size: 16),
-              label: const Text('Back'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey.shade600,
-              ),
-            )
-          else
-            const SizedBox.shrink(),
-          const Spacer(),
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey.shade600,
-              minimumSize: Size.zero,
-              side: BorderSide(color: Colors.grey.shade300),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Cancel'),
+  List<Widget> _buildFooterActions(ThemeData theme) {
+    return [
+      if (_step == 1)
+        TextButton.icon(
+          onPressed: () => setState(() => _step = 0),
+          icon: const Icon(Icons.arrow_back, size: 16),
+          label: const Text('Back'),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.grey.shade600,
           ),
-          const SizedBox(width: 10),
-          if (_step == 0)
-            ElevatedButton.icon(
-              onPressed: _selectedAwardType == null
-                  ? null
-                  : () => setState(() => _step = 1),
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Next'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                disabledBackgroundColor: Colors.grey.shade200,
-              ),
-            )
-          else
-            ElevatedButton.icon(
-              onPressed: _onSubmit,
-              icon: const Icon(Icons.send_rounded, size: 16),
-              label: const Text('Submit Nomination'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-        ],
+        ),
+      OutlinedButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
       ),
-    );
+      if (_step == 0)
+        ElevatedButton.icon(
+          onPressed: _selectedAwardType == null
+              ? null
+              : () => setState(() => _step = 1),
+          icon: const Icon(Icons.arrow_forward, size: 16),
+          label: const Text('Next'),
+        )
+      else
+        ElevatedButton.icon(
+          onPressed: _onSubmit,
+          icon: const Icon(Icons.send_rounded, size: 16),
+          label: const Text('Submit'),
+        ),
+    ];
   }
 
   // ─── Submit ──────────────────────────────────────────────────

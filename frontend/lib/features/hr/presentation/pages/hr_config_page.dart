@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
@@ -923,14 +924,6 @@ class _HrConfigPageState extends State<HrConfigPage>
             onPressed: onAction,
             icon: const Icon(Icons.add_rounded, size: 16),
             label: Text(actionLabel),
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              textStyle:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
           ),
       ],
     );
@@ -947,44 +940,40 @@ class _HrConfigPageState extends State<HrConfigPage>
       builder: (ctx) {
         bool saving = false;
         return StatefulBuilder(builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: Text(title, style: AppTextStyles.sectionTitle()),
-            content: SizedBox(
-              width: 420,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (subtitle != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(subtitle,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade500)),
+          return AppDialog(
+            title: title,
+            maxWidth: 460,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(subtitle,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500)),
+                  ),
+                ...fields.map((f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: TextField(
+                        controller: f.controller,
+                        keyboardType: f.isNumber
+                            ? TextInputType.number
+                            : TextInputType.text,
+                        maxLines: f.maxLines,
+                        decoration: InputDecoration(
+                          labelText: f.label,
+                          hintText: f.hint,
+                          hintStyle: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade400),
+                        ),
                       ),
-                    ...fields.map((f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: TextField(
-                            controller: f.controller,
-                            keyboardType: f.isNumber
-                                ? TextInputType.number
-                                : TextInputType.text,
-                            maxLines: f.maxLines,
-                            decoration: InputDecoration(
-                              labelText: f.label,
-                              hintText: f.hint,
-                              hintStyle: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade400),
-                            ),
-                          ),
-                        )),
-                  ],
-                ),
-              ),
+                    )),
+              ],
             ),
             actions: [
-              TextButton(
+              OutlinedButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: const Text('Cancel'),
               ),
@@ -1005,11 +994,6 @@ class _HrConfigPageState extends State<HrConfigPage>
                           }
                         }
                       },
-                style: ElevatedButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
                 child: saving
                     ? const SizedBox(
                         width: 16,
