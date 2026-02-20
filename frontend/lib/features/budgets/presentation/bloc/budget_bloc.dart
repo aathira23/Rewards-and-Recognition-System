@@ -3,6 +3,8 @@ import '../../../../core/usecases/usecase.dart';
 import '../../domain/usecases/get_budget_wallet_usecase.dart';
 import '../../domain/usecases/allocate_budget_usecase.dart';
 import '../../domain/usecases/reward_employee_usecase.dart';
+import '../../../profile/domain/usecases/get_me_usecase.dart';
+import '../../../profile/domain/usecases/get_users_usecase.dart';
 import 'budget_event.dart';
 import 'budget_state.dart';
 
@@ -10,15 +12,39 @@ class BudgetBloc extends Bloc<BudgetEvent, BudgetState> {
   final GetBudgetWalletUseCase getBudgetWalletUseCase;
   final AllocateBudgetUseCase allocateBudgetUseCase;
   final RewardEmployeeUseCase rewardEmployeeUseCase;
+  final GetUsersUseCase getUsersUseCase;
+  final GetMeUseCase getMeUseCase;
 
   BudgetBloc({
     required this.getBudgetWalletUseCase,
     required this.allocateBudgetUseCase,
     required this.rewardEmployeeUseCase,
+    required this.getUsersUseCase,
+    required this.getMeUseCase,
   }) : super(const BudgetState()) {
     on<LoadBudgetWallet>(_onLoad);
+    on<LoadBudgetUsers>(_onLoadUsers);
+    on<LoadCurrentUser>(_onLoadMe);
     on<AllocateBudget>(_onAllocate);
     on<RewardFromBudget>(_onReward);
+  }
+
+  Future<void> _onLoadMe(
+      LoadCurrentUser event, Emitter<BudgetState> emit) async {
+    final result = await getMeUseCase(NoParams());
+    result.fold(
+      (failure) => emit(state.copyWith(error: failure.message)),
+      (user) => emit(state.copyWith(currentUser: user)),
+    );
+  }
+
+  Future<void> _onLoadUsers(
+      LoadBudgetUsers event, Emitter<BudgetState> emit) async {
+    final result = await getUsersUseCase(NoParams());
+    result.fold(
+      (failure) => emit(state.copyWith(error: failure.message)),
+      (users) => emit(state.copyWith(users: users)),
+    );
   }
 
   Future<void> _onLoad(

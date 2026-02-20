@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../profile/domain/entities/user_entity.dart';
 import '../../../../injection_container.dart';
 import '../bloc/budget_bloc.dart';
 import '../bloc/budget_event.dart';
@@ -13,18 +14,45 @@ class BudgetsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<BudgetBloc>()..add(LoadBudgetWallet()),
+      create: (_) => sl<BudgetBloc>()
+        ..add(LoadBudgetWallet())
+        ..add(LoadBudgetUsers())
+        ..add(LoadCurrentUser()),
       child: _BudgetsView(userRole: userRole),
     );
   }
 }
 
-class _BudgetsView extends StatelessWidget {
+class _BudgetsView extends StatefulWidget {
   final String userRole;
   const _BudgetsView({required this.userRole});
 
+  @override
+  State<_BudgetsView> createState() => _BudgetsViewState();
+}
+
+class _BudgetsViewState extends State<_BudgetsView> {
   bool get isHR =>
-      userRole.toUpperCase() == 'HR' || userRole.toUpperCase() == 'ADMIN';
+      widget.userRole.toUpperCase() == 'HR' ||
+      widget.userRole.toUpperCase() == 'ADMIN';
+
+  // State for Allocation
+  final _managerIdController = TextEditingController();
+  final _allocatePointsController = TextEditingController();
+
+  // State for Reward
+  int? _selectedEmployeeId;
+  final _rewardPointsController = TextEditingController();
+  final _reasonController = TextEditingController();
+
+  @override
+  void dispose() {
+    _managerIdController.dispose();
+    _allocatePointsController.dispose();
+    _rewardPointsController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +153,11 @@ class _BudgetsView extends StatelessWidget {
                           ],
                         ),
                         SizedBox(
-                          height: 400,
+                          height: 500, // Increased height for dropdowns
                           child: TabBarView(
                             children: [
-                              if (isHR) _buildAllocateTab(context),
-                              _buildRewardTab(context),
+                              if (isHR) _buildAllocateTab(context, state),
+                              _buildRewardTab(context, state),
                             ],
                           ),
                         ),
@@ -145,10 +173,7 @@ class _BudgetsView extends StatelessWidget {
     );
   }
 
-  Widget _buildAllocateTab(BuildContext context) {
-    final managerIdController = TextEditingController();
-    final pointsController = TextEditingController();
-
+  Widget _buildAllocateTab(BuildContext context, BudgetState state) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -157,30 +182,31 @@ class _BudgetsView extends StatelessWidget {
           Text('Allocate Budget to Manager', style: AppTextStyles.label()),
           const SizedBox(height: 16),
           TextField(
-            controller: managerIdController,
+            controller: _managerIdController,
             decoration: const InputDecoration(
               labelText: 'Manager User ID',
               hintText: 'Enter manager user ID',
             ),
             keyboardType: TextInputType.number,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           TextField(
-            controller: pointsController,
+            controller: _allocatePointsController,
             decoration: const InputDecoration(
               labelText: 'Points to Allocate',
               hintText: 'Enter amount',
             ),
             keyboardType: TextInputType.number,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
               context.read<BudgetBloc>().add(AllocateBudget(
-                    managerId:
-                        int.tryParse(managerIdController.text) ?? 0,
-                    points: int.tryParse(pointsController.text) ?? 0,
+                    managerId: int.tryParse(_managerIdController.text) ?? 0,
+                    points: int.tryParse(_allocatePointsController.text) ?? 0,
                   ));
+              _managerIdController.clear();
+              _allocatePointsController.clear();
             },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(200, 48),
@@ -192,10 +218,17 @@ class _BudgetsView extends StatelessWidget {
     );
   }
 
-  Widget _buildRewardTab(BuildContext context) {
-    final employeeIdController = TextEditingController();
-    final pointsController = TextEditingController();
-    final reasonController = TextEditingController();
+  Widget _buildRewardTab(BuildContext context, BudgetState state) {
+    if (state.currentUser == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final employees = state.users.where((u) {
+      final role = state.currentUser!.role.toUpperCase();
+      if (role == 'HR' || role == 'ADMIN') return true;
+      // Manager and Dept Head only see their department
+      return u.departmentId == state.currentUser!.departmentId;
+    }).toList();
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -204,42 +237,45 @@ class _BudgetsView extends StatelessWidget {
         children: [
           Text('Reward Employee from Budget', style: AppTextStyles.label()),
           const SizedBox(height: 16),
-          TextField(
-            controller: employeeIdController,
-            decoration: const InputDecoration(
-              labelText: 'Employee User ID',
-              hintText: 'Enter employee user ID',
-            ),
-            keyboardType: TextInputType.number,
+          _buildSearchableDropdown(
+            label: 'Select Employee',
+            items: employees,
+            selectedId: _selectedEmployeeId,
+            onChanged: (id) => setState(() => _selectedEmployeeId = id),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           TextField(
-            controller: pointsController,
+            controller: _rewardPointsController,
             decoration: const InputDecoration(
               labelText: 'Points',
               hintText: 'Enter points to reward',
             ),
             keyboardType: TextInputType.number,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           TextField(
-            controller: reasonController,
+            controller: _reasonController,
             decoration: const InputDecoration(
               labelText: 'Reason',
               hintText: 'Why are you rewarding?',
             ),
             maxLines: 2,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {
-              context.read<BudgetBloc>().add(RewardFromBudget(
-                    employeeId:
-                        int.tryParse(employeeIdController.text) ?? 0,
-                    points: int.tryParse(pointsController.text) ?? 0,
-                    reason: reasonController.text,
-                  ));
-            },
+            onPressed: _selectedEmployeeId == null
+                ? null
+                : () {
+                    context.read<BudgetBloc>().add(RewardFromBudget(
+                          employeeId: _selectedEmployeeId!,
+                          points:
+                              int.tryParse(_rewardPointsController.text) ?? 0,
+                          reason: _reasonController.text,
+                        ));
+                    _rewardPointsController.clear();
+                    _reasonController.clear();
+                    setState(() => _selectedEmployeeId = null);
+                  },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(200, 48),
             ),
@@ -247,6 +283,43 @@ class _BudgetsView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSearchableDropdown({
+    required String label,
+    required List<UserEntity> items,
+    required int? selectedId,
+    required Function(int?) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int>(
+          value: selectedId,
+          isExpanded: true,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+          hint: const Text('Select a person'),
+          items: items.map((user) {
+            return DropdownMenuItem<int>(
+              value: user.id,
+              child: Text(user.name),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

@@ -9,6 +9,10 @@ abstract class BudgetEvent extends Equatable {
 
 class LoadBudgetWallet extends BudgetEvent {}
 
+class LoadBudgetUsers extends BudgetEvent {}
+
+class LoadCurrentUser extends BudgetEvent {}
+
 class AllocateBudget extends BudgetEvent {
   final int managerId;
   final int points;

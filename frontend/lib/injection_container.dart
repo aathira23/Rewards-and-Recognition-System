@@ -7,6 +7,7 @@ import 'core/network/web_token_provider.dart';
 
 import 'core/network/auth_interceptor.dart';
 import 'core/network/api_client.dart';
+
 import 'features/auth/data/datasources/auth_local_data_source.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
@@ -15,11 +16,13 @@ import 'features/auth/domain/usecases/check_auth_status_usecase.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+
 import 'features/profile/data/datasources/profile_remote_data_source.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
 import 'features/profile/domain/repositories/profile_repository.dart';
 import 'features/profile/domain/usecases/get_me_usecase.dart';
 import 'features/profile/domain/usecases/get_users_usecase.dart';
+
 import 'features/recognitions/data/datasources/recognitions_remote_data_source.dart';
 import 'features/recognitions/data/repositories/recognitions_repository_impl.dart';
 import 'features/recognitions/domain/repositories/recognitions_repository.dart';
@@ -28,6 +31,7 @@ import 'features/recognitions/domain/usecases/get_recognition_feed_usecase.dart'
 import 'features/recognitions/domain/usecases/send_recognition_usecase.dart';
 import 'features/recognitions/domain/usecases/get_appreciation_stats_usecase.dart';
 import 'features/recognitions/presentation/bloc/recognitions_bloc.dart';
+
 import 'features/catalog/data/datasources/catalog_remote_data_source.dart';
 import 'features/catalog/data/repositories/catalog_repository_impl.dart';
 import 'features/catalog/domain/repositories/catalog_repository.dart';
@@ -420,6 +424,8 @@ Future<void> init() async {
       getBudgetWalletUseCase: sl(),
       allocateBudgetUseCase: sl(),
       rewardEmployeeUseCase: sl(),
+      getUsersUseCase: sl(),
+      getMeUseCase: sl(),
     ),
   );
   // Use cases

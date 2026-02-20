@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/usecases/usecase.dart';
 import '../../../../injection_container.dart';
+import '../../../profile/domain/entities/user_entity.dart';
+import '../../../profile/domain/usecases/get_me_usecase.dart';
+import '../../../profile/domain/usecases/get_users_usecase.dart';
 import '../../domain/entities/points_summary_entity.dart';
 
 /// Wallet card with a toggle between "My Points" and "Manager Wallet".
@@ -25,7 +29,10 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   bool _showManagerWallet = false;
   bool _loadingManager = false;
   Map<String, dynamic>? _managerWallet;
+  List<UserEntity>? _users;
+  UserEntity? _currentUser;
   String? _managerError;
+  int? _selectedEmployeeId;
 
   bool get _canToggle {
     final r = widget.userRole.toUpperCase();
@@ -41,14 +48,30 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
       if (res.statusCode == 200) {
         setState(() {
           _managerWallet = res.data['data'];
-          _loadingManager = false;
         });
       }
+
+      // Also fetch users for the dropdown
+      final getUsers = sl<GetUsersUseCase>();
+      final usersResult = await getUsers(NoParams());
+      usersResult.fold(
+        (failure) => _managerError = failure.message,
+        (users) => setState(() => _users = users),
+      );
+
+      // Fetch current user to get department filtering info
+      final getMe = sl<GetMeUseCase>();
+      final meResult = await getMe(NoParams());
+      meResult.fold(
+        (failure) => _managerError = failure.message,
+        (user) => setState(() => _currentUser = user),
+      );
     } catch (e) {
       setState(() {
         _managerError = e.toString();
-        _loadingManager = false;
       });
+    } finally {
+      if (mounted) setState(() => _loadingManager = false);
     }
   }
 
@@ -398,13 +421,35 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: employeeIdCtl,
-                  decoration:
-                      const InputDecoration(labelText: 'Employee User ID'),
-                  keyboardType: TextInputType.number,
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                ),
+                if (_users == null || _currentUser == null)
+                  const Text('Loading users...',
+                      style: TextStyle(fontSize: 12, color: Colors.grey))
+                else
+                  DropdownButtonFormField<int>(
+                    value: _selectedEmployeeId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Select Employee',
+                      filled: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    hint: const Text('Search or select employee'),
+                    items: _users!.where((u) {
+                      final role = _currentUser!.role.toUpperCase();
+                      if (role == 'HR' || role == 'ADMIN') return true;
+                      // Manager and Dept Head only see their department
+                      return u.departmentId == _currentUser!.departmentId;
+                    }).map((user) {
+                      return DropdownMenuItem<int>(
+                        value: user.id,
+                        child: Text(user.name),
+                      );
+                    }).toList(),
+                    onChanged: (val) =>
+                        setState(() => _selectedEmployeeId = val),
+                    validator: (v) => v == null ? 'Required' : null,
+                  ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: pointsCtl,
@@ -434,13 +479,14 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
               try {
                 final client = sl<ApiClient>();
                 await client.post(ApiConstants.managerReward, data: {
-                  'employee_id': int.tryParse(employeeIdCtl.text) ?? 0,
+                  'employee_id': _selectedEmployeeId ?? 0,
                   'points': int.tryParse(pointsCtl.text) ?? 0,
                   'reason': reasonCtl.text,
                 });
                 // Refresh manager wallet
                 _managerWallet = null;
                 _loadManagerWallet();
+                setState(() => _selectedEmployeeId = null);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
