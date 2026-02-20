@@ -86,7 +86,7 @@ class ApiClient {
     }
   }
 
-  /// REST PATCH Method
+  /// REST PUT Method
   Future<Response> put(
     String path, {
     dynamic data,

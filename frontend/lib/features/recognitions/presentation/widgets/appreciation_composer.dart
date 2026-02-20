@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/badge_utils.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../bloc/recognitions_bloc.dart';
@@ -28,7 +29,7 @@ class AppreciationComposer extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -122,7 +123,7 @@ class _BadgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badgeInfo = _getBadgeInfo(badge.name);
+    final badgeInfo = BadgeUtils.getDisplayInfo(badge.name);
 
     return InkWell(
       onTap: onTap,
@@ -132,7 +133,7 @@ class _BadgeCard extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey[200]!),
           borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -145,7 +146,7 @@ class _BadgeCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: badgeInfo.isEmoji
+                child: badgeInfo.hasEmoji
                     ? Text(
                         badgeInfo.emoji!,
                         style: AppTextStyles.emoji(),
@@ -177,48 +178,4 @@ class _BadgeCard extends StatelessWidget {
       ),
     );
   }
-
-  _BadgeDetails _getBadgeInfo(String badgeName) {
-    switch (badgeName.toLowerCase()) {
-      case 'you rock !!!':
-        return const _BadgeDetails(emoji: '👍', color: Colors.amber);
-      case 'out of box thinker !!!':
-        return const _BadgeDetails(emoji: '💡', color: Colors.purple);
-      case 'bright spark !!!':
-        return const _BadgeDetails(emoji: '💖', color: Colors.pink);
-      case 'great team player !!!':
-        return const _BadgeDetails(emoji: '👥', color: Color(0xFF1B60FF));
-      case 'invaluable help !!!':
-        return const _BadgeDetails(emoji: '💎', color: Colors.cyan);
-      case 'agility champion !!!':
-        return const _BadgeDetails(emoji: '⚡', color: Colors.blue);
-      case 'trust builder !!!':
-        return const _BadgeDetails(emoji: '🛡️', color: Colors.lightBlue);
-      case 'partnership pioneer !!!':
-        return const _BadgeDetails(emoji: '🎯', color: Colors.redAccent);
-      case 'customer hero !!!':
-        return const _BadgeDetails(emoji: '🦸', color: Colors.teal);
-      case 'star of innovation !!!':
-        return const _BadgeDetails(emoji: '⭐', color: Colors.orange);
-      case 'heartfelt apology !!':
-        return const _BadgeDetails(emoji: '🙏', color: Colors.deepPurple);
-      default:
-        return const _BadgeDetails(
-            icon: Icons.stars_outlined, color: Colors.blue);
-    }
-  }
-}
-
-class _BadgeDetails {
-  final String? emoji;
-  final IconData? icon;
-  final Color color;
-
-  const _BadgeDetails({
-    this.emoji,
-    this.icon,
-    required this.color,
-  });
-
-  bool get isEmoji => emoji != null;
 }

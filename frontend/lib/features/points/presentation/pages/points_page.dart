@@ -42,6 +42,12 @@ class _PointsPageState extends State<PointsPage> {
     _bloc.add(GetLeaderboardRequested(period: _currentPeriod));
   }
 
+  @override
+  void dispose() {
+    _bloc.close();
+    super.dispose();
+  }
+
   void _fetchHistory({int page = 1}) {
     setState(() => _page = page);
     _bloc.add(GetPointsHistoryRequested(

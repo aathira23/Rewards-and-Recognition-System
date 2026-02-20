@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/badge_utils.dart';
 import '../../domain/entities/recognition_entity.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -54,14 +55,14 @@ class RecognitionFeedList extends StatelessWidget {
     final badgeName = recognition.badge?.name ?? 'Appreciation';
     final timeAgo = _getTimeAgo(recognition.createdAt);
 
-    // Dynamic Badge Colors
-    final badgeStyle = _getBadgeStyle(badgeName);
+    // Badge pill styling from shared utility
+    final pillStyle = BadgeUtils.getPillStyle(badgeName);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -129,22 +130,22 @@ class RecognitionFeedList extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: badgeStyle.backgroundColor,
+                      color: pillStyle.backgroundColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _getBadgeIcon(badgeName),
+                          pillStyle.icon,
                           size: 14,
-                          color: badgeStyle.textColor,
+                          color: pillStyle.textColor,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           badgeName.toUpperCase(),
                           style: AppTextStyles.captionBold(
-                            color: badgeStyle.textColor,
+                            color: pillStyle.textColor,
                           ),
                         ),
                       ],
@@ -195,49 +196,4 @@ class RecognitionFeedList extends StatelessWidget {
       return 'Just now';
     }
   }
-
-  BadgeStyle _getBadgeStyle(String badgeName) {
-    final name = badgeName.toLowerCase();
-    if (name.contains('star') || name.contains('spark')) {
-      return BadgeStyle(
-        backgroundColor: const Color(0xFFFCE4EC), // Pink 50
-        textColor: const Color(0xFFEc407A), // Pink 400
-      );
-    } else if (name.contains('help') || name.contains('assist')) {
-      return BadgeStyle(
-        backgroundColor: const Color(0xFFE8F5E9), // Green 50
-        textColor: const Color(0xFF66BB6A), // Green 400
-      );
-    } else if (name.contains('team') || name.contains('player')) {
-      return BadgeStyle(
-        backgroundColor: const Color(0xFFE3F2FD), // Blue 50
-        textColor: const Color(0xFF42A5F5), // Blue 400
-      );
-    } else {
-      // Default
-      return BadgeStyle(
-        backgroundColor: const Color(0xFFF3E5F5), // Purple 50
-        textColor: const Color(0xFFAB47BC), // Purple 400
-      );
-    }
-  }
-
-  IconData _getBadgeIcon(String badgeName) {
-    final name = badgeName.toLowerCase();
-    if (name.contains('star') || name.contains('spark')) {
-      return Icons.electric_bolt_rounded;
-    } else if (name.contains('help')) {
-      return Icons.handshake_rounded;
-    } else if (name.contains('team')) {
-      return Icons.groups_rounded;
-    }
-    return Icons.star_rounded;
-  }
-}
-
-class BadgeStyle {
-  final Color backgroundColor;
-  final Color textColor;
-
-  BadgeStyle({required this.backgroundColor, required this.textColor});
 }

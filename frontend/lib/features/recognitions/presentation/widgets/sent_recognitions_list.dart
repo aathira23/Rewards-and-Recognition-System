@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/badge_utils.dart';
 import '../../domain/entities/recognition_entity.dart';
 
 class SentRecognitionsList extends StatelessWidget {
@@ -121,31 +122,7 @@ class _SentRecognitionTile extends StatelessWidget {
   }
 
   Widget _getBadgeIcon(String badgeName) {
-    IconData icon;
-    Color color;
-
-    switch (badgeName.toLowerCase()) {
-      case 'you rock !!!':
-        icon = Icons.thumb_up_alt_outlined;
-        color = Colors.green;
-        break;
-      case 'out of box thinker !!!':
-        icon = Icons.lightbulb_outline;
-        color = Colors.purple;
-        break;
-      case 'bright spark !!!':
-        icon = Icons.lightbulb_outline;
-        color = Colors.pink;
-        break;
-      case 'great team player !!!':
-        icon = Icons.groups_outlined;
-        color = Colors.orange;
-        break;
-      default:
-        icon = Icons.stars_outlined;
-        color = Colors.blue;
-    }
-
-    return Icon(icon, color: color, size: 16);
+    final info = BadgeUtils.getDisplayInfo(badgeName);
+    return Icon(info.icon, color: info.effectiveIconColor, size: 16);
   }
 }

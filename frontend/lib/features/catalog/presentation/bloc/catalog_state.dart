@@ -42,9 +42,9 @@ class CatalogState extends Equatable {
       redemptions: redemptions ?? this.redemptions,
       conversions: conversions ?? this.conversions,
       pointsRules: pointsRules ?? this.pointsRules,
-      errorMessage: errorMessage ?? this.errorMessage,
-      redemptionSuccess: redemptionSuccess ?? this.redemptionSuccess,
-      conversionSuccess: conversionSuccess ?? this.conversionSuccess,
+      errorMessage: errorMessage,
+      redemptionSuccess: redemptionSuccess,
+      conversionSuccess: conversionSuccess,
     );
   }
 

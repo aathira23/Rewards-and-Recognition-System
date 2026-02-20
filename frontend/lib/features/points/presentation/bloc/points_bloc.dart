@@ -25,7 +25,6 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     GetPointsSummaryRequested event,
     Emitter<PointsState> emit,
   ) async {
-    print('PointsBloc: GetPointsSummaryRequested');
     if (state.summary == null) {
       emit(state.copyWith(status: PointsStatus.loading));
     }
@@ -33,14 +32,12 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     final result = await getPointsSummaryUseCase(NoParams());
     result.fold(
       (failure) {
-        print('PointsBloc: Summary Failure: ${failure.message}');
         emit(state.copyWith(
           status: PointsStatus.failure,
           errorMessage: failure.message,
         ));
       },
       (summary) {
-        print('PointsBloc: Summary Success');
         emit(state.copyWith(
           status: PointsStatus.success,
           summary: summary,
@@ -53,7 +50,6 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     GetPointsHistoryRequested event,
     Emitter<PointsState> emit,
   ) async {
-    print('PointsBloc: GetPointsHistoryRequested page=${event.page}');
     if (event.page == 1) {
       emit(state.copyWith(status: PointsStatus.loading, history: []));
     }
@@ -66,7 +62,6 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     ));
     result.fold(
       (failure) {
-        print('PointsBloc: History Failure: ${failure.message}');
         emit(state.copyWith(
           status: PointsStatus.failure,
           errorMessage: failure.message,
@@ -74,8 +69,6 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
       },
       (bundle) {
         final (total, newHistory) = bundle;
-        print(
-            'PointsBloc: History Success, count=${newHistory.length}, total=$total');
         final mergedHistory = event.page == 1
             ? newHistory
             : (List.of(state.history)..addAll(newHistory));
@@ -95,7 +88,6 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     GetLeaderboardRequested event,
     Emitter<PointsState> emit,
   ) async {
-    print('PointsBloc: GetLeaderboardRequested period=${event.period}');
     if (state.leaderboard.isEmpty) {
       emit(state.copyWith(status: PointsStatus.loading));
     }
@@ -103,14 +95,12 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     final result = await getLeaderboardUseCase(event.period);
     result.fold(
       (failure) {
-        print('PointsBloc: Leaderboard Failure: ${failure.message}');
         emit(state.copyWith(
           status: PointsStatus.failure,
           errorMessage: failure.message,
         ));
       },
       (leaderboard) {
-        print('PointsBloc: Leaderboard Success, count=${leaderboard.length}');
         emit(state.copyWith(
           status: PointsStatus.success,
           leaderboard: leaderboard,

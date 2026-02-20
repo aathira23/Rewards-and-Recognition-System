@@ -33,14 +33,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final isAuthenticated = await checkAuthStatusUseCase();
     if (isAuthenticated) {
-      // Logic removed: initially emit placeholder, then we'll trigger profile fetch from UI or here.
+      // Emit a temporary authenticated state with placeholder values.
+      // The real user data will be populated by AuthProfileFetchRequested.
+      // This allows the dashboard to render immediately while profile loads.
       emit(const AuthAuthenticated(
         auth: AuthEntity(
           token: '',
           userId: 0,
         ),
       ));
-      // Auto-trigger profile fetch if we have a token
       add(AuthProfileFetchRequested());
     } else {
       emit(AuthUnauthenticated());

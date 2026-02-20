@@ -99,7 +99,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                           child: Container(
                             height: MediaQuery.of(context).size.height * 0.72,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.surface,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                   color: Colors.grey.withValues(alpha: 0.1)),

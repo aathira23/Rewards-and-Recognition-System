@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/badge_utils.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 
 class AppreciationStats extends StatelessWidget {
@@ -73,31 +74,8 @@ class AppreciationStats extends StatelessWidget {
   }
 
   Widget _getBadgeIcon(String badgeName) {
-    // Placeholder logic for badge icons matched from mockup
-    IconData icon;
-    Color color;
-
-    switch (badgeName.toLowerCase()) {
-      case 'you rock !!!':
-        icon = Icons.thumb_up_alt_outlined;
-        color = Colors.green;
-        break;
-      case 'out of box thinker !!!':
-        icon = Icons.lightbulb_outline;
-        color = Colors.purple;
-        break;
-      case 'bright spark !!!':
-        icon = Icons.lightbulb_outline;
-        color = Colors.pink;
-        break;
-      case 'great team player !!!':
-        icon = Icons.groups_outlined;
-        color = Colors.orange;
-        break;
-      default:
-        icon = Icons.stars_outlined;
-        color = Colors.blue;
-    }
+    final info = BadgeUtils.getDisplayInfo(badgeName);
+    final color = info.effectiveIconColor;
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -105,7 +83,7 @@ class AppreciationStats extends StatelessWidget {
         color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: color, size: 20),
+      child: Icon(info.icon, color: color, size: 20),
     );
   }
 }

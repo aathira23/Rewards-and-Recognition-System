@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'core/network/web_token_provider.dart';
 
-import 'core/constants/api_constants.dart';
 import 'core/network/auth_interceptor.dart';
 import 'core/network/api_client.dart';
 import 'features/auth/data/datasources/auth_local_data_source.dart';
@@ -85,6 +84,17 @@ import 'features/analytics/presentation/bloc/analytics_bloc.dart';
 final sl = GetIt.instance; // sl stands for Service Locator
 
 Future<void> init() async {
+  //! External
+  sl.registerLazySingleton(() => Dio());
+  if (!kIsWeb) {
+    sl.registerLazySingleton(() => const FlutterSecureStorage());
+  }
+
+  //! Core
+  sl.registerLazySingleton(
+      () => AuthInterceptor(tokenProvider: sl<AuthLocalDataSource>()));
+  sl.registerLazySingleton(() => ApiClient(dio: sl(), authInterceptor: sl()));
+
   //! Features - Authentication
   // Bloc
   sl.registerFactory(
@@ -300,25 +310,4 @@ Future<void> init() async {
   sl.registerLazySingleton<AnalyticsRemoteDataSource>(
     () => AnalyticsRemoteDataSourceImpl(client: sl()),
   );
-
-  //! Core
-  sl.registerLazySingleton(
-      () => AuthInterceptor(tokenProvider: sl<AuthLocalDataSource>()));
-  sl.registerLazySingleton(() => ApiClient(dio: sl(), authInterceptor: sl()));
-
-  //! External
-  sl.registerLazySingleton(
-    () => Dio(
-      BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
-        connectTimeout:
-            const Duration(milliseconds: ApiConstants.connectTimeout),
-        receiveTimeout:
-            const Duration(milliseconds: ApiConstants.receiveTimeout),
-      ),
-    ),
-  );
-  if (!kIsWeb) {
-    sl.registerLazySingleton(() => const FlutterSecureStorage());
-  }
 }

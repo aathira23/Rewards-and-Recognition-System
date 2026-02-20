@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../injection_container.dart';
+import '../../domain/entities/reward_entity.dart';
 import '../../../points/presentation/bloc/points_bloc.dart';
 import '../../../points/presentation/bloc/points_event.dart';
 import '../../../points/presentation/bloc/points_state.dart';
@@ -34,6 +35,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _pointsController.dispose();
     super.dispose();
   }
 
@@ -393,9 +395,9 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       'Apr',
       'May',
       'Jun',
-      'July',
+      'Jul',
       'Aug',
-      'Sept',
+      'Sep',
       'Oct',
       'Nov',
       'Dec'
@@ -436,7 +438,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
 
   final _pointsController = TextEditingController();
   String _selectedConversionType = 'PAYROLL';
-  double _currentRate = 0.1;
 
   Widget _buildConversionTab(BuildContext context) {
     return BlocBuilder<CatalogBloc, CatalogState>(
@@ -448,7 +449,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
               r['conversion_reward_type'] == _selectedConversionType,
           orElse: () => {},
         );
-        _currentRate = (rule['conversion_rate'] != null)
+        final double currentRate = (rule['conversion_rate'] != null)
             ? double.parse(rule['conversion_rate'].toString())
             : 0.1;
 
@@ -474,7 +475,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Current rate: 100 pts = \$${(100 * _currentRate).toStringAsFixed(2)}',
+                    'Current rate: 100 pts = \$${(100 * currentRate).toStringAsFixed(2)}',
                     style: AppTextStyles.bodyBold(
                       color: Colors.indigoAccent,
                     ),
@@ -558,7 +559,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                   AppTextStyles.bodyMedium(color: Colors.green),
                             ),
                             Text(
-                              '\$${((int.tryParse(_pointsController.text) ?? 0) * _currentRate).toStringAsFixed(2)}',
+                              '\$${((int.tryParse(_pointsController.text) ?? 0) * currentRate).toStringAsFixed(2)}',
                               style: AppTextStyles.headline1(
                                 color: Colors.green,
                               ),
@@ -836,7 +837,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     );
   }
 
-  void _showRedemptionConfirm(BuildContext context, dynamic reward) {
+  void _showRedemptionConfirm(BuildContext context, RewardEntity reward) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(

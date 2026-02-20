@@ -42,7 +42,7 @@ class RecognitionsState extends Equatable {
       users: users ?? this.users,
       stats: stats ?? this.stats,
       errorMessage: errorMessage,
-      lastSentRecognition: lastSentRecognition ?? this.lastSentRecognition,
+      lastSentRecognition: lastSentRecognition,
     );
   }
 

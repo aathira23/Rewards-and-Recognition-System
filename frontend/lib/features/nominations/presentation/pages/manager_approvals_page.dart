@@ -403,7 +403,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     final nominatorName = item['nominator_name']?.toString() ?? '';
     final pts = item['points_awarded'];
     final justification = item['justification']?.toString() ?? '';
-    final myLevel = item['my_level']?.toString() ?? '';
     final myComments = item['my_comments']?.toString() ?? '';
     final actionAt = item['my_action_at']?.toString() ?? '';
 
