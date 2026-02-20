@@ -146,16 +146,24 @@ class _BadgeCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: badgeInfo.hasEmoji
-                    ? Text(
-                        badgeInfo.emoji!,
-                        style: AppTextStyles.emoji(),
+                child: badge.iconUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          badge.iconUrl!,
+                          width: 38,
+                          height: 38,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => badgeInfo.hasEmoji
+                              ? Text(badgeInfo.emoji!,
+                                  style: AppTextStyles.emoji())
+                              : Icon(badgeInfo.icon,
+                                  color: badgeInfo.color, size: 28),
+                        ),
                       )
-                    : Icon(
-                        badgeInfo.icon,
-                        color: badgeInfo.color,
-                        size: 28,
-                      ),
+                    : badgeInfo.hasEmoji
+                        ? Text(badgeInfo.emoji!, style: AppTextStyles.emoji())
+                        : Icon(badgeInfo.icon,
+                            color: badgeInfo.color, size: 28),
               ),
             ),
             const SizedBox(height: 16),

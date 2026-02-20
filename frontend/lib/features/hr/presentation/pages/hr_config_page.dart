@@ -348,9 +348,38 @@ class _HrConfigPageState extends State<HrConfigPage>
               rows: _badges.map((b) {
                 final isActive = b['is_active'] ?? true;
                 return [
-                  Text(b['name']?.toString() ?? '',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (b['icon_url'] != null &&
+                              b['icon_url'].toString().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Image.network(
+                                b['icon_url'].toString(),
+                                width: 28,
+                                height: 28,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.emoji_events, size: 28),
+                              ),
+                            )
+                          else
+                            const Padding(
+                              padding: EdgeInsets.only(right: 8.0),
+                              child: Icon(Icons.emoji_events, size: 28),
+                            ),
+                          Flexible(
+                            child: Text(b['name']?.toString() ?? '',
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   Text(b['description']?.toString() ?? '—',
                       style:
                           TextStyle(fontSize: 12, color: Colors.grey.shade600),
@@ -411,6 +440,7 @@ class _HrConfigPageState extends State<HrConfigPage>
     final isEdit = existing != null;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
     final descC = TextEditingController(text: existing?['description'] ?? '');
+    final iconC = TextEditingController(text: existing?['icon_url'] ?? '');
     final pointsC =
         TextEditingController(text: existing?['points']?.toString() ?? '');
 
@@ -419,6 +449,7 @@ class _HrConfigPageState extends State<HrConfigPage>
       fields: [
         _Field(label: 'Name', controller: nameC, hint: 'e.g. Star Performer'),
         _Field(label: 'Description', controller: descC, maxLines: 2),
+        _Field(label: 'Icon URL', controller: iconC, hint: 'https://...'),
         _Field(
             label: 'Points',
             controller: pointsC,
@@ -431,6 +462,9 @@ class _HrConfigPageState extends State<HrConfigPage>
           'name': nameC.text,
           'description': descC.text,
         };
+        if (iconC.text.isNotEmpty) {
+          data['icon_url'] = iconC.text;
+        }
         if (pointsC.text.isNotEmpty) {
           data['points'] = int.tryParse(pointsC.text);
         }

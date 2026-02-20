@@ -136,11 +136,23 @@ class RecognitionFeedList extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          pillStyle.icon,
-                          size: 14,
-                          color: pillStyle.textColor,
-                        ),
+                        recognition.badge?.iconUrl != null
+                            ? Image.network(
+                                recognition.badge!.iconUrl!,
+                                width: 14,
+                                height: 14,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  pillStyle.icon,
+                                  size: 14,
+                                  color: pillStyle.textColor,
+                                ),
+                              )
+                            : Icon(
+                                pillStyle.icon,
+                                size: 14,
+                                color: pillStyle.textColor,
+                              ),
                         const SizedBox(width: 6),
                         Text(
                           badgeName.toUpperCase(),

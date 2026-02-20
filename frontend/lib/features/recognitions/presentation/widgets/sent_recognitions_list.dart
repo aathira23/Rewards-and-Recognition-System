@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
+import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/recognition_entity.dart';
 
 class SentRecognitionsList extends StatelessWidget {
@@ -93,7 +94,7 @@ class _SentRecognitionTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    _getBadgeIcon(recognition.badge?.name ?? ''),
+                    _getBadgeIcon(recognition.badge),
                     const SizedBox(width: 8),
                     Text(
                       recognition.badge?.name ?? 'Badge',
@@ -121,8 +122,20 @@ class _SentRecognitionTile extends StatelessWidget {
     );
   }
 
-  Widget _getBadgeIcon(String badgeName) {
-    final info = BadgeUtils.getDisplayInfo(badgeName);
+  Widget _getBadgeIcon(BadgeEntity? badge) {
+    if (badge?.iconUrl != null) {
+      return Image.network(
+        badge!.iconUrl!,
+        width: 18,
+        height: 18,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) {
+          final info = BadgeUtils.getDisplayInfo(badge.name);
+          return Icon(info.icon, color: info.effectiveIconColor, size: 16);
+        },
+      );
+    }
+    final info = BadgeUtils.getDisplayInfo(badge?.name ?? '');
     return Icon(info.icon, color: info.effectiveIconColor, size: 16);
   }
 }
