@@ -115,26 +115,29 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Recognition Feed',
-                                      style: AppTextStyles.sectionHeader(),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.refresh,
-                                          size: 20, color: Colors.grey),
-                                      onPressed: () {
-                                        context
-                                            .read<RecognitionsBloc>()
-                                            .add(GetRecognitionFeedRequested());
-                                      },
-                                      tooltip: 'Refresh Feed',
-                                    ),
-                                  ],
-                                ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          'Recognition Feed',
+                                          style: AppTextStyles.sectionHeader(),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.refresh,
+                                            size: 20, color: Colors.grey),
+                                        onPressed: () {
+                                          context
+                                              .read<RecognitionsBloc>()
+                                              .add(GetRecognitionFeedRequested());
+                                        },
+                                        tooltip: 'Refresh Feed',
+                                      ),
+                                    ],
+                                  ),
                                 const SizedBox(height: 16),
                                 Expanded(
                                   child: RecognitionFeedList(feed: state.feed),

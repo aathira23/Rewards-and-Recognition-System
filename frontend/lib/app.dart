@@ -35,7 +35,11 @@ class RRApp extends StatelessWidget {
               (previous is AuthInitial && current is AuthLoading),
           builder: (context, state) {
             if (state is AuthAuthenticated) {
-              return const DashboardPage();
+              final user = state.auth.user;
+              return DashboardPage(
+                userName: user?.name ?? 'User',
+                userRole: user?.role ?? 'EMPLOYEE',
+              );
             }
             if (state is AuthInitial || (state is AuthLoading)) {
               return const Scaffold(

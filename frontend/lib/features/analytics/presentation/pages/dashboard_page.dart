@@ -16,30 +16,25 @@ import 'package:rr_frontend/features/hr/presentation/pages/hr_config_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_approvals_page.dart';
 
 class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
+  final String userName;
+  final String userRole;
+
+  const DashboardPage({
+    super.key,
+    required this.userName,
+    required this.userRole,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        String userName = 'User';
-        String userRole = 'EMPLOYEE';
+    final destinations = _buildDestinations(userRole);
 
-        if (state is AuthAuthenticated && state.auth.user != null) {
-          userName = state.auth.user!.name;
-          userRole = state.auth.user!.role;
-        }
-
-        final destinations = _buildDestinations(userRole);
-
-        return MainLayout(
-          userName: userName,
-          userRole: _displayRole(userRole),
-          destinations: destinations,
-          onLogout: () {
-            context.read<AuthBloc>().add(AuthLogoutRequested());
-          },
-        );
+    return MainLayout(
+      userName: userName,
+      userRole: _displayRole(userRole),
+      destinations: destinations,
+      onLogout: () {
+        context.read<AuthBloc>().add(AuthLogoutRequested());
       },
     );
   }

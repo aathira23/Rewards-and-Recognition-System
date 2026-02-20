@@ -120,13 +120,17 @@ class _MainLayoutState extends State<MainLayout> {
                                         : Colors.grey[600],
                                   ),
                                   const SizedBox(width: 16),
-                                  Text(
-                                    destination.title,
-                                    style: AppTextStyles.navItem(
-                                      isSelected: isSelected,
-                                      color: isSelected
-                                          ? theme.colorScheme.primary
-                                          : Colors.grey[600],
+                                  Expanded(
+                                    child: Text(
+                                      destination.title,
+                                      style: AppTextStyles.navItem(
+                                        isSelected: isSelected,
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                            : Colors.grey[600],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ],
@@ -145,7 +149,7 @@ class _MainLayoutState extends State<MainLayout> {
                       children: [
                         CircleAvatar(
                           backgroundColor:
-                              theme.colorScheme.primary.withValues(alpha: 0.1),
+                              theme.colorScheme.primary.withOpacity(0.1),
                           child: Text(
                             widget.userName.isNotEmpty
                                 ? widget.userName[0].toUpperCase()
@@ -155,30 +159,28 @@ class _MainLayoutState extends State<MainLayout> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.userName,
-                              style: AppTextStyles.bodyBold(),
-                            ),
-                            Text(
-                              widget.userRole,
-                              style: AppTextStyles.caption(
-                                color: Colors.grey,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.userName,
+                                style: AppTextStyles.bodyBold(),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        if (widget.onLogout != null)
-                          IconButton(
-                            icon: const Icon(Icons.logout_rounded,
-                                size: 18, color: Colors.grey),
-                            onPressed: widget.onLogout,
-                            tooltip: 'Logout',
+                              Text(
+                                widget.userRole,
+                                style: AppTextStyles.caption(
+                                  color: Colors.grey,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -198,7 +200,7 @@ class _MainLayoutState extends State<MainLayout> {
                     color: theme.colorScheme.surface,
                     border: Border(
                       bottom: BorderSide(
-                          color: theme.dividerColor.withValues(alpha: 0.1)),
+                          color: theme.dividerColor.withOpacity(0.1)),
                     ),
                   ),
                   child: Row(
@@ -210,10 +212,14 @@ class _MainLayoutState extends State<MainLayout> {
                             // TODO: Add Drawer for mobile
                           },
                         ),
-                      Text(
-                        'Rewards & Recognition',
-                        style: AppTextStyles.headline1(
-                          color: theme.colorScheme.onSurface,
+                      Expanded(
+                        child: Text(
+                          'Rewards & Recognition',
+                          style: AppTextStyles.headline1(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                       const Spacer(),

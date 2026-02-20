@@ -67,15 +67,15 @@ class AppreciationComposer extends StatelessWidget {
                 color: Colors.grey,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 20,
-                childAspectRatio: 1.15,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 150,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.7,
               ),
               itemCount: badges.length,
               itemBuilder: (context, index) {
@@ -136,45 +136,58 @@ class _BadgeCard extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: badgeInfo.color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
+            // Icon section - standard height
+            SizedBox(
+              height: 60,
               child: Center(
-                child: badge.iconUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          badge.iconUrl!,
-                          width: 38,
-                          height: 38,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => badgeInfo.hasEmoji
-                              ? Text(badgeInfo.emoji!,
-                                  style: AppTextStyles.emoji())
-                              : Icon(badgeInfo.icon,
-                                  color: badgeInfo.color, size: 28),
-                        ),
-                      )
-                    : badgeInfo.hasEmoji
-                        ? Text(badgeInfo.emoji!, style: AppTextStyles.emoji())
-                        : Icon(badgeInfo.icon,
-                            color: badgeInfo.color, size: 28),
+                child: Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: badgeInfo.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: badge.iconUrl != null
+                        ? ClipOval(
+                            child: Image.network(
+                              badge.iconUrl!,
+                              width: 38,
+                              height: 38,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => badgeInfo.hasEmoji
+                                  ? Text(badgeInfo.emoji!,
+                                      style: AppTextStyles.emoji())
+                                  : Icon(badgeInfo.icon,
+                                      color: badgeInfo.color, size: 28),
+                            ),
+                          )
+                        : badgeInfo.hasEmoji
+                            ? Text(badgeInfo.emoji!,
+                                style: AppTextStyles.emoji())
+                            : Icon(badgeInfo.icon,
+                                color: badgeInfo.color, size: 28),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              badge.name,
-              style: AppTextStyles.cardTitle(),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 12),
+            // Name section - standard 2-line height
+            SizedBox(
+              height: 40,
+              child: Center(
+                child: Text(
+                  badge.name,
+                  style: AppTextStyles.cardTitle(),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
-            const SizedBox(height: 4),
+            const Spacer(),
+            // Points section
             Text(
               '${badge.points ?? 50} pts',
               style: AppTextStyles.bodyMedium(

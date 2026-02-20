@@ -79,9 +79,13 @@ class AppDialog extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: AppTextStyles.pageTitle(),
+          Expanded(
+            child: Text(
+              title,
+              style: AppTextStyles.pageTitle(),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
           if (showCloseButton)
             IconButton(

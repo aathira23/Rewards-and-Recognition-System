@@ -64,11 +64,7 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: theme.colorScheme.surface,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthAuthenticated) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const DashboardPage()),
-            );
-          } else if (state is AuthFailure) {
+          if (state is AuthFailure) {
             _errorTimer?.cancel();
             setState(() => _loginError = state.message);
             _errorTimer = Timer(const Duration(seconds: 4), () {

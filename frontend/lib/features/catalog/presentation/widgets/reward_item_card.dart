@@ -60,44 +60,53 @@ class RewardItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        reward.name,
-                        style: AppTextStyles.label(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    _buildCategoryBadge(theme, reward.category),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      reward.pointsCost.toString(),
-                      style: AppTextStyles.headline2(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Text(
-                        'pts',
-                        style: AppTextStyles.smallMedium(
-                          color: theme.hintColor,
+                // Name section - standard 2-line height for uniformity
+                SizedBox(
+                  height: 48,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          reward.name,
+                          style: AppTextStyles.label(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      _buildCategoryBadge(theme, reward.category),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                // Points section
+                SizedBox(
+                  height: 32,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        reward.pointsCost.toString(),
+                        style: AppTextStyles.headline2(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Text(
+                          'pts',
+                          style: AppTextStyles.smallMedium(
+                            color: theme.hintColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   height: 42,
@@ -105,13 +114,14 @@ class RewardItemCard extends StatelessWidget {
                     onPressed: hasInsufficientPoints ? null : onRedeem,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
+                      padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: theme.colorScheme.onPrimary,
                       disabledBackgroundColor:
-                          theme.colorScheme.primary.withValues(alpha: 0.1),
+                          theme.colorScheme.primary.withOpacity(0.1),
                       disabledForegroundColor: theme.hintColor,
                     ),
                     child: Text(
