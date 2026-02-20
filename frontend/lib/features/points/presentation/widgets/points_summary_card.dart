@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../budgets/presentation/bloc/budget_bloc.dart';
 import '../../../budgets/presentation/bloc/budget_event.dart';
 import '../../../budgets/presentation/bloc/budget_state.dart';
@@ -228,26 +229,33 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             children: [
               const Divider(color: Colors.white24, height: 1),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _stat('Total Earned', s.totalEarned.toString(),
+              Builder(
+                builder: (context) {
+                  final statWidgets = [
+                    _stat('Total Earned', s.totalEarned.toString(),
                         Icons.trending_up),
-                  ),
-                  Expanded(
-                    child: _stat('Redeemed', s.totalRedeemed.toString(),
+                    _stat('Redeemed', s.totalRedeemed.toString(),
                         Icons.shopping_bag_outlined),
-                  ),
-                  Expanded(
-                    child: _stat(
+                    _stat(
                         'Expiring Soon',
                         (s.expiringToday + s.expiringThisMonth).toString(),
                         Icons.timer_outlined,
                         sub: s.expiringToday > 0
                             ? '${s.expiringToday} exp today'
                             : 'rest of month'),
-                  ),
-                ],
+                  ];
+                  if (Responsive.isMobile(context)) {
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 10,
+                      children: statWidgets,
+                    );
+                  }
+                  return Row(
+                    children:
+                        statWidgets.map((w) => Expanded(child: w)).toList(),
+                  );
+                },
               ),
             ],
           ),
@@ -413,7 +421,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                         style: TextStyle(fontSize: 12, color: Colors.grey))
                   else
                     DropdownButtonFormField<int>(
-                      value: selectedEmployeeId,
+                      initialValue: selectedEmployeeId,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Select Employee',

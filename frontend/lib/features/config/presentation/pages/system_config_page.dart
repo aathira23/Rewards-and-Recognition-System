@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/system_config_entity.dart';
@@ -50,7 +51,7 @@ class _SystemConfigView extends StatelessWidget {
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(Responsive.pagePadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

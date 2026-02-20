@@ -121,7 +121,7 @@ class RewardItemCard extends StatelessWidget {
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: theme.colorScheme.onPrimary,
                       disabledBackgroundColor:
-                          theme.colorScheme.primary.withOpacity(0.1),
+                          theme.colorScheme.primary.withValues(alpha: 0.1),
                       disabledForegroundColor: theme.hintColor,
                     ),
                     child: Text(

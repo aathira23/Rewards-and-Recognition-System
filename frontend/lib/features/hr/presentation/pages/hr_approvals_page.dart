@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/action_buttons.dart';
@@ -73,7 +74,12 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
+                padding: EdgeInsets.fromLTRB(
+                  Responsive.pagePadding(context),
+                  Responsive.pagePadding(context),
+                  Responsive.pagePadding(context),
+                  0,
+                ),
                 child: AppPageHeader(
                   title: 'Approvals & Allocation',
                   subtitle:
@@ -89,7 +95,9 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
 
               // Tabs
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.pagePadding(context),
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
@@ -98,6 +106,10 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                   ),
                   child: TabBar(
                     controller: _tabController,
+                    isScrollable: Responsive.isMobile(context),
+                    tabAlignment: Responsive.isMobile(context)
+                        ? TabAlignment.start
+                        : TabAlignment.fill,
                     labelColor: theme.colorScheme.primary,
                     unselectedLabelColor: Colors.grey.shade500,
                     indicatorColor: theme.colorScheme.primary,
@@ -174,28 +186,28 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
         .length;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding:
+          EdgeInsets.symmetric(horizontal: Responsive.pagePadding(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Filter chips
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _FilterChip(
                   label: 'All (${state.nominations.length})',
                   isActive: _nomFilter == 'ALL',
                   onTap: () => setState(() => _nomFilter = 'ALL')),
-              const SizedBox(width: 8),
               _FilterChip(
                   label: 'Pending ($pendingCount)',
                   isActive: _nomFilter == 'PENDING',
                   onTap: () => setState(() => _nomFilter = 'PENDING')),
-              const SizedBox(width: 8),
               _FilterChip(
                   label: 'Approved',
                   isActive: _nomFilter == 'APPROVED',
                   onTap: () => setState(() => _nomFilter = 'APPROVED')),
-              const SizedBox(width: 8),
               _FilterChip(
                   label: 'Rejected',
                   isActive: _nomFilter == 'REJECTED',
@@ -384,7 +396,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           icon: Icons.swap_horiz_rounded, title: 'No conversion requests');
     }
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding:
+          EdgeInsets.symmetric(horizontal: Responsive.pagePadding(context)),
       child: Column(
         children: state.conversions
             .map((c) => _buildConversionCard(context, c, theme))
@@ -466,7 +479,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
   Widget _buildBudgetAllocationTab(
       BuildContext context, ThemeData theme, HrApprovalsState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding:
+          EdgeInsets.symmetric(horizontal: Responsive.pagePadding(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

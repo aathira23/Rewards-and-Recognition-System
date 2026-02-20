@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/status_badge.dart';
@@ -96,7 +97,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
           backgroundColor: Colors.transparent,
           body: Builder(
             builder: (innerContext) => SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              padding: EdgeInsets.symmetric(
+                horizontal: Responsive.pagePadding(context),
+                vertical: Responsive.pagePadding(context) + 8,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -611,21 +615,19 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Search and Filters
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search rewards...',
-                  prefixIcon: const Icon(Icons.search),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  fillColor: theme.colorScheme.surface,
-                ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final narrow = constraints.maxWidth < 500;
+            final searchField = TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search rewards...',
+                prefixIcon: const Icon(Icons.search),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                fillColor: theme.colorScheme.surface,
               ),
-            ),
-            const SizedBox(width: 16),
-            Container(
+            );
+            final categoryDropdown = Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
@@ -646,10 +648,27 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       .toList(),
                   onChanged: (val) {},
                   style: theme.textTheme.bodyMedium,
+                  isExpanded: narrow,
                 ),
               ),
-            ),
-          ],
+            );
+            if (narrow) {
+              return Column(
+                children: [
+                  searchField,
+                  const SizedBox(height: 12),
+                  categoryDropdown,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: searchField),
+                const SizedBox(width: 16),
+                categoryDropdown,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 24),
 

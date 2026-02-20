@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/app_dialog.dart';
@@ -70,7 +71,12 @@ class _HrConfigViewState extends State<_HrConfigView>
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
+                padding: EdgeInsets.fromLTRB(
+                  Responsive.pagePadding(context),
+                  Responsive.pagePadding(context),
+                  Responsive.pagePadding(context),
+                  0,
+                ),
                 child: AppPageHeader(
                   title: 'Configuration',
                   subtitle:
@@ -85,7 +91,9 @@ class _HrConfigViewState extends State<_HrConfigView>
 
               // Tab bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.pagePadding(context),
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
@@ -94,6 +102,10 @@ class _HrConfigViewState extends State<_HrConfigView>
                   ),
                   child: TabBar(
                     controller: _tabController,
+                    isScrollable: Responsive.isMobile(context),
+                    tabAlignment: Responsive.isMobile(context)
+                        ? TabAlignment.start
+                        : TabAlignment.fill,
                     labelColor: theme.colorScheme.primary,
                     unselectedLabelColor: Colors.grey.shade500,
                     indicatorColor: theme.colorScheme.primary,
@@ -150,7 +162,8 @@ class _HrConfigViewState extends State<_HrConfigView>
   Widget _buildAwardTypesTab(
       BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.pagePadding(context), vertical: 4),
       child: Column(
         children: [
           _sectionHeader(
@@ -294,7 +307,8 @@ class _HrConfigViewState extends State<_HrConfigView>
   Widget _buildBadgesTab(
       BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.pagePadding(context), vertical: 4),
       child: Column(
         children: [
           _sectionHeader(
@@ -432,7 +446,8 @@ class _HrConfigViewState extends State<_HrConfigView>
   Widget _buildRewardsCatalogTab(
       BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.pagePadding(context), vertical: 4),
       child: Column(
         children: [
           _sectionHeader(
@@ -561,7 +576,8 @@ class _HrConfigViewState extends State<_HrConfigView>
   Widget _buildPointsPolicyTab(
       BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.pagePadding(context), vertical: 4),
       child: Column(
         children: [
           _sectionHeader(
@@ -733,7 +749,8 @@ class _HrConfigViewState extends State<_HrConfigView>
   Widget _buildSystemSettingsTab(
       BuildContext context, ThemeData theme, HrConfigState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.pagePadding(context), vertical: 4),
       child: Column(
         children: [
           _sectionHeader(
@@ -771,7 +788,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.08),
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(Icons.tune_rounded,
@@ -899,7 +917,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                     padding: const EdgeInsets.only(bottom: 12),
                     child: f.dropdownOptions != null
                         ? DropdownButtonFormField<String>(
-                            value:
+                            initialValue:
                                 f.dropdownOptions!.contains(f.controller.text)
                                     ? f.controller.text
                                     : null,
@@ -1068,58 +1086,24 @@ class _DataCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isMobile = Responsive.isMobile(context);
+
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(10)),
-            ),
-            child: Row(
-              children: List.generate(columns.length, (i) {
-                return Expanded(
-                  flex: flexes[i],
-                  child: Text(
-                    columns[i].toUpperCase(),
-                    style: AppTextStyles.captionStrong(
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-          const Divider(height: 1),
-          // Rows
-          ...rows.asMap().entries.map((entry) {
-            final cells = entry.value;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-              ),
-              child: Row(
-                children: List.generate(cells.length, (i) {
-                  return Expanded(
-                    flex: flexes[i],
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: cells[i],
-                    ),
-                  );
-                }),
-              ),
-            );
-          }),
+          if (isMobile)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: _buildTableContent(theme, scrollable: true),
+            )
+          else
+            _buildTableContent(theme),
           // Footer
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -1133,6 +1117,62 @@ class _DataCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTableContent(ThemeData theme, {bool scrollable = false}) {
+    // When inside a horizontal SingleChildScrollView we must use fixed SizedBox
+    // widths – Expanded requires bounded width which a scrollable axis can't provide.
+    const double colUnit = 88.0;
+
+    Widget headerCell(String label, int flex) {
+      final text = Text(
+        label.toUpperCase(),
+        style: AppTextStyles.captionStrong(color: Colors.grey.shade500),
+      );
+      return scrollable
+          ? SizedBox(width: flex * colUnit, child: text)
+          : Expanded(flex: flex, child: text);
+    }
+
+    Widget dataCell(Widget child, int flex) {
+      final aligned = Align(alignment: Alignment.centerLeft, child: child);
+      return scrollable
+          ? SizedBox(width: flex * colUnit, child: aligned)
+          : Expanded(flex: flex, child: aligned);
+    }
+
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(color: Colors.grey.shade50),
+          child: Row(
+            children: List.generate(
+              columns.length,
+              (i) => headerCell(columns[i], flexes[i]),
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        // Rows
+        ...rows.asMap().entries.map((entry) {
+          final cells = entry.value;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            ),
+            child: Row(
+              children: List.generate(
+                cells.length,
+                (i) => dataCell(cells[i], flexes[i]),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

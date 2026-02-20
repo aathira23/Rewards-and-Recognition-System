@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/celebration_entity.dart';
 import '../bloc/celebrations_bloc.dart';
@@ -41,7 +42,7 @@ class _CelebrationsView extends StatelessWidget {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(Responsive.pagePadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -49,65 +50,78 @@ class _CelebrationsView extends StatelessWidget {
                   title: 'Celebrations',
                   subtitle: 'Celebrate birthdays and work anniversaries',
                 ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Upcoming
-                    Expanded(
-                      flex: 55,
-                      child: Column(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 768;
+
+                    final upcomingColumn = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.celebration_rounded,
+                                color: Colors.pink.shade400, size: 22),
+                            const SizedBox(width: 8),
+                            Text('Upcoming Celebrations',
+                                style: AppTextStyles.sectionTitle()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (state.upcoming.isEmpty)
+                          const EmptyStateView(
+                            icon: Icons.event_busy,
+                            title: 'No upcoming celebrations',
+                            padding: 32,
+                          ),
+                        ...state.upcoming
+                            .map((c) => _buildCelebrationCard(c, theme)),
+                      ],
+                    );
+
+                    final historyColumn = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.history_rounded,
+                                color: Colors.blue.shade400, size: 22),
+                            const SizedBox(width: 8),
+                            Text('Recent Celebrations',
+                                style: AppTextStyles.sectionTitle()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (state.history.isEmpty)
+                          const EmptyStateView(
+                            icon: Icons.history,
+                            title: 'No celebration history',
+                            padding: 32,
+                          ),
+                        ...state.history
+                            .map((c) => _buildHistoryTile(c, theme)),
+                      ],
+                    );
+
+                    if (isWide) {
+                      return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.celebration_rounded,
-                                  color: Colors.pink.shade400, size: 22),
-                              const SizedBox(width: 8),
-                              Text('Upcoming Celebrations',
-                                  style: AppTextStyles.sectionTitle()),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (state.upcoming.isEmpty)
-                            const EmptyStateView(
-                              icon: Icons.event_busy,
-                              title: 'No upcoming celebrations',
-                              padding: 32,
-                            ),
-                          ...state.upcoming
-                              .map((c) => _buildCelebrationCard(c, theme)),
+                          Expanded(flex: 55, child: upcomingColumn),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 45, child: historyColumn),
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    // History
-                    Expanded(
-                      flex: 45,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.history_rounded,
-                                  color: Colors.blue.shade400, size: 22),
-                              const SizedBox(width: 8),
-                              Text('Recent Celebrations',
-                                  style: AppTextStyles.sectionTitle()),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (state.history.isEmpty)
-                            const EmptyStateView(
-                              icon: Icons.history,
-                              title: 'No celebration history',
-                              padding: 32,
-                            ),
-                          ...state.history
-                              .map((c) => _buildHistoryTile(c, theme)),
-                        ],
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        upcomingColumn,
+                        const SizedBox(height: 24),
+                        historyColumn,
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

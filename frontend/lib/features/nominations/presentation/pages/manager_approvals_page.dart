@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
@@ -111,7 +112,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           }
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(Responsive.pagePadding(context)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -200,6 +201,10 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                           children: [
                             TabBar(
                               controller: _tabController,
+                              isScrollable: Responsive.isMobile(context),
+                              tabAlignment: Responsive.isMobile(context)
+                                  ? TabAlignment.start
+                                  : TabAlignment.fill,
                               labelColor: theme.colorScheme.primary,
                               unselectedLabelColor: Colors.grey,
                               indicatorColor: theme.colorScheme.primary,
@@ -237,7 +242,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                               ],
                             ),
                             SizedBox(
-                              height: 540,
+                              height: MediaQuery.of(context).size.height * 0.6,
                               child: TabBarView(
                                 controller: _tabController,
                                 children: [

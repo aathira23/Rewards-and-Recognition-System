@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
@@ -49,7 +50,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(Responsive.pagePadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -76,84 +77,99 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                       );
                     }
 
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left Column: Composer + Stats
-                        Expanded(
-                          flex: 65,
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 768;
+
+                        final leftColumn = Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppreciationComposer(
+                              badges: state.badges,
+                              onBadgeSelected: (badge) {
+                                _showSendRecognitionDialog(
+                                    context, badge, state.users);
+                              },
+                            ),
+                            const SizedBox(height: 32),
+                            if (state.stats != null) ...[
+                              AppreciationStats(stats: state.stats!),
+                            ],
+                          ],
+                        );
+
+                        final feedPanel = Container(
+                          height: isWide
+                              ? MediaQuery.of(context).size.height * 0.72
+                              : 420,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: Colors.grey.withValues(alpha: 0.1)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AppreciationComposer(
-                                badges: state.badges,
-                                onBadgeSelected: (badge) {
-                                  _showSendRecognitionDialog(
-                                      context, badge, state.users);
-                                },
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      'Recognition Feed',
+                                      style: AppTextStyles.sectionHeader(),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh,
+                                        size: 20, color: Colors.grey),
+                                    onPressed: () {
+                                      context
+                                          .read<RecognitionsBloc>()
+                                          .add(GetRecognitionFeedRequested());
+                                    },
+                                    tooltip: 'Refresh Feed',
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 32),
-                              if (state.stats != null) ...[
-                                AppreciationStats(stats: state.stats!),
-                              ],
+                              const SizedBox(height: 16),
+                              Expanded(
+                                child: RecognitionFeedList(feed: state.feed),
+                              ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 32),
-                        // Right Column: Feed
-                        Expanded(
-                          flex: 35,
-                          child: Container(
-                            height: MediaQuery.of(context).size.height * 0.72,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: Colors.grey.withValues(alpha: 0.1)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.03),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        'Recognition Feed',
-                                        style: AppTextStyles.sectionHeader(),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.refresh,
-                                          size: 20, color: Colors.grey),
-                                      onPressed: () {
-                                        context
-                                            .read<RecognitionsBloc>()
-                                            .add(GetRecognitionFeedRequested());
-                                      },
-                                      tooltip: 'Refresh Feed',
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Expanded(
-                                  child: RecognitionFeedList(feed: state.feed),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                        );
+
+                        if (isWide) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 65, child: leftColumn),
+                              const SizedBox(width: 24),
+                              Expanded(flex: 35, child: feedPanel),
+                            ],
+                          );
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            leftColumn,
+                            const SizedBox(height: 24),
+                            feedPanel,
+                          ],
+                        );
+                      },
                     );
                   },
                 ),

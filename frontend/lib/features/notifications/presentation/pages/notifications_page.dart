@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../bloc/notifications_bloc.dart';
@@ -36,7 +37,7 @@ class _NotificationsView extends StatelessWidget {
       body: BlocBuilder<NotificationsBloc, NotificationsState>(
         builder: (context, state) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(Responsive.pagePadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

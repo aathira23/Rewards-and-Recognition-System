@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/status_badge.dart';
@@ -82,7 +83,7 @@ class _PointsPageState extends State<PointsPage> {
             return RefreshIndicator(
               onRefresh: () async => _refreshAll(),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(Responsive.pagePadding(context)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -94,41 +95,53 @@ class _PointsPageState extends State<PointsPage> {
                         icon: const Icon(Icons.refresh_rounded),
                       ),
                     ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left: wallet card + history table
-                        Expanded(
-                          flex: 65,
-                          child: Column(
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 768;
+
+                        final leftColumn = Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (state.summary != null) ...[
+                              PointsSummaryCard(
+                                summary: state.summary!,
+                                userRole: widget.userRole,
+                              ),
+                              const SizedBox(height: 28),
+                            ],
+                            _buildHistorySection(state),
+                          ],
+                        );
+
+                        final rightColumn = LeaderboardPanel(
+                          entries: state.leaderboard,
+                          currentPeriod: _currentPeriod,
+                          onPeriodChanged: (period) {
+                            setState(() => _currentPeriod = period);
+                            _bloc.add(GetLeaderboardRequested(period: period));
+                          },
+                        );
+
+                        if (isWide) {
+                          return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (state.summary != null) ...[
-                                PointsSummaryCard(
-                                  summary: state.summary!,
-                                  userRole: widget.userRole,
-                                ),
-                                const SizedBox(height: 28),
-                              ],
-                              _buildHistorySection(state),
+                              Expanded(flex: 65, child: leftColumn),
+                              const SizedBox(width: 24),
+                              Expanded(flex: 35, child: rightColumn),
                             ],
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        // Right: leaderboard
-                        Expanded(
-                          flex: 35,
-                          child: LeaderboardPanel(
-                            entries: state.leaderboard,
-                            currentPeriod: _currentPeriod,
-                            onPeriodChanged: (period) {
-                              setState(() => _currentPeriod = period);
-                              _bloc
-                                  .add(GetLeaderboardRequested(period: period));
-                            },
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            leftColumn,
+                            const SizedBox(height: 24),
+                            rightColumn,
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -176,81 +189,97 @@ class _PointsPageState extends State<PointsPage> {
   }
 
   Widget _buildFilterBar() {
+    final mobile = Responsive.isMobile(context);
+
+    final filters = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        // From date
+        _DateChip(
+          label: _startDate != null
+              ? AppDateFormatter.short(_startDate)
+              : 'mm/dd/yyyy',
+          isSet: _startDate != null,
+          onTap: () async {
+            final d = await showDatePicker(
+              context: context,
+              initialDate: _startDate ?? DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now(),
+            );
+            if (d != null) {
+              setState(() => _startDate = d);
+              _fetchHistory();
+            }
+          },
+          onClear: _startDate != null
+              ? () {
+                  setState(() => _startDate = null);
+                  _fetchHistory();
+                }
+              : null,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text('to',
+              style: AppTextStyles.small(color: Colors.grey.shade500)),
+        ),
+        // To date
+        _DateChip(
+          label: _endDate != null
+              ? AppDateFormatter.short(_endDate)
+              : 'mm/dd/yyyy',
+          isSet: _endDate != null,
+          onTap: () async {
+            final d = await showDatePicker(
+              context: context,
+              initialDate: _endDate ?? DateTime.now(),
+              firstDate: _startDate ?? DateTime(2020),
+              lastDate: DateTime.now(),
+            );
+            if (d != null) {
+              setState(() => _endDate = d);
+              _fetchHistory();
+            }
+          },
+          onClear: _endDate != null
+              ? () {
+                  setState(() => _endDate = null);
+                  _fetchHistory();
+                }
+              : null,
+        ),
+        // Type dropdown
+        _TypeDropdown(
+          value: _category,
+          onChanged: (v) {
+            setState(() => _category = v);
+            _fetchHistory();
+          },
+        ),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-      child: Row(
-        children: [
-          Text(
-            'Points History',
-            style: AppTextStyles.sectionTitle(),
-          ),
-          const Spacer(),
-          // From date
-          _DateChip(
-            label: _startDate != null
-                ? AppDateFormatter.short(_startDate)
-                : 'mm/dd/yyyy',
-            isSet: _startDate != null,
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _startDate ?? DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (d != null) {
-                setState(() => _startDate = d);
-                _fetchHistory();
-              }
-            },
-            onClear: _startDate != null
-                ? () {
-                    setState(() => _startDate = null);
-                    _fetchHistory();
-                  }
-                : null,
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text('to',
-                style: AppTextStyles.small(color: Colors.grey.shade500)),
-          ),
-          // To date
-          _DateChip(
-            label: _endDate != null
-                ? AppDateFormatter.short(_endDate)
-                : 'mm/dd/yyyy',
-            isSet: _endDate != null,
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _endDate ?? DateTime.now(),
-                firstDate: _startDate ?? DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (d != null) {
-                setState(() => _endDate = d);
-                _fetchHistory();
-              }
-            },
-            onClear: _endDate != null
-                ? () {
-                    setState(() => _endDate = null);
-                    _fetchHistory();
-                  }
-                : null,
-          ),
-          const SizedBox(width: 10),
-          // Type dropdown
-          _TypeDropdown(
-            value: _category,
-            onChanged: (v) {
-              setState(() => _category = v);
-              _fetchHistory();
-            },
-          ),
-        ],
-      ),
+      child: mobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Points History', style: AppTextStyles.sectionTitle()),
+                const SizedBox(height: 12),
+                filters,
+              ],
+            )
+          : Row(
+              children: [
+                Text('Points History', style: AppTextStyles.sectionTitle()),
+                const Spacer(),
+                filters,
+              ],
+            ),
     );
   }
 
@@ -258,15 +287,27 @@ class _PointsPageState extends State<PointsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       color: Colors.grey.shade50,
-      child: Row(
+      child: _buildTableRowLayout(
         children: [
-          Expanded(flex: 2, child: _hdr('DATE')),
-          Expanded(flex: 4, child: _hdr('DESCRIPTION')),
-          Expanded(flex: 2, child: _hdr('TYPE')),
-          Expanded(flex: 2, child: _hdr('POINTS')),
-          const SizedBox(width: 28),
+          _hdr('DATE'),
+          _hdr('DESCRIPTION'),
+          _hdr('TYPE'),
+          _hdr('POINTS'),
         ],
       ),
+    );
+  }
+
+  /// Shared flex-based row layout for table header & data rows.
+  Widget _buildTableRowLayout({required List<Widget> children}) {
+    return Row(
+      children: [
+        Expanded(flex: 2, child: children[0]),
+        Expanded(flex: 4, child: children[1]),
+        Expanded(flex: 2, child: children[2]),
+        Expanded(flex: 2, child: children[3]),
+        const SizedBox(width: 28),
+      ],
     );
   }
 

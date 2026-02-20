@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../domain/entities/analytics_entity.dart';
@@ -93,7 +94,10 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
           final data = state.data;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.pagePadding(context),
+              vertical: Responsive.pagePadding(context),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -103,29 +107,45 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                 const SizedBox(height: 20),
                 _buildTrendsSection(theme, data),
                 const SizedBox(height: 20),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildLeaderboard(
-                        theme: theme,
-                        title: 'Top Recognizers',
-                        subtitle: 'People who give the most recognition',
-                        items: data?.topRecognizers ?? [],
-                        emptyIcon: Icons.volunteer_activism_rounded,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: _buildLeaderboard(
-                        theme: theme,
-                        title: 'Most Recognized',
-                        subtitle: 'People who receive the most recognition',
-                        items: data?.topRecognized ?? [],
-                        emptyIcon: Icons.emoji_events_rounded,
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 768;
+
+                    final recognizersBoard = _buildLeaderboard(
+                      theme: theme,
+                      title: 'Top Recognizers',
+                      subtitle: 'People who give the most recognition',
+                      items: data?.topRecognizers ?? [],
+                      emptyIcon: Icons.volunteer_activism_rounded,
+                    );
+
+                    final recognizedBoard = _buildLeaderboard(
+                      theme: theme,
+                      title: 'Most Recognized',
+                      subtitle: 'People who receive the most recognition',
+                      items: data?.topRecognized ?? [],
+                      emptyIcon: Icons.emoji_events_rounded,
+                    );
+
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: recognizersBoard),
+                          const SizedBox(width: 20),
+                          Expanded(child: recognizedBoard),
+                        ],
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        recognizersBoard,
+                        const SizedBox(height: 20),
+                        recognizedBoard,
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -145,31 +165,30 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
             ? 'Department'
             : 'Team';
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ScopeChip(
           label: 'Organization',
           isActive: _activeScope == 'ORG',
           onTap: () => _changeScope('ORG'),
         ),
-        const SizedBox(width: 8),
         _ScopeChip(
           label: 'Department',
           isActive: _activeScope == 'DEPARTMENT',
           onTap: () => _changeScope('DEPARTMENT'),
         ),
-        const SizedBox(width: 8),
         _ScopeChip(
           label: 'Team',
           isActive: _activeScope == 'TEAM',
           onTap: () => _changeScope('TEAM'),
         ),
-        const Spacer(),
         Text(
           scopeLabel,
           style: AppTextStyles.small(color: Colors.grey.shade400),
         ),
-        const SizedBox(width: 12),
         _buildRefreshButton(theme),
       ],
     );
@@ -199,36 +218,72 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
   // METRIC CARDS
   // ───────────────────────────────────────────────────────────────
   Widget _buildMetricCards(ThemeData theme, AnalyticsEntity? data) {
-    return Row(
-      children: [
-        _MetricCard(
-          label: 'Recognitions',
-          value: _fmt(data?.totalRecognitions ?? 0),
-          icon: Icons.workspace_premium_rounded,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(width: 16),
-        _MetricCard(
-          label: 'Points Distributed',
-          value: _fmt(data?.totalPointsDistributed ?? 0),
-          icon: Icons.toll_rounded,
-          color: const Color(0xFF0D9488),
-        ),
-        const SizedBox(width: 16),
-        _MetricCard(
-          label: 'Engagement',
-          value: '${(data?.engagementRate ?? 0).toStringAsFixed(0)}%',
-          icon: Icons.show_chart_rounded,
-          color: const Color(0xFF7C3AED),
-        ),
-        const SizedBox(width: 16),
-        _MetricCard(
-          label: 'Active Users',
-          value: _fmt(data?.userCount ?? 0),
-          icon: Icons.people_outline_rounded,
-          color: const Color(0xFFD97706),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+        final cards = [
+          _MetricCard(
+            label: 'Recognitions',
+            value: _fmt(data?.totalRecognitions ?? 0),
+            icon: Icons.workspace_premium_rounded,
+            color: theme.colorScheme.primary,
+          ),
+          _MetricCard(
+            label: 'Points Distributed',
+            value: _fmt(data?.totalPointsDistributed ?? 0),
+            icon: Icons.toll_rounded,
+            color: const Color(0xFF0D9488),
+          ),
+          _MetricCard(
+            label: 'Engagement',
+            value: '${(data?.engagementRate ?? 0).toStringAsFixed(0)}%',
+            icon: Icons.show_chart_rounded,
+            color: const Color(0xFF7C3AED),
+          ),
+          _MetricCard(
+            label: 'Active Users',
+            value: _fmt(data?.userCount ?? 0),
+            icon: Icons.people_outline_rounded,
+            color: const Color(0xFFD97706),
+          ),
+        ];
+
+        if (isNarrow) {
+          // 2×2 grid on narrow screens
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: 12),
+                  Expanded(child: cards[1]),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: cards[2]),
+                  const SizedBox(width: 12),
+                  Expanded(child: cards[3]),
+                ],
+              ),
+            ],
+          );
+        }
+
+        // 4 in a row on wide screens
+        return Row(
+          children: [
+            Expanded(child: cards[0]),
+            const SizedBox(width: 16),
+            Expanded(child: cards[1]),
+            const SizedBox(width: 16),
+            Expanded(child: cards[2]),
+            const SizedBox(width: 16),
+            Expanded(child: cards[3]),
+          ],
+        );
+      },
     );
   }
 
@@ -319,7 +374,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: primary.withOpacity(0.08),
+                        color: primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
@@ -349,8 +404,9 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                               minHeight: 3,
                               backgroundColor: Colors.grey.shade100,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                primary.withOpacity(0.25 +
-                                    (count / math.max(maxCount, 1)) * 0.6),
+                                primary.withValues(
+                                    alpha: 0.25 +
+                                        (count / math.max(maxCount, 1)) * 0.6),
                               ),
                             ),
                           ),
@@ -469,42 +525,40 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFEEEEEE)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade500,
-                          letterSpacing: 0.2)),
-                  const SizedBox(height: 8),
-                  Text(value, style: AppTextStyles.headline2()),
-                ],
-              ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 0.2)),
+                const SizedBox(height: 8),
+                Text(value, style: AppTextStyles.headline2()),
+              ],
             ),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: color),
+          ),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-        ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -82,7 +83,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
           }
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(Responsive.pagePadding(context)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -133,6 +134,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                   children: [
                     TabBar(
                       controller: _tabController,
+                      isScrollable: Responsive.isMobile(context),
+                      tabAlignment: Responsive.isMobile(context)
+                          ? TabAlignment.start
+                          : TabAlignment.fill,
                       labelColor: theme.colorScheme.primary,
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: theme.colorScheme.primary,
@@ -176,7 +181,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                                 .toList();
 
                         return SizedBox(
-                          height: 520,
+                          height: MediaQuery.of(context).size.height * 0.6,
                           child: TabBarView(
                             controller: _tabController,
                             children: [

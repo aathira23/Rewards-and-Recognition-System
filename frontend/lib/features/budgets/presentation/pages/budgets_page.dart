@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../../../../injection_container.dart';
 import '../bloc/budget_bloc.dart';
@@ -79,7 +80,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(Responsive.pagePadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -101,31 +102,32 @@ class _BudgetsViewState extends State<_BudgetsView> {
                   ),
                   child: state.isLoading
                       ? const Center(
-                          child:
-                              CircularProgressIndicator(color: Colors.white))
+                          child: CircularProgressIndicator(color: Colors.white))
                       : Row(
                           children: [
                             const Icon(Icons.account_balance_wallet,
                                 color: Colors.white, size: 36),
                             const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isHR
-                                      ? 'Manager Wallet Overview'
-                                      : 'My Budget Wallet',
-                                  style:
-                                      AppTextStyles.body(color: Colors.white70),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${state.wallet?.balance ?? 0} pts',
-                                  style: AppTextStyles.displayMedium(
-                                    color: Colors.white,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isHR
+                                        ? 'Manager Wallet Overview'
+                                        : 'My Budget Wallet',
+                                    style: AppTextStyles.body(
+                                        color: Colors.white70),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${state.wallet?.balance ?? 0} pts',
+                                    style: AppTextStyles.displayMedium(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -153,7 +155,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
                           ],
                         ),
                         SizedBox(
-                          height: 500, // Increased height for dropdowns
+                          height: MediaQuery.of(context).size.height * 0.55,
                           child: TabBarView(
                             children: [
                               if (isHR) _buildAllocateTab(context, state),
@@ -298,7 +300,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 8),
         DropdownButtonFormField<int>(
-          value: selectedId,
+          initialValue: selectedId,
           isExpanded: true,
           decoration: InputDecoration(
             filled: true,

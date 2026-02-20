@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
@@ -272,7 +273,7 @@ class _ReportsViewState extends State<_ReportsView> {
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildGrid() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(Responsive.pagePadding(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -282,13 +283,17 @@ class _ReportsViewState extends State<_ReportsView> {
                 'Generate, filter and export detailed organizational reports',
           ),
           LayoutBuilder(builder: (ctx, constraints) {
-            final cardWidth = (constraints.maxWidth - 40) / 3;
+            final w = constraints.maxWidth;
+            // desktop ≥1100 → 3 cols, tablet ≥600 → 2 cols, mobile → 1 col
+            final cols = w >= 1100 ? 3 : (w >= 600 ? 2 : 1);
+            final spacing = 20.0;
+            final cardWidth = (w - spacing * (cols - 1)) / cols;
             return Wrap(
-              spacing: 20,
+              spacing: spacing,
               runSpacing: 20,
               children: _ReportType.values.map((t) {
                 return SizedBox(
-                  width: cardWidth.clamp(260, 500),
+                  width: cardWidth.clamp(260, 600),
                   child: _ReportCard(type: t, onTap: () => _fetchReport(t)),
                 );
               }).toList(),
@@ -308,7 +313,7 @@ class _ReportsViewState extends State<_ReportsView> {
     final theme = Theme.of(context);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(Responsive.pagePadding(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -343,41 +348,76 @@ class _ReportsViewState extends State<_ReportsView> {
           const SizedBox(height: 20),
 
           // ── title + actions ──
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: type.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(type.icon, color: type.color, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(type.title, style: AppTextStyles.sectionHeader()),
-                    const SizedBox(height: 2),
-                    Text(type.subtitle,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500)),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 600;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: type.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(type.icon, color: type.color, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(type.title,
+                                style: AppTextStyles.sectionHeader()),
+                            const SizedBox(height: 2),
+                            Text(type.subtitle,
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey.shade500)),
+                          ],
+                        ),
+                      ),
+                      if (!narrow) ...[
+                        OutlinedButton.icon(
+                          onPressed: () => _fetchReport(type),
+                          icon: const Icon(Icons.refresh, size: 15),
+                          label: const Text('Refresh'),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: data.isNotEmpty ? _exportCsv : null,
+                          icon: const Icon(Icons.download_rounded, size: 15),
+                          label: const Text('Export CSV'),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (narrow) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _fetchReport(type),
+                            icon: const Icon(Icons.refresh, size: 15),
+                            label: const Text('Refresh'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: data.isNotEmpty ? _exportCsv : null,
+                            icon: const Icon(Icons.download_rounded, size: 15),
+                            label: const Text('Export CSV'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _fetchReport(type),
-                icon: const Icon(Icons.refresh, size: 15),
-                label: const Text('Refresh'),
-              ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: data.isNotEmpty ? _exportCsv : null,
-                icon: const Icon(Icons.download_rounded, size: 15),
-                label: const Text('Export CSV'),
-              ),
-            ],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 20),
 
@@ -437,11 +477,13 @@ class _ReportsViewState extends State<_ReportsView> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 10,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Icon(Icons.filter_list_rounded,
               size: 18, color: Colors.grey.shade500),
-          const SizedBox(width: 12),
 
           // Date range
           if (type.hasDateFilter) ...[
@@ -496,7 +538,6 @@ class _ReportsViewState extends State<_ReportsView> {
                     }
                   : null,
             ),
-            const SizedBox(width: 16),
           ],
 
           // Department filter
@@ -535,7 +576,6 @@ class _ReportsViewState extends State<_ReportsView> {
                 ),
               ),
             ),
-            const SizedBox(width: 16),
           ],
 
           // Expiry forecast days selector
@@ -604,7 +644,6 @@ class _ReportsViewState extends State<_ReportsView> {
             ),
           ],
 
-          const Spacer(),
           Text('${data.length} records',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
         ],
@@ -618,39 +657,61 @@ class _ReportsViewState extends State<_ReportsView> {
   Widget _buildSummary(
       _ReportType type, List<Map<String, dynamic>> data, ThemeData theme) {
     final stats = _computeStats(type, data);
-    return Row(
-      children: stats
-          .map((s) => Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 14),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: s.color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(s.icon, size: 16, color: s.color),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(s.value, style: AppTextStyles.headline2()),
-                      const SizedBox(height: 3),
-                      Text(s.label,
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade500)),
-                    ],
-                  ),
-                ),
-              ))
-          .toList(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        if (isMobile) {
+          // 2-column grid on mobile
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: stats
+                .map((s) => SizedBox(
+                      width: (constraints.maxWidth - 12) / 2,
+                      child: _buildStatCard(s, theme),
+                    ))
+                .toList(),
+          );
+        }
+        return Row(
+          children: stats
+              .map((s) => Expanded(
+                      child: Padding(
+                    padding: const EdgeInsets.only(right: 14),
+                    child: _buildStatCard(s, theme),
+                  )))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(_Stat s, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: s.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(s.icon, size: 16, color: s.color),
+          ),
+          const SizedBox(height: 10),
+          Text(s.value, style: AppTextStyles.headline2()),
+          const SizedBox(height: 3),
+          Text(s.label,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        ],
+      ),
     );
   }
 
@@ -820,6 +881,52 @@ class _ReportsViewState extends State<_ReportsView> {
     final cols = type.columns;
     const maxRows = 100;
     final rows = data.take(maxRows).toList();
+    final isMobile = Responsive.isMobile(context);
+    // On mobile each column gets a fixed pixel width so the Row inside the
+    // horizontal scroll view has bounded constraints (Expanded requires bounded).
+    const double colUnit = 90.0;
+
+    Column buildContent(bool scrollable) {
+      Widget headerCell(_ColDef c) {
+        final text = Text(
+          c.label.toUpperCase(),
+          style: AppTextStyles.captionStrong(color: Colors.grey.shade500),
+        );
+        return scrollable
+            ? SizedBox(width: c.flex * colUnit, child: text)
+            : Expanded(flex: c.flex, child: text);
+      }
+
+      Widget dataCell(_ColDef c, Map<String, dynamic> row) {
+        final cell = Align(
+          alignment: Alignment.centerLeft,
+          child: _renderCell(c.key, row[c.key], type),
+        );
+        return scrollable
+            ? SizedBox(width: c.flex * colUnit, child: cell)
+            : Expanded(flex: c.flex, child: cell);
+      }
+
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(color: Colors.grey.shade50),
+            child: Row(children: cols.map(headerCell).toList()),
+          ),
+          const Divider(height: 1),
+          ...rows.map((row) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                decoration: BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: Colors.grey.shade100))),
+                child:
+                    Row(children: cols.map((c) => dataCell(c, row)).toList()),
+              )),
+        ],
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -827,51 +934,16 @@ class _ReportsViewState extends State<_ReportsView> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(10)),
-            ),
-            child: Row(
-              children: cols
-                  .map((c) => Expanded(
-                        flex: c.flex,
-                        child: Text(
-                          c.label.toUpperCase(),
-                          style: AppTextStyles.captionStrong(
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          const Divider(height: 1),
-          // Rows
-          ...rows.map((row) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-              ),
-              child: Row(
-                children: cols
-                    .map((c) => Expanded(
-                          flex: c.flex,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: _renderCell(c.key, row[c.key], type),
-                          ),
-                        ))
-                    .toList(),
-              ),
-            );
-          }),
+          if (isMobile)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: buildContent(true),
+            )
+          else
+            buildContent(false),
           // Footer
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

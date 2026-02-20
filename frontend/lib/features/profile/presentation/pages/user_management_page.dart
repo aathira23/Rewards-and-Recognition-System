@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
@@ -47,7 +48,7 @@ class _UserManagementView extends StatelessWidget {
         },
         builder: (context, state) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(Responsive.pagePadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -95,42 +96,53 @@ class _UserManagementView extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: DataTable(
-                        headingRowColor:
-                            WidgetStatePropertyAll(Colors.grey.shade50),
-                        columns: const [
-                          DataColumn(label: Text('Name')),
-                          DataColumn(label: Text('Email')),
-                          DataColumn(label: Text('Role')),
-                          DataColumn(label: Text('Department')),
-                          DataColumn(label: Text('Actions')),
-                        ],
-                        rows: state.users.map((user) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(user['name'] ?? '',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w500))),
-                              DataCell(Text(user['email'] ?? '',
-                                  style: AppTextStyles.body(
-                                      color: Colors.grey.shade600))),
-                              DataCell(_buildRoleBadge(user['role'] ?? '')),
-                              DataCell(Text(
-                                  user['department']?['name'] ?? 'Unassigned',
-                                  style: AppTextStyles.body(
-                                      color: Colors.grey.shade600))),
-                              DataCell(
-                                IconButton(
-                                  icon: Icon(Icons.edit,
-                                      size: 18,
-                                      color: theme.colorScheme.primary),
-                                  onPressed: () =>
-                                      _showEditUserDialog(context, user),
-                                ),
-                              ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: MediaQuery.of(context).size.width -
+                                (Responsive.showSidebar(context) ? 260 : 0) -
+                                Responsive.pagePadding(context) * 2,
+                          ),
+                          child: DataTable(
+                            headingRowColor:
+                                WidgetStatePropertyAll(Colors.grey.shade50),
+                            columns: const [
+                              DataColumn(label: Text('Name')),
+                              DataColumn(label: Text('Email')),
+                              DataColumn(label: Text('Role')),
+                              DataColumn(label: Text('Department')),
+                              DataColumn(label: Text('Actions')),
                             ],
-                          );
-                        }).toList(),
+                            rows: state.users.map((user) {
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text(user['name'] ?? '',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w500))),
+                                  DataCell(Text(user['email'] ?? '',
+                                      style: AppTextStyles.body(
+                                          color: Colors.grey.shade600))),
+                                  DataCell(_buildRoleBadge(user['role'] ?? '')),
+                                  DataCell(Text(
+                                      user['department']?['name'] ??
+                                          'Unassigned',
+                                      style: AppTextStyles.body(
+                                          color: Colors.grey.shade600))),
+                                  DataCell(
+                                    IconButton(
+                                      icon: Icon(Icons.edit,
+                                          size: 18,
+                                          color: theme.colorScheme.primary),
+                                      onPressed: () =>
+                                          _showEditUserDialog(context, user),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
                       ),
                     ),
                   ),

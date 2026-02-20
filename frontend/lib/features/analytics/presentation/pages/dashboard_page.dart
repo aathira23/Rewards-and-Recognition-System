@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:rr_frontend/features/auth/presentation/bloc/auth_state.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';

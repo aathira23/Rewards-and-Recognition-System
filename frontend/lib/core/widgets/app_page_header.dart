@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/responsive.dart';
 
 /// A standardized header used at the top of main pages.
 class AppPageHeader extends StatelessWidget {
@@ -16,32 +17,48 @@ class AppPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.pageTitle()),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle!,
-                      style: AppTextStyles.body(color: Colors.grey.shade500),
-                    ),
-                  ],
-                ],
-              ),
+        if (isMobile && action != null) ...[
+          // Mobile: stack title + action vertically
+          Text(title, style: AppTextStyles.pageTitle()),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle!,
+              style: AppTextStyles.body(color: Colors.grey.shade500),
             ),
-            if (action != null) ...[
-              const SizedBox(width: 16),
-              action!,
-            ],
           ],
-        ),
+          const SizedBox(height: 12),
+          action!,
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTextStyles.pageTitle()),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: AppTextStyles.body(color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (action != null) ...[
+                const SizedBox(width: 16),
+                action!,
+              ],
+            ],
+          ),
+        ],
         const SizedBox(height: 24),
       ],
     );
