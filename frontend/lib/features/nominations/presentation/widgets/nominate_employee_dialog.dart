@@ -14,12 +14,14 @@ class NominateEmployeeDialog extends StatefulWidget {
   final List<AwardTypeEntity> awardTypes;
   final List<UserEntity> users;
   final NominationsBloc bloc;
+  final UserEntity? currentUser;
 
   const NominateEmployeeDialog({
     super.key,
     required this.awardTypes,
     required this.users,
     required this.bloc,
+    this.currentUser,
   });
 
   @override
@@ -45,9 +47,56 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     super.dispose();
   }
 
+  List<AwardTypeEntity> get _allowedAwardTypes {
+    if (widget.currentUser == null) return [];
+    return widget.awardTypes.where((type) {
+      final rule = type.eligibilityRule.toUpperCase();
+      final role = widget.currentUser!.role.toUpperCase();
+
+      if (rule == 'PEER') return true;
+
+      if (rule == 'MANAGER_ONLY') {
+        return role == 'MANAGER' ||
+            role == 'DEPT_HEAD' ||
+            role == 'HR' ||
+            role == 'ADMIN';
+      }
+
+      if (rule == 'SENIOR_MGMT') {
+        return role == 'DEPT_HEAD' || role == 'HR' || role == 'ADMIN';
+      }
+
+      return true;
+    }).toList();
+  }
+
   List<UserEntity> get _filteredUsers {
-    if (_searchQuery.isEmpty) return widget.users;
-    return widget.users
+    if (widget.currentUser == null) return [];
+
+    final myId = widget.currentUser!.id;
+    final myRole = widget.currentUser!.role.toUpperCase();
+    final myDeptId = widget.currentUser!.departmentId;
+
+    // 1. Filter based on role/eligibility
+    Iterable<UserEntity> list = widget.users.where((u) => u.id != myId);
+
+    if (myRole == 'MANAGER') {
+      // Managers can only nominate direct reports
+      list = list.where((u) => u.managerId == myId);
+    } else if (myRole == 'DEPT_HEAD') {
+      // Dept Heads can only nominate employees within their department
+      if (myDeptId != null) {
+        list = list.where((u) => u.departmentId == myDeptId);
+      }
+    } else if (myRole == 'EMPLOYEE') {
+      // Employees can only nominate other Employees (true Peer-to-Peer)
+      list = list.where((u) => u.role.toUpperCase() == 'EMPLOYEE');
+    }
+    // HR and ADMIN can nominate anyone (except self)
+
+    // 2. Filter by search query
+    if (_searchQuery.isEmpty) return list.toList();
+    return list
         .where((u) =>
             u.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             u.email.toLowerCase().contains(_searchQuery.toLowerCase()))
@@ -169,7 +218,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 12),
-          ...widget.awardTypes
+          ..._allowedAwardTypes
               .map((type) => _buildAwardTypeCard(theme, type))
               .toList(),
         ],

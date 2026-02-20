@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/constants/api_constants.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../../../injection_container.dart';
-import '../../../profile/domain/entities/user_entity.dart';
-import '../../../profile/domain/usecases/get_me_usecase.dart';
-import '../../../profile/domain/usecases/get_users_usecase.dart';
+import '../../../budgets/presentation/bloc/budget_bloc.dart';
+import '../../../budgets/presentation/bloc/budget_event.dart';
+import '../../../budgets/presentation/bloc/budget_state.dart';
 import '../../domain/entities/points_summary_entity.dart';
 
 /// Wallet card with a toggle between "My Points" and "Manager Wallet".
@@ -27,57 +24,18 @@ class PointsSummaryCard extends StatefulWidget {
 
 class _PointsSummaryCardState extends State<PointsSummaryCard> {
   bool _showManagerWallet = false;
-  bool _loadingManager = false;
-  Map<String, dynamic>? _managerWallet;
-  List<UserEntity>? _users;
-  UserEntity? _currentUser;
-  String? _managerError;
-  int? _selectedEmployeeId;
 
   bool get _canToggle {
     final r = widget.userRole.toUpperCase();
     return r == 'MANAGER' || r == 'DEPT_HEAD' || r == 'HR' || r == 'ADMIN';
   }
 
-  Future<void> _loadManagerWallet() async {
-    if (_managerWallet != null) return; // already loaded
-    setState(() => _loadingManager = true);
-    try {
-      final client = sl<ApiClient>();
-      final res = await client.get(ApiConstants.managerWallet);
-      if (res.statusCode == 200) {
-        setState(() {
-          _managerWallet = res.data['data'];
-        });
-      }
-
-      // Also fetch users for the dropdown
-      final getUsers = sl<GetUsersUseCase>();
-      final usersResult = await getUsers(NoParams());
-      usersResult.fold(
-        (failure) => _managerError = failure.message,
-        (users) => setState(() => _users = users),
-      );
-
-      // Fetch current user to get department filtering info
-      final getMe = sl<GetMeUseCase>();
-      final meResult = await getMe(NoParams());
-      meResult.fold(
-        (failure) => _managerError = failure.message,
-        (user) => setState(() => _currentUser = user),
-      );
-    } catch (e) {
-      setState(() {
-        _managerError = e.toString();
-      });
-    } finally {
-      if (mounted) setState(() => _loadingManager = false);
-    }
-  }
-
   void _toggle(bool toManager) {
-    if (toManager && _managerWallet == null && _managerError == null) {
-      _loadManagerWallet();
+    if (toManager) {
+      final bloc = context.read<BudgetBloc>();
+      bloc.add(LoadBudgetWallet());
+      bloc.add(LoadBudgetUsers());
+      bloc.add(LoadCurrentUser());
     }
     setState(() => _showManagerWallet = toManager);
   }
@@ -92,77 +50,96 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
     final isManager = _showManagerWallet;
     final grad = isManager ? _managerGrad : _personalGrad;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: grad,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: grad.first.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    return BlocListener<BudgetBloc, BudgetState>(
+      listenWhen: (prev, curr) =>
+          prev.successMessage != curr.successMessage ||
+          prev.error != curr.error,
+      listener: (context, budgetState) {
+        if (budgetState.successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(budgetState.successMessage!),
+            backgroundColor: Colors.green,
+          ));
+        }
+        if (budgetState.error != null && budgetState.wallet != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(budgetState.error!),
+            backgroundColor: Colors.red,
+          ));
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: grad,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ─── Header row: title + toggle ───
-            Row(
-              children: [
-                Icon(
-                  isManager
-                      ? Icons.savings_rounded
-                      : Icons.account_balance_wallet_outlined,
-                  color: Colors.white,
-                  size: 26,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  isManager ? 'Manager Wallet' : 'Points Wallet',
-                  style: AppTextStyles.label(
-                    color: Colors.white,
-                  ),
-                ),
-                const Spacer(),
-                if (_canToggle) _buildToggle(isManager),
-              ],
-            ),
-            const SizedBox(height: 18),
-
-            // ─── Animated switcher between wallet contents ───
-            // Fixed height prevents the card from resizing during transition.
-            SizedBox(
-              height: 168,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 320),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.04, 0),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
-                  ),
-                ),
-                child: isManager
-                    ? _managerContent(key: const ValueKey('mgr'))
-                    : _personalContent(key: const ValueKey('personal')),
-              ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: grad.first.withValues(alpha: 0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ─── Header row: title + toggle ───
+              Row(
+                children: [
+                  Icon(
+                    isManager
+                        ? Icons.savings_rounded
+                        : Icons.account_balance_wallet_outlined,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    isManager ? 'Manager Wallet' : 'Points Wallet',
+                    style: AppTextStyles.label(
+                      color: Colors.white,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_canToggle) _buildToggle(isManager),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // ─── Animated switcher between wallet contents ───
+              // Fixed height prevents the card from resizing during transition.
+              SizedBox(
+                height: 168,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.04, 0),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
+                    ),
+                  ),
+                  child: isManager
+                      ? _managerContent(key: const ValueKey('mgr'))
+                      : _personalContent(key: const ValueKey('personal')),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -262,9 +239,13 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                         Icons.shopping_bag_outlined),
                   ),
                   Expanded(
-                    child: _stat('Expiring Soon', s.pendingCount.toString(),
+                    child: _stat(
+                        'Expiring Soon',
+                        (s.expiringToday + s.expiringThisMonth).toString(),
                         Icons.timer_outlined,
-                        sub: 'this quarter'),
+                        sub: s.expiringToday > 0
+                            ? '${s.expiringToday} exp today'
+                            : 'rest of month'),
                   ),
                 ],
               ),
@@ -278,91 +259,91 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   // ─── Manager wallet content ───
 
   Widget _managerContent({Key? key}) {
-    if (_loadingManager) {
-      return SizedBox(
-        key: key,
-        width: double.infinity,
-        child: const Center(
-          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-        ),
-      );
-    }
+    return BlocBuilder<BudgetBloc, BudgetState>(
+      builder: (context, budgetState) {
+        if (budgetState.isLoading && budgetState.wallet == null) {
+          return SizedBox(
+            key: key,
+            width: double.infinity,
+            child: const Center(
+              child: CircularProgressIndicator(
+                  color: Colors.white, strokeWidth: 2),
+            ),
+          );
+        }
 
-    if (_managerError != null) {
-      return SizedBox(
-        key: key,
-        width: double.infinity,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white60, size: 28),
-              const SizedBox(height: 8),
-              Text('Could not load budget',
-                  style: AppTextStyles.body(color: Colors.white60)),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () {
-                  _managerError = null;
-                  _managerWallet = null;
-                  _loadManagerWallet();
-                },
-                child: Text('Tap to retry',
-                    style: AppTextStyles.small(
-                      color: Colors.white,
-                    )),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final w = _managerWallet ?? {};
-    final balance = w['balance'] ?? 0;
-
-    return SizedBox(
-      key: key,
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        if (budgetState.error != null && budgetState.wallet == null) {
+          return SizedBox(
+            key: key,
+            width: double.infinity,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    balance.toString(),
-                    style: AppTextStyles.displayLarge(
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    'pts available to reward',
-                    style: AppTextStyles.body(color: Colors.white70),
+                  const Icon(Icons.error_outline,
+                      color: Colors.white60, size: 28),
+                  const SizedBox(height: 8),
+                  Text('Could not load budget',
+                      style: AppTextStyles.body(color: Colors.white60)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () =>
+                        context.read<BudgetBloc>().add(LoadBudgetWallet()),
+                    child: Text('Tap to retry',
+                        style: AppTextStyles.small(color: Colors.white)),
                   ),
                 ],
               ),
-              const Spacer(),
-              _rewardButton(),
-            ],
-          ),
-          Column(
+            ),
+          );
+        }
+
+        final balance = budgetState.wallet?.balance ?? 0;
+
+        return SizedBox(
+          key: key,
+          width: double.infinity,
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Divider(color: Colors.white24, height: 1),
-              const SizedBox(height: 10),
-              Text(
-                'Use your budget to reward team members directly from this wallet.',
-                style: AppTextStyles.small(color: Colors.white60),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        balance.toString(),
+                        style: AppTextStyles.displayLarge(
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'pts available to reward',
+                        style: AppTextStyles.body(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  _rewardButton(),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(color: Colors.white24, height: 1),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Use your budget to reward team members directly from this wallet.',
+                    style: AppTextStyles.small(color: Colors.white60),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -397,117 +378,101 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   }
 
   void _showRewardDialog(BuildContext context) {
-    final employeeIdCtl = TextEditingController();
+    final budgetBloc = context.read<BudgetBloc>();
+    final budgetState = budgetBloc.state;
+    final users = budgetState.users;
+    final currentUser = budgetState.currentUser;
+    int? selectedEmployeeId;
     final pointsCtl = TextEditingController();
     final reasonCtl = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.card_giftcard_rounded,
-                color: Theme.of(context).colorScheme.primary, size: 22),
-            const SizedBox(width: 10),
-            const Text('Reward Employee'),
-          ],
-        ),
-        content: SizedBox(
-          width: 380,
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_users == null || _currentUser == null)
-                  const Text('Loading users...',
-                      style: TextStyle(fontSize: 12, color: Colors.grey))
-                else
-                  DropdownButtonFormField<int>(
-                    value: _selectedEmployeeId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Select Employee',
-                      filled: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.card_giftcard_rounded,
+                  color: Theme.of(context).colorScheme.primary, size: 22),
+              const SizedBox(width: 10),
+              const Text('Reward Employee'),
+            ],
+          ),
+          content: SizedBox(
+            width: 380,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (users.isEmpty || currentUser == null)
+                    const Text('Loading users...',
+                        style: TextStyle(fontSize: 12, color: Colors.grey))
+                  else
+                    DropdownButtonFormField<int>(
+                      value: selectedEmployeeId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Employee',
+                        filled: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      hint: const Text('Search or select employee'),
+                      items: users.where((u) {
+                        final role = currentUser.role.toUpperCase();
+                        if (role == 'HR' || role == 'ADMIN') return true;
+                        return u.departmentId == currentUser.departmentId;
+                      }).map((user) {
+                        return DropdownMenuItem<int>(
+                          value: user.id,
+                          child: Text(user.name),
+                        );
+                      }).toList(),
+                      onChanged: (val) =>
+                          setDialogState(() => selectedEmployeeId = val),
+                      validator: (v) => v == null ? 'Required' : null,
                     ),
-                    hint: const Text('Search or select employee'),
-                    items: _users!.where((u) {
-                      final role = _currentUser!.role.toUpperCase();
-                      if (role == 'HR' || role == 'ADMIN') return true;
-                      // Manager and Dept Head only see their department
-                      return u.departmentId == _currentUser!.departmentId;
-                    }).map((user) {
-                      return DropdownMenuItem<int>(
-                        value: user.id,
-                        child: Text(user.name),
-                      );
-                    }).toList(),
-                    onChanged: (val) =>
-                        setState(() => _selectedEmployeeId = val),
-                    validator: (v) => v == null ? 'Required' : null,
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: pointsCtl,
+                    decoration: const InputDecoration(labelText: 'Points'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                   ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: pointsCtl,
-                  decoration: const InputDecoration(labelText: 'Points'),
-                  keyboardType: TextInputType.number,
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: reasonCtl,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  maxLines: 2,
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: reasonCtl,
+                    decoration: const InputDecoration(labelText: 'Reason'),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.pop(ctx);
+                budgetBloc.add(RewardFromBudget(
+                  employeeId: selectedEmployeeId ?? 0,
+                  points: int.tryParse(pointsCtl.text) ?? 0,
+                  reason: reasonCtl.text,
+                ));
+              },
+              child: const Text('Send Reward'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-              Navigator.pop(ctx);
-              try {
-                final client = sl<ApiClient>();
-                await client.post(ApiConstants.managerReward, data: {
-                  'employee_id': _selectedEmployeeId ?? 0,
-                  'points': int.tryParse(pointsCtl.text) ?? 0,
-                  'reason': reasonCtl.text,
-                });
-                // Refresh manager wallet
-                _managerWallet = null;
-                _loadManagerWallet();
-                setState(() => _selectedEmployeeId = null);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Employee rewarded successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            child: const Text('Send Reward'),
-          ),
-        ],
       ),
     );
   }

@@ -12,6 +12,8 @@ class NominationsState extends Equatable {
   final List<UserEntity> users;
   final String? errorMessage;
   final String? successMessage;
+  final List<Map<String, dynamic>> approvalHistory;
+  final bool historyLoading;
 
   const NominationsState({
     this.status = NominationsStatus.initial,
@@ -20,6 +22,8 @@ class NominationsState extends Equatable {
     this.users = const [],
     this.errorMessage,
     this.successMessage,
+    this.approvalHistory = const [],
+    this.historyLoading = false,
   });
 
   NominationsState copyWith({
@@ -29,6 +33,8 @@ class NominationsState extends Equatable {
     List<UserEntity>? users,
     String? errorMessage,
     String? successMessage,
+    List<Map<String, dynamic>>? approvalHistory,
+    bool? historyLoading,
   }) {
     return NominationsState(
       status: status ?? this.status,
@@ -37,10 +43,20 @@ class NominationsState extends Equatable {
       users: users ?? this.users,
       errorMessage: errorMessage,
       successMessage: successMessage,
+      approvalHistory: approvalHistory ?? this.approvalHistory,
+      historyLoading: historyLoading ?? this.historyLoading,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, nominations, awardTypes, users, errorMessage, successMessage];
+  List<Object?> get props => [
+        status,
+        nominations,
+        awardTypes,
+        users,
+        errorMessage,
+        successMessage,
+        approvalHistory,
+        historyLoading,
+      ];
 }

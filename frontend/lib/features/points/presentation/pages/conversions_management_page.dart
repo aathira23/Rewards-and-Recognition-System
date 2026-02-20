@@ -1,74 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../core/widgets/action_buttons.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../bloc/conversions_mgmt_bloc.dart';
+import '../bloc/conversions_mgmt_event.dart';
+import '../bloc/conversions_mgmt_state.dart';
 
-class ConversionsManagementPage extends StatefulWidget {
+class ConversionsManagementPage extends StatelessWidget {
   const ConversionsManagementPage({super.key});
 
   @override
-  State<ConversionsManagementPage> createState() =>
-      _ConversionsManagementPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ConversionsMgmtBloc>()..add(LoadPendingConversions()),
+      child: const _ConversionsManagementView(),
+    );
+  }
 }
 
-class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
-  List<Map<String, dynamic>> _pending = [];
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPending();
-  }
-
-  Future<void> _loadPending() async {
-    setState(() => _isLoading = true);
-    try {
-      final client = sl<ApiClient>();
-      final response = await client.get(ApiConstants.pointsPendingConversions);
-      if (response.statusCode == 200) {
-        final List data = response.data['data'] ?? [];
-        setState(() {
-          _pending = data.cast<Map<String, dynamic>>();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _actionConversion(int id, String action) async {
-    try {
-      final client = sl<ApiClient>();
-      await client.post(
-        '${ApiConstants.pointsConversions}/$id/action',
-        data: {'action': action},
-      );
-      _loadPending();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Conversion ${action.toLowerCase()}'),
-          backgroundColor: action == 'APPROVED' ? Colors.green : Colors.red,
-        ));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
+class _ConversionsManagementView extends StatelessWidget {
+  const _ConversionsManagementView();
 
   @override
   Widget build(BuildContext context) {
@@ -76,45 +31,65 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppPageHeader(
-              title: 'Points Conversions',
-              subtitle: 'Approve or reject employee points conversion requests',
-              action: IconButton(
-                  icon: const Icon(Icons.refresh), onPressed: _loadPending),
+      body: BlocConsumer<ConversionsMgmtBloc, ConversionsMgmtState>(
+        listener: (context, state) {
+          if (state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.successMessage!),
+              backgroundColor: Colors.green,
+            ));
+          }
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.error!),
+              backgroundColor: Colors.red,
+            ));
+          }
+        },
+        builder: (context, state) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppPageHeader(
+                  title: 'Points Conversions',
+                  subtitle:
+                      'Approve or reject employee points conversion requests',
+                  action: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => context
+                        .read<ConversionsMgmtBloc>()
+                        .add(LoadPendingConversions()),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (state.isLoading && state.pending.isEmpty)
+                  const Center(
+                      child: Padding(
+                          padding: EdgeInsets.all(48.0),
+                          child: CircularProgressIndicator())),
+                if (!state.isLoading &&
+                    state.pending.isEmpty &&
+                    state.error == null)
+                  const EmptyStateView(
+                    icon: Icons.check_circle_outline,
+                    title: 'No pending conversions',
+                    message: 'All requests have been processed.',
+                  ),
+                if (state.pending.isNotEmpty)
+                  ...state.pending.map(
+                      (conv) => _buildConversionCard(context, conv, theme)),
+              ],
             ),
-            const SizedBox(height: 24),
-            if (_isLoading)
-              const Center(
-                  child: Padding(
-                      padding: EdgeInsets.all(48.0),
-                      child: CircularProgressIndicator())),
-            if (_error != null)
-              EmptyStateView(
-                icon: Icons.error_outline_rounded,
-                title: 'Unable to load conversions',
-                message: _error,
-                onRetry: _loadPending,
-              ),
-            if (!_isLoading && _pending.isEmpty && _error == null)
-              const EmptyStateView(
-                icon: Icons.check_circle_outline,
-                title: 'No pending conversions',
-                message: 'All requests have been processed.',
-              ),
-            if (!_isLoading && _pending.isNotEmpty)
-              ..._pending.map((conv) => _buildConversionCard(conv, theme)),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildConversionCard(Map<String, dynamic> conv, ThemeData theme) {
+  Widget _buildConversionCard(
+      BuildContext context, Map<String, dynamic> conv, ThemeData theme) {
     final id = conv['id'] ?? 0;
     final userName =
         conv['user']?['name'] ?? conv['user_name'] ?? 'Unknown User';
@@ -128,7 +103,7 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -169,12 +144,16 @@ class _ConversionsManagementPageState extends State<ConversionsManagementPage> {
           if (status == 'PENDING') ...[
             RejectButton(
               isCompact: true,
-              onPressed: () => _actionConversion(id, 'REJECTED'),
+              onPressed: () => context
+                  .read<ConversionsMgmtBloc>()
+                  .add(ActionConversionRequested(id: id, action: 'REJECTED')),
             ),
             const SizedBox(width: 4),
             ApproveButton(
               isCompact: true,
-              onPressed: () => _actionConversion(id, 'APPROVED'),
+              onPressed: () => context
+                  .read<ConversionsMgmtBloc>()
+                  .add(ActionConversionRequested(id: id, action: 'APPROVED')),
             ),
           ] else
             Container(

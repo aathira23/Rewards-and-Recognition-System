@@ -40,3 +40,5 @@ class RejectNominationRequested extends NominationsEvent {
   @override
   List<Object?> get props => [nominationId, comments];
 }
+
+class GetApprovalHistoryRequested extends NominationsEvent {}

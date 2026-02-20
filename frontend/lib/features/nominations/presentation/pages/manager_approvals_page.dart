@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
@@ -33,7 +31,8 @@ class ManagerApprovalsPage extends StatelessWidget {
       create: (_) => sl<NominationsBloc>()
         ..add(GetNominationsRequested())
         ..add(GetAwardTypesRequested())
-        ..add(GetUsersRequested()),
+        ..add(GetUsersRequested())
+        ..add(GetApprovalHistoryRequested()),
       child: const _ManagerApprovalsView(),
     );
   }
@@ -49,50 +48,11 @@ class _ManagerApprovalsView extends StatefulWidget {
 class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int? _myId;
-  bool _idLoading = true;
-
-  // Approval history loaded from dedicated endpoint
-  List<Map<String, dynamic>> _approvalHistory = [];
-  bool _historyLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadCurrentUser();
-    _loadApprovalHistory();
-  }
-
-  Future<void> _loadApprovalHistory() async {
-    try {
-      final res = await sl<ApiClient>().get(ApiConstants.myApprovalHistory);
-      final data = res.data['data'] ?? [];
-      if (mounted) {
-        setState(() {
-          _approvalHistory =
-              (data is List) ? data.cast<Map<String, dynamic>>() : [];
-          _historyLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _historyLoading = false);
-    }
-  }
-
-  Future<void> _loadCurrentUser() async {
-    try {
-      final res = await sl<ApiClient>().get(ApiConstants.profile);
-      final data = res.data['data'] ?? res.data ?? {};
-      if (mounted) {
-        setState(() {
-          _myId = data['id'];
-          _idLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _idLoading = false);
-    }
   }
 
   @override
@@ -141,8 +101,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
               content: Text(state.successMessage!),
               backgroundColor: Colors.green,
             ));
-            // Reload history so the acted-on card appears immediately
-            _loadApprovalHistory();
           }
           if (state.status == NominationsStatus.failure &&
               state.errorMessage != null) {
@@ -161,21 +119,32 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
               AppPageHeader(
                 title: 'Nomination Approvals',
                 subtitle: 'Review and action pending award nominations',
-                action: BlocBuilder<NominationsBloc, NominationsState>(
-                  builder: (context, state) {
-                    return ElevatedButton.icon(
-                      onPressed: state.awardTypes.isEmpty
-                          ? null
-                          : () => showDialog(
-                                context: context,
-                                builder: (_) => NominateEmployeeDialog(
-                                  awardTypes: state.awardTypes,
-                                  users: state.users,
-                                  bloc: context.read<NominationsBloc>(),
-                                ),
-                              ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Nominate'),
+                action: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    UserEntity? currentUser;
+                    if (authState is AuthAuthenticated) {
+                      currentUser = authState.auth.user;
+                    }
+
+                    return BlocBuilder<NominationsBloc, NominationsState>(
+                      builder: (context, state) {
+                        return ElevatedButton.icon(
+                          onPressed:
+                              (state.awardTypes.isEmpty || currentUser == null)
+                                  ? null
+                                  : () => showDialog(
+                                        context: context,
+                                        builder: (_) => NominateEmployeeDialog(
+                                          awardTypes: state.awardTypes,
+                                          users: state.users,
+                                          bloc: context.read<NominationsBloc>(),
+                                          currentUser: currentUser,
+                                        ),
+                                      ),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Nominate'),
+                        );
+                      },
                     );
                   },
                 ),
@@ -184,9 +153,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
               // ── Tabs ────────────────────────────────────────────
               BlocBuilder<NominationsBloc, NominationsState>(
                 builder: (context, state) {
-                  if ((state.status == NominationsStatus.loading &&
-                          state.nominations.isEmpty) ||
-                      _idLoading) {
+                  if (state.status == NominationsStatus.loading &&
+                      state.nominations.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.all(60.0),
                       child: Center(child: CircularProgressIndicator()),
@@ -196,8 +164,10 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                   return BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, authState) {
                       String userRole = 'MANAGER';
+                      int? myId;
                       if (authState is AuthAuthenticated) {
                         userRole = authState.auth.user?.role ?? 'MANAGER';
+                        myId = authState.auth.user?.id;
                       }
 
                       final all = state.nominations;
@@ -212,9 +182,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                           .toList();
 
                       // Nominations I submitted
-                      final mySubmissions = _myId == null
+                      final mySubmissions = myId == null
                           ? <NominationEntity>[]
-                          : all.where((n) => n.nominatorId == _myId).toList();
+                          : all.where((n) => n.nominatorId == myId).toList();
 
                       // History – resolved nominations
                       // final history =
@@ -310,20 +280,24 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
 
   // ── History tab (from dedicated /my-approvals endpoint) ──────────
   Widget _buildHistoryTab() {
-    if (_historyLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_approvalHistory.isEmpty) {
-      return const EmptyStateView(
-        icon: Icons.inbox_rounded,
-        title: 'No approvals given yet',
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(14),
-      itemCount: _approvalHistory.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => _buildHistoryCard(_approvalHistory[i]),
+    return BlocBuilder<NominationsBloc, NominationsState>(
+      builder: (context, state) {
+        if (state.historyLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state.approvalHistory.isEmpty) {
+          return const EmptyStateView(
+            icon: Icons.inbox_rounded,
+            title: 'No approvals given yet',
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(14),
+          itemCount: state.approvalHistory.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (_, i) => _buildHistoryCard(state.approvalHistory[i]),
+        );
+      },
     );
   }
 

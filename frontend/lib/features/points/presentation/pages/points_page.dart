@@ -6,6 +6,7 @@ import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../injection_container.dart';
+import '../../../budgets/presentation/bloc/budget_bloc.dart';
 import '../bloc/points_bloc.dart';
 import '../bloc/points_event.dart';
 import '../bloc/points_state.dart';
@@ -63,8 +64,11 @@ class _PointsPageState extends State<PointsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _bloc,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _bloc),
+        BlocProvider(create: (_) => sl<BudgetBloc>()),
+      ],
       child: Scaffold(
         backgroundColor: Colors.grey.shade50,
         body: BlocBuilder<PointsBloc, PointsState>(

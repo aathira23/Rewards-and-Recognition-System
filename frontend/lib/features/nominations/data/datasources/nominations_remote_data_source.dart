@@ -15,6 +15,7 @@ abstract class NominationsRemoteDataSource {
   Future<void> rejectNomination(int nominationId, {String? comments});
   Future<AwardTypeModel> createAwardType(Map<String, dynamic> data);
   Future<AwardTypeModel> updateAwardType(int id, Map<String, dynamic> data);
+  Future<List<Map<String, dynamic>>> fetchApprovalHistory();
 }
 
 class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
@@ -95,5 +96,15 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
       return AwardTypeModel.fromJson(response.data['data']);
     }
     throw Exception('Failed to update award type');
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchApprovalHistory() async {
+    final response = await client.get(ApiConstants.myApprovalHistory);
+    if (response.statusCode == 200) {
+      final List data = response.data['data'] ?? [];
+      return data.cast<Map<String, dynamic>>();
+    }
+    throw Exception('Failed to fetch approval history');
   }
 }

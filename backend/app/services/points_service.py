@@ -191,11 +191,34 @@ class PointsService:
             PointsConversion.status == "PENDING"
         ).scalar() or 0
         
+        # Calculate points expiring today
+        today = date.today()
+        expiring_today = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
+            PointsBatch.user_id == user_id,
+            PointsBatch.remaining_points > 0,
+            PointsBatch.expiry_date == today
+        ).scalar() or 0
+
+        # Calculate points expiring this month (from tomorrow until end of month)
+        import calendar
+        _, last_day = calendar.monthrange(today.year, today.month)
+        end_of_month = date(today.year, today.month, last_day)
+        
+        expiring_this_month = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
+            PointsBatch.user_id == user_id,
+            PointsBatch.remaining_points > 0,
+            PointsBatch.expiry_date > today,
+            PointsBatch.expiry_date <= end_of_month
+        ).scalar() or 0
+
         return {
             "balance": balance,
             "total_earned": int(earned),
             "total_redeemed": int(redeemed),
-            "pending_count": int(pending_count),
+            "pending_count": int(expiring_today), # Repurposing as legacy support if needed
+            "expiring_soon": int(expiring_today + expiring_this_month),
+            "expiring_today": int(expiring_today),
+            "expiring_this_month": int(expiring_this_month),
         }
 
     def fetch_ledger_history(
@@ -237,6 +260,10 @@ class PointsService:
             elif cat == "spent":
                 q = q.filter(PointsLedger.transaction_type == TransactionType.DEBIT.value)
                 include_pending = False
+            elif cat == "pending":
+                # Only show pending conversions, hide all ledger records
+                q = q.filter(PointsLedger.id == -1)
+                include_pending = True
             elif cat == "expired":
                 include_pending = False
                 # Return expired batches
@@ -264,19 +291,26 @@ class PointsService:
         # Merge Pending Conversions
         if include_pending and (not category or category.lower() == "pending"):
             pending_q = self.db.query(PointsConversion).filter(
-                PointsConversion.user_id == user_id, 
                 PointsConversion.status == "PENDING"
             )
-            for p in pending_q.all():
-                req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
-                items.insert(0, {
-                    "id": f"conv-{p.id}",
-                    "date": req_date,
-                    "description": f"Conversion Request: {p.conversion_type}",
-                    "type": "Pending",
-                    "points": f"-{int(p.points_converted)}"
-                })
-                total_ledger += 1
+            # Find conversions belonging to this user
+            user_pending = [p for p in pending_q.all() if p.user_id == user_id]
+            
+            # Update total count
+            total_ledger += len(user_pending)
+            
+            # Only add to results if we are on the first page
+            if page == 1:
+                # Add in reverse chronological order (assuming list is chronological)
+                for p in reversed(user_pending):
+                    req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
+                    items.insert(0, {
+                        "id": f"conv-{p.id}",
+                        "date": req_date,
+                        "description": f"Conversion Request: {p.conversion_type}\nAwaiting HR Approval",
+                        "type": "Pending",
+                        "points": f"-{int(p.points_converted)}"
+                    })
 
         return total_ledger, items
 
@@ -340,7 +374,15 @@ class PointsService:
             ctype = conversion.conversion_type if conversion else "Cash"
             return f"Points Conversion - {ctype}\nCompleted Request", "Redeemed"
 
-        return f"{ref_type} #{ref_id}", "Other"
+        if ref_upper == ReferenceType.MANAGER_REWARD.value:
+            manager = self.db.query(User).filter(User.id == ref_id).first()
+            manager_name = manager.name if manager else "Manager"
+            return f"Direct Recognition Reward\nFrom: {manager_name}", "Earned"
+
+        if ref_upper == ReferenceType.EXPIRY.value:
+            return "Points Expired\nValidity Period Ended", "Expired"
+
+        return f"{ref_type.title()} Reward", "Earned"
 
     def notify_upcoming_expiries(self, days: Optional[int] = None) -> Dict[str, Any]:
         """

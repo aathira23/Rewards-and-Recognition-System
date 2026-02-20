@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
@@ -47,32 +47,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Raw current-user-id loaded directly (to distinguish "my nominations" vs
-  // "received awards" without introducing a heavy dependency).
-  int? _currentUserId;
-  bool _userIdLoading = true;
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadCurrentUser();
-  }
-
-  Future<void> _loadCurrentUser() async {
-    try {
-      final client = sl<ApiClient>();
-      final res = await client.get(ApiConstants.profile);
-      final data = res.data['data'] ?? res.data ?? {};
-      if (mounted) {
-        setState(() {
-          _currentUserId = data['id'];
-          _userIdLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _userIdLoading = false);
-    }
   }
 
   @override
@@ -112,21 +90,32 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
               AppPageHeader(
                 title: 'Nominations',
                 subtitle: 'Nominate a colleague or check your award status',
-                action: BlocBuilder<NominationsBloc, NominationsState>(
-                  builder: (context, state) {
-                    return ElevatedButton.icon(
-                      onPressed: state.awardTypes.isEmpty
-                          ? null
-                          : () => showDialog(
-                                context: context,
-                                builder: (_) => NominateEmployeeDialog(
-                                  awardTypes: state.awardTypes,
-                                  users: state.users,
-                                  bloc: context.read<NominationsBloc>(),
-                                ),
-                              ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Nominate Someone'),
+                action: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    UserEntity? currentUser;
+                    if (authState is AuthAuthenticated) {
+                      currentUser = authState.auth.user;
+                    }
+
+                    return BlocBuilder<NominationsBloc, NominationsState>(
+                      builder: (context, state) {
+                        return ElevatedButton.icon(
+                          onPressed:
+                              (state.awardTypes.isEmpty || currentUser == null)
+                                  ? null
+                                  : () => showDialog(
+                                        context: context,
+                                        builder: (_) => NominateEmployeeDialog(
+                                          awardTypes: state.awardTypes,
+                                          users: state.users,
+                                          bloc: context.read<NominationsBloc>(),
+                                          currentUser: currentUser,
+                                        ),
+                                      ),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Nominate Someone'),
+                        );
+                      },
                     );
                   },
                 ),
@@ -163,26 +152,26 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                           );
                         }
 
-                        if (_userIdLoading) {
-                          return const Padding(
-                            padding: EdgeInsets.all(48.0),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
+                        // Get current user ID from AuthBloc
+                        int? currentUserId;
+                        final authState = context.read<AuthBloc>().state;
+                        if (authState is AuthAuthenticated) {
+                          currentUserId = authState.auth.user?.id;
                         }
 
                         // Nominations I submitted
-                        final submitted = _currentUserId == null
+                        final submitted = currentUserId == null
                             ? state.nominations
                             : state.nominations
-                                .where((n) => n.nominatorId == _currentUserId)
+                                .where((n) => n.nominatorId == currentUserId)
                                 .toList();
 
                         // Awards where I am the nominee and they are APPROVED
-                        final received = _currentUserId == null
+                        final received = currentUserId == null
                             ? <NominationEntity>[]
                             : state.nominations
                                 .where((n) =>
-                                    n.nomineeId == _currentUserId &&
+                                    n.nomineeId == currentUserId &&
                                     n.status == 'APPROVED')
                                 .toList();
 

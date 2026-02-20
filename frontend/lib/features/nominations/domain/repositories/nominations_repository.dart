@@ -30,4 +30,5 @@ abstract class NominationsRepository {
     int? points,
     String? description,
   });
+  Future<Either<Failure, List<Map<String, dynamic>>>> getApprovalHistory();
 }

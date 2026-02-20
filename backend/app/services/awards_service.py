@@ -216,6 +216,13 @@ class AwardsService:
         if award.status != AwardStatus.PENDING.value:
             raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
 
+        # 0. Prevent self-approval
+        if award.nominee_id == approver_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="You cannot approve your own award nomination."
+            )
+
         # 1. Get required approval workflow from award type
         required_levels = [lvl.strip().upper() for lvl in self._get_required_approval_levels(award.award_type)]
         
@@ -320,6 +327,13 @@ class AwardsService:
 
         if award.status != AwardStatus.PENDING.value:
             raise HTTPException(status_code=400, detail=f"Award is already {award.status}")
+
+        # 0. Prevent self-action (rejecting own award)
+        if award.nominee_id == approver_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="You cannot reject your own award nomination."
+            )
 
         # For MANAGER-level rejection, enforce that only the nominee's direct manager may reject.
         if approval_level.upper() == 'MANAGER':

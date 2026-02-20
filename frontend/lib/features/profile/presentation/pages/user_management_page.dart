@@ -1,49 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../bloc/user_mgmt_bloc.dart';
+import '../bloc/user_mgmt_event.dart';
+import '../bloc/user_mgmt_state.dart';
 
-class UserManagementPage extends StatefulWidget {
+class UserManagementPage extends StatelessWidget {
   const UserManagementPage({super.key});
 
   @override
-  State<UserManagementPage> createState() => _UserManagementPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<UserMgmtBloc>()..add(LoadUsers()),
+      child: const _UserManagementView(),
+    );
+  }
 }
 
-class _UserManagementPageState extends State<UserManagementPage> {
-  List<Map<String, dynamic>> _users = [];
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUsers();
-  }
-
-  Future<void> _loadUsers() async {
-    setState(() => _isLoading = true);
-    try {
-      final client = sl<ApiClient>();
-      final response = await client.get(ApiConstants.users);
-      if (response.statusCode == 200) {
-        final List data = response.data['data'] ?? [];
-        setState(() {
-          _users = data.cast<Map<String, dynamic>>();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
+class _UserManagementView extends StatelessWidget {
+  const _UserManagementView();
 
   @override
   Widget build(BuildContext context) {
@@ -51,99 +30,114 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppPageHeader(
-              title: 'User Management',
-              subtitle: 'Manage system users, roles, and departments',
-              action: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _loadUsers,
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showCreateUserDialog(context),
-                    icon: const Icon(Icons.person_add, size: 18),
-                    label: const Text('Add User'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_isLoading)
-              const Center(
-                  child: Padding(
-                padding: EdgeInsets.all(48.0),
-                child: CircularProgressIndicator(),
-              )),
-            if (_error != null)
-              EmptyStateView(
-                icon: Icons.error_outline_rounded,
-                title: 'Unable to load users',
-                message: _error,
-                onRetry: _loadUsers,
-              ),
-            if (!_isLoading && _users.isEmpty && _error == null)
-              const EmptyStateView(
-                icon: Icons.people_outline_rounded,
-                title: 'No users found',
-                message: 'Add your first user to get started.',
-              ),
-            if (!_isLoading && _users.isNotEmpty)
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: DataTable(
-                    headingRowColor:
-                        WidgetStatePropertyAll(Colors.grey.shade50),
-                    columns: const [
-                      DataColumn(label: Text('Name')),
-                      DataColumn(label: Text('Email')),
-                      DataColumn(label: Text('Role')),
-                      DataColumn(label: Text('Department')),
-                      DataColumn(label: Text('Actions')),
+      body: BlocConsumer<UserMgmtBloc, UserMgmtState>(
+        listener: (context, state) {
+          if (state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.successMessage!),
+              backgroundColor: Colors.green,
+            ));
+          }
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.error!),
+              backgroundColor: Colors.red,
+            ));
+          }
+        },
+        builder: (context, state) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppPageHeader(
+                  title: 'User Management',
+                  subtitle: 'Manage system users, roles, and departments',
+                  action: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () =>
+                            context.read<UserMgmtBloc>().add(LoadUsers()),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _showCreateUserDialog(context),
+                        icon: const Icon(Icons.person_add, size: 18),
+                        label: const Text('Add User'),
+                      ),
                     ],
-                    rows: _users.map((user) {
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(user['name'] ?? '',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w500))),
-                          DataCell(Text(user['email'] ?? '',
-                              style: AppTextStyles.body(
-                                  color: Colors.grey.shade600))),
-                          DataCell(_buildRoleBadge(user['role'] ?? '')),
-                          DataCell(Text(
-                              user['department']?['name'] ?? 'Unassigned',
-                              style: AppTextStyles.body(
-                                  color: Colors.grey.shade600))),
-                          DataCell(
-                            IconButton(
-                              icon: Icon(Icons.edit,
-                                  size: 18, color: theme.colorScheme.primary),
-                              onPressed: () =>
-                                  _showEditUserDialog(context, user),
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
                   ),
                 ),
-              ),
-          ],
-        ),
+                const SizedBox(height: 24),
+                if (state.isLoading && state.users.isEmpty)
+                  const Center(
+                      child: Padding(
+                    padding: EdgeInsets.all(48.0),
+                    child: CircularProgressIndicator(),
+                  )),
+                if (!state.isLoading &&
+                    state.users.isEmpty &&
+                    state.error == null)
+                  const EmptyStateView(
+                    icon: Icons.people_outline_rounded,
+                    title: 'No users found',
+                    message: 'Add your first user to get started.',
+                  ),
+                if (state.users.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: DataTable(
+                        headingRowColor:
+                            WidgetStatePropertyAll(Colors.grey.shade50),
+                        columns: const [
+                          DataColumn(label: Text('Name')),
+                          DataColumn(label: Text('Email')),
+                          DataColumn(label: Text('Role')),
+                          DataColumn(label: Text('Department')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: state.users.map((user) {
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(user['name'] ?? '',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500))),
+                              DataCell(Text(user['email'] ?? '',
+                                  style: AppTextStyles.body(
+                                      color: Colors.grey.shade600))),
+                              DataCell(_buildRoleBadge(user['role'] ?? '')),
+                              DataCell(Text(
+                                  user['department']?['name'] ?? 'Unassigned',
+                                  style: AppTextStyles.body(
+                                      color: Colors.grey.shade600))),
+                              DataCell(
+                                IconButton(
+                                  icon: Icon(Icons.edit,
+                                      size: 18,
+                                      color: theme.colorScheme.primary),
+                                  onPressed: () =>
+                                      _showEditUserDialog(context, user),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -226,34 +220,17 @@ class _UserManagementPageState extends State<UserManagementPage> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               if (formKey.currentState!.validate()) {
                 Navigator.of(ctx).pop();
-                try {
-                  final client = sl<ApiClient>();
-                  await client.post(ApiConstants.users, data: {
-                    'name': name,
-                    'email': email,
-                    'password': password,
-                    'role': role,
-                  });
-                  _loadUsers();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('User created successfully'),
-                          backgroundColor: Colors.green),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: Colors.red),
-                    );
-                  }
-                }
+                context.read<UserMgmtBloc>().add(CreateUserRequested(
+                      data: {
+                        'name': name,
+                        'email': email,
+                        'password': password,
+                        'role': role,
+                      },
+                    ));
               }
             },
             style: ElevatedButton.styleFrom(minimumSize: Size.zero),
@@ -303,22 +280,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.of(ctx).pop();
-              try {
-                final client = sl<ApiClient>();
-                await client.patch('${ApiConstants.userUpdate}$userId',
-                    data: {'name': name, 'role': role});
-                _loadUsers();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red),
-                  );
-                }
-              }
+              context.read<UserMgmtBloc>().add(UpdateUserRequested(
+                    id: userId,
+                    data: {'name': name, 'role': role},
+                  ));
             },
             style: ElevatedButton.styleFrom(minimumSize: Size.zero),
             child: const Text('Save'),

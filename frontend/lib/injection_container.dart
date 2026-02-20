@@ -76,6 +76,7 @@ import 'features/nominations/domain/usecases/get_nominations_usecase.dart';
 import 'features/nominations/domain/usecases/create_nomination_usecase.dart';
 import 'features/nominations/domain/usecases/approve_nomination_usecase.dart';
 import 'features/nominations/domain/usecases/reject_nomination_usecase.dart';
+import 'features/nominations/domain/usecases/get_approval_history_usecase.dart';
 import 'features/nominations/presentation/bloc/nominations_bloc.dart';
 
 // Analytics
@@ -140,6 +141,18 @@ import 'features/hr/data/datasources/hr_approvals_remote_data_source.dart';
 import 'features/hr/data/repositories/hr_approvals_repository_impl.dart';
 import 'features/hr/domain/repositories/hr_approvals_repository.dart';
 import 'features/hr/presentation/bloc/hr_approvals_bloc.dart';
+
+// Conversions Management
+import 'features/points/data/datasources/conversions_mgmt_remote_data_source.dart';
+import 'features/points/data/repositories/conversions_mgmt_repository_impl.dart';
+import 'features/points/domain/repositories/conversions_mgmt_repository.dart';
+import 'features/points/presentation/bloc/conversions_mgmt_bloc.dart';
+
+// User Management
+import 'features/profile/data/datasources/user_mgmt_remote_data_source.dart';
+import 'features/profile/data/repositories/user_mgmt_repository_impl.dart';
+import 'features/profile/domain/repositories/user_mgmt_repository.dart';
+import 'features/profile/presentation/bloc/user_mgmt_bloc.dart';
 
 final sl = GetIt.instance; // sl stands for Service Locator
 
@@ -337,6 +350,7 @@ Future<void> init() async {
       createNominationUseCase: sl(),
       approveNominationUseCase: sl(),
       rejectNominationUseCase: sl(),
+      getApprovalHistoryUseCase: sl(),
       getUsersUseCase: sl<GetUsersUseCase>(),
     ),
   );
@@ -346,6 +360,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CreateNominationUseCase(sl()));
   sl.registerLazySingleton(() => ApproveNominationUseCase(sl()));
   sl.registerLazySingleton(() => RejectNominationUseCase(sl()));
+  sl.registerLazySingleton(() => GetApprovalHistoryUseCase(sl()));
   // Repository
   sl.registerLazySingleton<NominationsRepository>(
     () => NominationsRepositoryImpl(remoteDataSource: sl()),
@@ -507,5 +522,33 @@ Future<void> init() async {
   // Data sources
   sl.registerLazySingleton<HrApprovalsRemoteDataSource>(
     () => HrApprovalsRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - Conversions Management
+  // Bloc
+  sl.registerFactory(
+    () => ConversionsMgmtBloc(repository: sl()),
+  );
+  // Repository
+  sl.registerLazySingleton<ConversionsMgmtRepository>(
+    () => ConversionsMgmtRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<ConversionsMgmtRemoteDataSource>(
+    () => ConversionsMgmtRemoteDataSourceImpl(client: sl()),
+  );
+
+  //! Features - User Management
+  // Bloc
+  sl.registerFactory(
+    () => UserMgmtBloc(repository: sl()),
+  );
+  // Repository
+  sl.registerLazySingleton<UserMgmtRepository>(
+    () => UserMgmtRepositoryImpl(remoteDataSource: sl()),
+  );
+  // Data sources
+  sl.registerLazySingleton<UserMgmtRemoteDataSource>(
+    () => UserMgmtRemoteDataSourceImpl(client: sl()),
   );
 }

@@ -6,6 +6,8 @@ class PointsSummaryModel extends PointsSummaryEntity {
     required super.totalEarned,
     required super.totalRedeemed,
     required super.pendingCount,
+    required super.expiringToday,
+    required super.expiringThisMonth,
   });
 
   factory PointsSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -14,6 +16,8 @@ class PointsSummaryModel extends PointsSummaryEntity {
       totalEarned: json['total_earned'] ?? 0,
       totalRedeemed: json['total_redeemed'] ?? 0,
       pendingCount: json['pending_count'] ?? 0,
+      expiringToday: json['expiring_today'] ?? 0,
+      expiringThisMonth: json['expiring_this_month'] ?? 0,
     );
   }
 }

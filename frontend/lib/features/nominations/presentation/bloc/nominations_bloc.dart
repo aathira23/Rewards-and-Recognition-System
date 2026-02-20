@@ -5,6 +5,7 @@ import '../../domain/usecases/get_nominations_usecase.dart';
 import '../../domain/usecases/create_nomination_usecase.dart';
 import '../../domain/usecases/approve_nomination_usecase.dart';
 import '../../domain/usecases/reject_nomination_usecase.dart';
+import '../../domain/usecases/get_approval_history_usecase.dart';
 import '../../../profile/domain/usecases/get_users_usecase.dart';
 import 'nominations_event.dart';
 import 'nominations_state.dart';
@@ -15,6 +16,7 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
   final CreateNominationUseCase createNominationUseCase;
   final ApproveNominationUseCase approveNominationUseCase;
   final RejectNominationUseCase rejectNominationUseCase;
+  final GetApprovalHistoryUseCase getApprovalHistoryUseCase;
   final GetUsersUseCase getUsersUseCase;
 
   NominationsBloc({
@@ -23,6 +25,7 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
     required this.createNominationUseCase,
     required this.approveNominationUseCase,
     required this.rejectNominationUseCase,
+    required this.getApprovalHistoryUseCase,
     required this.getUsersUseCase,
   }) : super(const NominationsState()) {
     on<GetAwardTypesRequested>(_onGetAwardTypes);
@@ -31,6 +34,7 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
     on<CreateNominationRequested>(_onCreateNomination);
     on<ApproveNominationRequested>(_onApprove);
     on<RejectNominationRequested>(_onReject);
+    on<GetApprovalHistoryRequested>(_onGetApprovalHistory);
   }
 
   Future<void> _onGetAwardTypes(
@@ -97,6 +101,7 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
             status: NominationsStatus.success,
             successMessage: 'Nomination approved'));
         add(GetNominationsRequested());
+        add(GetApprovalHistoryRequested());
       },
     );
   }
@@ -113,7 +118,20 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
             status: NominationsStatus.success,
             successMessage: 'Nomination rejected'));
         add(GetNominationsRequested());
+        add(GetApprovalHistoryRequested());
       },
+    );
+  }
+
+  Future<void> _onGetApprovalHistory(
+      GetApprovalHistoryRequested event, Emitter<NominationsState> emit) async {
+    emit(state.copyWith(historyLoading: true));
+    final result = await getApprovalHistoryUseCase(NoParams());
+    result.fold(
+      (f) =>
+          emit(state.copyWith(historyLoading: false, errorMessage: f.message)),
+      (history) =>
+          emit(state.copyWith(historyLoading: false, approvalHistory: history)),
     );
   }
 }

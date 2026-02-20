@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/nomination_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
@@ -48,29 +48,11 @@ class _ApprovalsView extends StatefulWidget {
 class _ApprovalsViewState extends State<_ApprovalsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int? _myId;
-  bool _idLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadCurrentUser();
-  }
-
-  Future<void> _loadCurrentUser() async {
-    try {
-      final res = await sl<ApiClient>().get(ApiConstants.profile);
-      final data = res.data['data'] ?? res.data ?? {};
-      if (mounted) {
-        setState(() {
-          _myId = data['id'];
-          _idLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _idLoading = false);
-    }
   }
 
   @override
@@ -137,21 +119,32 @@ class _ApprovalsViewState extends State<_ApprovalsView>
               AppPageHeader(
                 title: 'My Nominations',
                 subtitle: 'Track your nominations and awards',
-                action: BlocBuilder<NominationsBloc, NominationsState>(
-                  builder: (context, state) {
-                    return ElevatedButton.icon(
-                      onPressed: state.awardTypes.isEmpty
-                          ? null
-                          : () => showDialog(
-                                context: context,
-                                builder: (_) => NominateEmployeeDialog(
-                                  awardTypes: state.awardTypes,
-                                  users: state.users,
-                                  bloc: context.read<NominationsBloc>(),
-                                ),
-                              ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Nominate'),
+                action: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    UserEntity? currentUser;
+                    if (authState is AuthAuthenticated) {
+                      currentUser = authState.auth.user;
+                    }
+
+                    return BlocBuilder<NominationsBloc, NominationsState>(
+                      builder: (context, state) {
+                        return ElevatedButton.icon(
+                          onPressed:
+                              (state.awardTypes.isEmpty || currentUser == null)
+                                  ? null
+                                  : () => showDialog(
+                                        context: context,
+                                        builder: (_) => NominateEmployeeDialog(
+                                          awardTypes: state.awardTypes,
+                                          users: state.users,
+                                          bloc: context.read<NominationsBloc>(),
+                                          currentUser: currentUser,
+                                        ),
+                                      ),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Nominate'),
+                        );
+                      },
                     );
                   },
                 ),
@@ -180,38 +173,44 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                     ),
                     BlocBuilder<NominationsBloc, NominationsState>(
                       builder: (context, state) {
-                        if ((state.status == NominationsStatus.loading &&
-                                state.nominations.isEmpty) ||
-                            _idLoading) {
+                        if (state.status == NominationsStatus.loading &&
+                            state.nominations.isEmpty) {
                           return const Padding(
                             padding: EdgeInsets.all(48.0),
                             child: Center(child: CircularProgressIndicator()),
                           );
                         }
 
+                        // Get current user ID from AuthBloc
+                        int? myId;
+                        final authState = context.read<AuthBloc>().state;
+                        if (authState is AuthAuthenticated) {
+                          myId = authState.auth.user?.id;
+                        }
+
                         // Nominations I submitted
-                        final submitted = _myId == null
+                        final submitted = myId == null
                             ? state.nominations
                             : state.nominations
-                                .where((n) => n.nominatorId == _myId)
+                                .where((n) => n.nominatorId == myId)
                                 .toList();
 
                         // Approved awards where I'm the nominee
-                        final received = _myId == null
+                        final received = myId == null
                             ? <NominationEntity>[]
                             : state.nominations
                                 .where((n) =>
-                                    n.nomineeId == _myId &&
+                                    n.nomineeId == myId &&
                                     n.status == 'APPROVED')
                                 .toList();
 
                         // All nominations I'm involved in
-                        final allMine = _myId == null
+                        final allMine = myId == null
                             ? state.nominations
                             : state.nominations
                                 .where((n) =>
-                                    n.nominatorId == _myId ||
-                                    n.nomineeId == _myId)
+                                    n.nominatorId == myId ||
+                                    n.nomineeId == myId)
                                 .toList();
 
                         return SizedBox(
