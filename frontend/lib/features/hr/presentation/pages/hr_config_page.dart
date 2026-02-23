@@ -37,6 +37,27 @@ class _HrConfigViewState extends State<_HrConfigView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Map friendly frontend labels to backend enum values
+  final Map<String, String> _frontendToBackend = {
+    'GIFT CARD': 'GIFT_CARD',
+    'MERCHANDISE': 'MERCH',
+    // Award eligibility friendly labels
+    'Any employee (peer)': 'PEER',
+    'Managers, Dept Heads & HR': 'MANAGER_ONLY',
+    'Dept Heads & HR (senior management)': 'SENIOR_MGMT',
+    // Legacy/short labels (kept for backward compatibility)
+    'MANAGER ONLY': 'MANAGER_ONLY',
+    'SENIOR MGMT': 'SENIOR_MGMT',
+    'MANAGER->DEPT HEAD': 'MANAGER,DEPT_HEAD',
+    'MANAGER->DEPT HEAD->HR': 'MANAGER,DEPT_HEAD,HR',
+    'DEPT HEAD->HR': 'DEPT_HEAD,HR',
+  };
+
+  String _mapToBackend(String? v) {
+    if (v == null) return '';
+    return _frontendToBackend[v] ?? v;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -266,18 +287,18 @@ class _HrConfigViewState extends State<_HrConfigView>
             label: 'Eligibility Rule',
             controller: eligC,
             dropdownOptions: const [
-              'PEER',
-              'MANAGER_ONLY',
-              'SENIOR_MGMT',
+              'Any employee (peer)',
+              'Managers, Dept Heads & HR (manager-only)',
+              'Dept Heads & HR (senior management)',
             ]),
         _Field(
             label: 'Approval Workflow',
             controller: workflowC,
             dropdownOptions: const [
               'MANAGER',
-              'MANAGER,DEPT_HEAD',
-              'MANAGER,DEPT_HEAD,HR',
-              'DEPT_HEAD,HR',
+              'MANAGER->DEPT HEAD',
+              'MANAGER->DEPT HEAD->HR',
+              'DEPT HEAD->HR',
               'HR',
             ]),
         _Field(label: 'Description', controller: descC, maxLines: 2),
@@ -287,8 +308,10 @@ class _HrConfigViewState extends State<_HrConfigView>
           'name': nameC.text,
           'points': int.tryParse(pointsC.text) ?? 0,
           'frequency': freqC.text,
-          'eligibility_rule': eligC.text,
-          'approval_workflow': workflowC.text,
+          // map friendly eligibility label to backend enum
+          'eligibility_rule': _mapToBackend(eligC.text),
+          // map friendly workflow label into backend comma-separated form
+          'approval_workflow': _mapToBackend(workflowC.text),
           'description': descC.text,
         };
         if (!isEdit) data['award_key'] = keyC.text;
@@ -544,7 +567,7 @@ class _HrConfigViewState extends State<_HrConfigView>
         _Field(
             label: 'Reward Type',
             controller: typeC,
-            dropdownOptions: const ['GIFT_CARD', 'MERCHANDISE', 'EXPERIENCE']),
+            dropdownOptions: const ['GIFT CARD', 'MERCHANDISE']),
         _Field(label: 'Points Cost', controller: pointsC, isNumber: true),
         _Field(
             label: 'Stock Quantity',
@@ -555,7 +578,8 @@ class _HrConfigViewState extends State<_HrConfigView>
       onSave: () {
         final data = <String, dynamic>{
           'name': nameC.text,
-          'reward_type': typeC.text,
+          // convert friendly label (e.g. 'GIFT CARD') to backend value ('GIFT_CARD')
+          'reward_type': _mapToBackend(typeC.text),
           'points_required': int.tryParse(pointsC.text) ?? 0,
         };
         if (stockC.text.isNotEmpty) {
@@ -629,9 +653,19 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Text(p['cooldown_days']?.toString() ?? '—',
                       style:
                           TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                  Text(p['conversion_rate']?.toString() ?? '—',
-                      style:
-                          TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p['conversion_rate']?.toString() ?? '—',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey.shade600)),
+                      if (p['conversion_reward_type'] != null &&
+                          p['conversion_reward_type'].toString().isNotEmpty)
+                        Text(p['conversion_reward_type'].toString(),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade500)),
+                    ],
+                  ),
                   StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
                   _IconBtn(
                     icon: Icons.edit_outlined,
@@ -649,97 +683,241 @@ class _HrConfigViewState extends State<_HrConfigView>
   void _showPolicyDialog(BuildContext context,
       {Map<String, dynamic>? existing}) {
     final isEdit = existing != null;
-    final typeC =
-        TextEditingController(text: existing?['recognition_type'] ?? '');
+
+    // Mutable state captured by StatefulBuilder closure
+    String selectedType = existing?['recognition_type'] ?? 'ECARD';
+    String selectedConvType = existing?['conversion_reward_type'] ?? 'PAYROLL';
+
     final eventC = TextEditingController(text: existing?['event_key'] ?? '');
     final pointsC = TextEditingController(text: '${existing?['points'] ?? ''}');
-    final limitC =
-        TextEditingController(text: '${existing?['monthly_limit'] ?? ''}');
-    final cooldownC =
-        TextEditingController(text: '${existing?['cooldown_days'] ?? ''}');
     final rateC =
         TextEditingController(text: '${existing?['conversion_rate'] ?? ''}');
-    final convTypeC =
-        TextEditingController(text: existing?['conversion_reward_type'] ?? '');
 
-    _showFormDialog(
+    final outerCtx = context;
+
+    showDialog(
       context: context,
-      title: isEdit ? 'Edit Policy Rule' : 'Create Policy Rule',
-      fields: [
-        if (!isEdit)
-          _Field(
-              label: 'Recognition Type',
-              controller: typeC,
-              dropdownOptions: const ['PEER', 'BADGE', 'CONVERSION', 'AWARD']),
-        if (!isEdit)
-          _Field(label: 'Event Key', controller: eventC, hint: 'Optional'),
-        _Field(label: 'Points', controller: pointsC, isNumber: true),
-        _Field(
-            label: 'Monthly Limit',
-            controller: limitC,
-            isNumber: true,
-            hint: 'Optional'),
-        _Field(
-            label: 'Cooldown Days',
-            controller: cooldownC,
-            isNumber: true,
-            hint: 'Optional'),
-        _Field(
-            label: 'Conversion Rate',
-            controller: rateC,
-            hint: 'e.g. 0.1 (optional)'),
-        if (!isEdit)
-          _Field(
-              label: 'Conversion Reward Type',
-              controller: convTypeC,
-              dropdownOptions: const ['PAYROLL', 'CHARITY']),
-      ],
-      onSave: () {
-        if (isEdit) {
-          final data = <String, dynamic>{};
-          if (pointsC.text.isNotEmpty) {
-            data['points'] = int.tryParse(pointsC.text);
+      builder: (_) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          // ── "Coming Soon" disabled field ──────────────────────────
+          Widget comingSoon(String label) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Stack(
+                  alignment: Alignment.centerRight,
+                  children: [
+                    TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        labelText: label,
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Text(
+                          'Coming soon',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+          // ── Type-specific fields ──────────────────────────────────
+          List<Widget> typeFields = [];
+          if (selectedType == 'ECARD') {
+            typeFields = [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: pointsC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Points'),
+                ),
+              ),
+            ];
+          } else if (selectedType == 'CELEBRATION') {
+            typeFields = [
+              if (!isEdit)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: eventC.text.isNotEmpty ? eventC.text : null,
+                    decoration: const InputDecoration(labelText: 'Event'),
+                    hint: const Text('Select event'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'BIRTHDAY', child: Text('BIRTHDAY')),
+                      DropdownMenuItem(
+                          value: 'ANNIVERSARY', child: Text('ANNIVERSARY')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setDialogState(() => eventC.text = v);
+                      }
+                    },
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: pointsC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Points'),
+                ),
+              ),
+            ];
+          } else if (selectedType == 'CONVERSION') {
+            typeFields = [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: rateC,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Conversion Rate',
+                    hintText: 'e.g. 0.10',
+                  ),
+                ),
+              ),
+              if (!isEdit)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: selectedConvType,
+                    decoration: const InputDecoration(
+                        labelText: 'Conversion Reward Type'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'PAYROLL', child: Text('PAYROLL')),
+                      DropdownMenuItem(value: 'CSR', child: Text('CSR')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setDialogState(() => selectedConvType = v);
+                      }
+                    },
+                  ),
+                ),
+            ];
           }
-          if (limitC.text.isNotEmpty) {
-            data['monthly_limit'] = int.tryParse(limitC.text);
-          }
-          if (cooldownC.text.isNotEmpty) {
-            data['cooldown_days'] = int.tryParse(cooldownC.text);
-          }
-          if (rateC.text.isNotEmpty) {
-            data['conversion_rate'] = double.tryParse(rateC.text);
-          }
-          data['is_active'] = existing['is_active'] ?? true;
-          context.read<HrConfigBloc>().add(SaveItem(
-                entityType: HrConfigEntityType.policyRule,
-                data: data,
-                id: existing['id'],
-              ));
-        } else {
-          final data = <String, dynamic>{
-            'recognition_type': typeC.text,
-            'points': int.tryParse(pointsC.text) ?? 0,
-            'is_active': true,
-          };
-          if (eventC.text.isNotEmpty) data['event_key'] = eventC.text;
-          if (limitC.text.isNotEmpty) {
-            data['monthly_limit'] = int.tryParse(limitC.text);
-          }
-          if (cooldownC.text.isNotEmpty) {
-            data['cooldown_days'] = int.tryParse(cooldownC.text);
-          }
-          if (rateC.text.isNotEmpty) {
-            data['conversion_rate'] = double.tryParse(rateC.text);
-          }
-          if (convTypeC.text.isNotEmpty) {
-            data['conversion_reward_type'] = convTypeC.text;
-          }
-          context.read<HrConfigBloc>().add(SaveItem(
-                entityType: HrConfigEntityType.policyRule,
-                data: data,
-              ));
-        }
-      },
+
+          return AppDialog(
+            title: isEdit ? 'Edit Policy Rule' : 'Create Policy Rule',
+            maxWidth: 500,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Recognition Type — dropdown on create, label on edit
+                if (!isEdit)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: selectedType,
+                      decoration:
+                          const InputDecoration(labelText: 'Recognition Type'),
+                      items: const [
+                        DropdownMenuItem(value: 'ECARD', child: Text('ECARD')),
+                        DropdownMenuItem(
+                            value: 'CELEBRATION', child: Text('CELEBRATION')),
+                        DropdownMenuItem(
+                            value: 'CONVERSION', child: Text('CONVERSION')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          setDialogState(() {
+                            selectedType = v;
+                            eventC.clear();
+                            pointsC.clear();
+                            rateC.clear();
+                            selectedConvType = 'PAYROLL';
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ...typeFields,
+                comingSoon('Monthly Limit'),
+                comingSoon('Cooldown Days'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  if (isEdit) {
+                    final data = <String, dynamic>{
+                      'is_active': existing['is_active'] ?? true,
+                    };
+                    if (selectedType == 'CONVERSION') {
+                      if (rateC.text.isNotEmpty) {
+                        data['conversion_rate'] = double.tryParse(rateC.text);
+                      }
+                    } else {
+                      if (pointsC.text.isNotEmpty) {
+                        data['points'] = int.tryParse(pointsC.text);
+                      }
+                    }
+                    outerCtx.read<HrConfigBloc>().add(SaveItem(
+                          entityType: HrConfigEntityType.policyRule,
+                          data: data,
+                          id: existing['id'],
+                        ));
+                  } else {
+                    final data = <String, dynamic>{
+                      'recognition_type': selectedType,
+                      'is_active': true,
+                    };
+                    if (selectedType == 'ECARD') {
+                      data['points'] = int.tryParse(pointsC.text) ?? 0;
+                    } else if (selectedType == 'CELEBRATION') {
+                      data['points'] = int.tryParse(pointsC.text) ?? 0;
+                      if (eventC.text.isNotEmpty) {
+                        data['event_key'] = eventC.text;
+                      }
+                    } else if (selectedType == 'CONVERSION') {
+                      data['points'] = 0;
+                      if (rateC.text.isNotEmpty) {
+                        data['conversion_rate'] = double.tryParse(rateC.text);
+                      }
+                      data['conversion_reward_type'] = selectedConvType;
+                    }
+                    outerCtx.read<HrConfigBloc>().add(SaveItem(
+                          entityType: HrConfigEntityType.policyRule,
+                          data: data,
+                        ));
+                  }
+                  Navigator.pop(dialogCtx);
+                },
+                child: const Text('Save Changes'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -917,10 +1095,11 @@ class _HrConfigViewState extends State<_HrConfigView>
                     padding: const EdgeInsets.only(bottom: 12),
                     child: f.dropdownOptions != null
                         ? DropdownButtonFormField<String>(
-                            initialValue:
-                                f.dropdownOptions!.contains(f.controller.text)
-                                    ? f.controller.text
-                                    : null,
+                            initialValue: f.dropdownOptions!
+                                    .map((o) => _mapToBackend(o))
+                                    .contains(f.controller.text)
+                                ? f.controller.text
+                                : null,
                             decoration: InputDecoration(
                               labelText: f.label,
                               hintText: f.hint ?? 'Select an option',
@@ -928,8 +1107,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                                   fontSize: 12, color: Colors.grey.shade400),
                             ),
                             items: f.dropdownOptions!
-                                .map((o) =>
-                                    DropdownMenuItem(value: o, child: Text(o)))
+                                .map((o) => DropdownMenuItem(
+                                    value: _mapToBackend(o), child: Text(o)))
                                 .toList(),
                             onChanged: (v) {
                               if (v != null) {

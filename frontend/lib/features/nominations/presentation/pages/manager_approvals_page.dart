@@ -173,14 +173,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
 
                       final all = state.nominations;
 
-                      // Pending for MY role
-                      final pendingForMe = all
-                          .where((n) =>
-                              n.status == 'PENDING' &&
-                              n.nextRequiredLevel != null &&
-                              n.nextRequiredLevel!.toUpperCase() ==
-                                  userRole.toUpperCase())
-                          .toList();
+                      // All active pending nominations in my circle
+                      final pendingForMe =
+                          all.where((n) => n.status == 'PENDING').toList();
 
                       // Nominations I submitted
                       final mySubmissions = myId == null
@@ -250,7 +245,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                   _buildList(
                                     pendingForMe,
                                     state.users,
-                                    'All caught up! No nominations waiting for your approval',
+                                    'No pending nominations at the moment',
                                     Icons.check_circle_outline,
                                     showActions: true,
                                     userRole: userRole,

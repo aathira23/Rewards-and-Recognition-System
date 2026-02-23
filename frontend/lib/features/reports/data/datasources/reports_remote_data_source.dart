@@ -1,12 +1,13 @@
+import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 
 abstract class ReportsRemoteDataSource {
   Future<List<Map<String, dynamic>>> fetchReport(
       Map<String, dynamic> queryParams);
-  Future<void> exportReportCsv(Map<String, dynamic> queryParams);
+  Future<List<int>> exportReportCsv(Map<String, dynamic> queryParams);
   Future<List<Map<String, dynamic>>> fetchPayroll(String month);
-  Future<void> exportPayrollCsv(String month);
+  Future<List<int>> exportPayrollCsv(String month);
   Future<List<Map<String, dynamic>>> fetchDepartments();
 }
 
@@ -40,7 +41,7 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
   }
 
   @override
-  Future<void> exportReportCsv(Map<String, dynamic> queryParams) async {
+  Future<List<int>> exportReportCsv(Map<String, dynamic> queryParams) async {
     final reportType = queryParams['report_type']?.toString();
 
     if (reportType == 'PAYROLL') {
@@ -53,7 +54,12 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
       ...queryParams,
       'export_format': 'csv',
     };
-    await client.get(ApiConstants.reports, queryParameters: params);
+    final response = await client.get(
+      ApiConstants.reports,
+      queryParameters: params,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data as List<int>;
   }
 
   @override
@@ -67,9 +73,13 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
   }
 
   @override
-  Future<void> exportPayrollCsv(String month) async {
-    await client.get(ApiConstants.reportsPayroll,
-        queryParameters: {'month': month, 'export_format': 'csv'});
+  Future<List<int>> exportPayrollCsv(String month) async {
+    final response = await client.get(
+      ApiConstants.reportsPayroll,
+      queryParameters: {'month': month, 'export_format': 'csv'},
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data as List<int>;
   }
 
   @override

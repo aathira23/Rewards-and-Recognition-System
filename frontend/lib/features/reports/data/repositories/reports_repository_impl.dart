@@ -25,11 +25,11 @@ class ReportsRepositoryImpl implements ReportsRepository {
   }
 
   @override
-  Future<Either<Failure, void>> exportReportCsv(
+  Future<Either<Failure, List<int>>> exportReportCsv(
       Map<String, dynamic> queryParams) async {
     try {
-      await remoteDataSource.exportReportCsv(queryParams);
-      return const Right(null);
+      final bytes = await remoteDataSource.exportReportCsv(queryParams);
+      return Right(bytes);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException {
@@ -55,10 +55,10 @@ class ReportsRepositoryImpl implements ReportsRepository {
   }
 
   @override
-  Future<Either<Failure, void>> exportPayrollCsv(String month) async {
+  Future<Either<Failure, List<int>>> exportPayrollCsv(String month) async {
     try {
-      await remoteDataSource.exportPayrollCsv(month);
-      return const Right(null);
+      final bytes = await remoteDataSource.exportPayrollCsv(month);
+      return Right(bytes);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException {

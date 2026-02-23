@@ -7,6 +7,9 @@ class PointTransactionModel extends PointTransactionEntity {
     required super.description,
     required super.type,
     required super.points,
+    super.createdAtFull,
+    super.direction,
+    super.referenceType,
   });
 
   factory PointTransactionModel.fromJson(Map<String, dynamic> json) {
@@ -16,6 +19,9 @@ class PointTransactionModel extends PointTransactionEntity {
       description: json['description'] ?? '',
       type: json['type'] ?? '',
       points: json['points'] ?? '0',
+      createdAtFull: json['created_at_full'] as String?,
+      direction: json['direction'] as String?,
+      referenceType: json['reference_type'] as String?,
     );
   }
 }

@@ -109,7 +109,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
 
     return AppDialog(
       title: 'Nominate an Employee',
-      maxWidth: 560,
+      maxWidth: 620,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -132,7 +132,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   // ─── Step indicator ─────────────────────────────────────────
   Widget _buildStepIndicator(ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      padding: const EdgeInsets.only(top: 4, bottom: 0),
       child: Row(
         children: [
           _stepDot(theme, 0, 'Award Type'),
@@ -199,30 +199,28 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   Widget _buildStep1(ThemeData theme) {
     if (widget.awardTypes.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.all(40),
+        padding: EdgeInsets.symmetric(vertical: 40),
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    return SingleChildScrollView(
+    return Column(
       key: const ValueKey('step1'),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Choose the award type',
-            style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 12),
-          ..._allowedAwardTypes
-              .map((type) => _buildAwardTypeCard(theme, type))
-              .toList(),
-        ],
-      ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          'Choose the award type',
+          style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 12),
+        ..._allowedAwardTypes
+            .map((type) => _buildAwardTypeCard(theme, type))
+            .toList(),
+      ],
     );
   }
 
@@ -341,14 +339,13 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
 
   // ─── Step 2: Employee search + justification ─────────────────
   Widget _buildStep2(ThemeData theme) {
-    return SingleChildScrollView(
-      key: const ValueKey('step2'),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Form(
+      key: _formKey,
+      child: Column(
+        key: const ValueKey('step2'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
             // Selected award summary pill
             if (_selectedAwardType != null) _buildAwardSummaryPill(theme),
             const SizedBox(height: 16),
@@ -513,11 +510,10 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
               ),
               maxLines: 4,
               validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Please provide a justification'
-                  : null,
-            ),
-          ],
-        ),
+                ? 'Please provide a justification'
+                : null,
+          ),
+        ],
       ),
     );
   }

@@ -5,6 +5,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../../../injection_container.dart';
 import '../bloc/reports_bloc.dart';
 import '../bloc/reports_event.dart';
@@ -251,6 +252,15 @@ class _ReportsViewState extends State<_ReportsView> {
             behavior: SnackBarBehavior.floating,
           ));
         }
+
+        // Trigger CSV download if data available
+        if (state.exportData != null && state.exportFileName != null) {
+          FileDownloadHelper.download(
+            bytes: state.exportData!,
+            fileName: state.exportFileName!,
+          );
+        }
+
         if (state.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Error: ${state.error}'),

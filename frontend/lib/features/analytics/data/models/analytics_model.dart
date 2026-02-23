@@ -7,9 +7,11 @@ class AnalyticsModel extends AnalyticsEntity {
     required super.engagementRate,
     required super.userCount,
     required super.scope,
+    super.scopeName = '',
     required super.topRecognizers,
     required super.topRecognized,
     required super.trends,
+    super.breakdown = const [],
   });
 
   /// Backend response shape:
@@ -29,6 +31,7 @@ class AnalyticsModel extends AnalyticsEntity {
       engagementRate: (summary['engagement_rate'] ?? 0).toDouble(),
       userCount: json['user_count'] ?? 0,
       scope: json['scope']?.toString() ?? '',
+      scopeName: json['scope_name']?.toString() ?? '',
       topRecognizers: (json['top_recognizers'] as List?)
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
@@ -38,6 +41,10 @@ class AnalyticsModel extends AnalyticsEntity {
               .toList() ??
           [],
       trends: (json['trends'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [],
+      breakdown: (json['breakdown'] as List?)
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
           [],

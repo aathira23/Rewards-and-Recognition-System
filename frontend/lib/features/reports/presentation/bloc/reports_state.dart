@@ -6,6 +6,8 @@ class ReportsState extends Equatable {
   final List<Map<String, dynamic>> departments;
   final String? error;
   final String? successMessage;
+  final List<int>? exportData;
+  final String? exportFileName;
 
   const ReportsState({
     this.isLoading = false,
@@ -13,6 +15,8 @@ class ReportsState extends Equatable {
     this.departments = const [],
     this.error,
     this.successMessage,
+    this.exportData,
+    this.exportFileName,
   });
 
   ReportsState copyWith({
@@ -21,6 +25,8 @@ class ReportsState extends Equatable {
     List<Map<String, dynamic>>? departments,
     String? error,
     String? successMessage,
+    List<int>? exportData,
+    String? exportFileName,
   }) {
     return ReportsState(
       isLoading: isLoading ?? this.isLoading,
@@ -28,10 +34,19 @@ class ReportsState extends Equatable {
       departments: departments ?? this.departments,
       error: error,
       successMessage: successMessage,
+      exportData: exportData,
+      exportFileName: exportFileName,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [isLoading, data, departments, error, successMessage];
+  List<Object?> get props => [
+        isLoading,
+        data,
+        departments,
+        error,
+        successMessage,
+        exportData,
+        exportFileName
+      ];
 }

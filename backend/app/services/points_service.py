@@ -278,15 +278,42 @@ class PointsService:
                 items = [{
                     "id": f"batch-{b.id}",
                     "date": b.expiry_date.strftime("%d/%m/%Y"),
+                    "created_at_full": b.expiry_date.isoformat() if b.expiry_date else "",
                     "description": f"Points Expired - {b.source_type}",
                     "type": "Expired",
-                    "points": f"-{int(b.remaining_points)}"
+                    "points": f"-{int(b.remaining_points)}",
+                    "direction": "Debit",
+                    "reference_type": "EXPIRY",
                 } for b in rows]
                 return total, items
 
         total_ledger = q.count()
         rows = q.order_by(desc(PointsLedger.created_at)).offset((page - 1) * per_page).limit(per_page).all()
         items = [self._map_ledger_row(r, wallet.id) for r in rows]
+
+        # Merge Expired Batches (for All Types view)
+        # Batches with remaining_points > 0 past expiry haven't been processed by
+        # the job yet (once processed the ledger entry is created and remaining_points
+        # is set to 0, so no double-counting happens).
+        if not category:
+            today = date.today()
+            expired_batches = self.db.query(PointsBatch).filter(
+                PointsBatch.user_id == user_id,
+                PointsBatch.expiry_date <= today,
+                PointsBatch.remaining_points > 0,
+            ).all()
+            for b in expired_batches:
+                total_ledger += 1
+                items.append({
+                    "id": f"batch-{b.id}",
+                    "date": b.expiry_date.strftime("%d/%m/%Y"),
+                    "created_at_full": b.expiry_date.isoformat() if b.expiry_date else "",
+                    "description": f"Points Expired - {b.source_type}",
+                    "type": "Expired",
+                    "points": f"-{int(b.remaining_points)}",
+                    "direction": "Debit",
+                    "reference_type": "EXPIRY",
+                })
 
         # Merge Pending Conversions
         if include_pending and (not category or category.lower() == "pending"):
@@ -304,12 +331,16 @@ class PointsService:
                 # Add in reverse chronological order (assuming list is chronological)
                 for p in reversed(user_pending):
                     req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
+                    req_full = p.requested_at.isoformat() if p.requested_at else ""
                     items.insert(0, {
                         "id": f"conv-{p.id}",
                         "date": req_date,
+                        "created_at_full": req_full,
                         "description": f"Conversion Request: {p.conversion_type}\nAwaiting HR Approval",
                         "type": "Pending",
-                        "points": f"-{int(p.points_converted)}"
+                        "points": f"-{int(p.points_converted)}",
+                        "direction": "Debit",
+                        "reference_type": "CONVERSION",
                     })
 
         return total_ledger, items
@@ -321,9 +352,12 @@ class PointsService:
         return {
             "id": row.id,
             "date": row.created_at.strftime("%d/%m/%Y") if row.created_at else "",
+            "created_at_full": row.created_at.isoformat() if row.created_at else "",
             "description": description,
             "type": type_badge,
             "points": f"+{points}" if is_credit else f"-{points}",
+            "direction": "Credit" if is_credit else "Debit",
+            "reference_type": (row.reference_type or "").upper(),
         }
 
     def _enrich_description(self, row: PointsLedger) -> Tuple[str, str]:

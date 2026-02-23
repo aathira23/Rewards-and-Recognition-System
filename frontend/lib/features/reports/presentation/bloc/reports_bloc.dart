@@ -34,13 +34,19 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
 
   Future<void> _onExport(
       ExportReportCsv event, Emitter<ReportsState> emit) async {
+    final reportType = event.queryParams['report_type']?.toString() ?? 'report';
+    final date = DateTime.now().toString().split(' ')[0].replaceAll('-', '');
+    final fileName = '${reportType.toLowerCase()}_$date.csv';
+
     final result = await exportReportCsvUseCase(
         ExportReportCsvParams(queryParams: event.queryParams));
     result.fold(
-      (failure) => emit(
-          state.copyWith(error: failure.message)),
-      (_) => emit(state.copyWith(
-          successMessage: 'CSV export initiated')),
+      (failure) => emit(state.copyWith(error: failure.message)),
+      (bytes) => emit(state.copyWith(
+        successMessage: 'CSV report downloaded',
+        exportData: bytes,
+        exportFileName: fileName,
+      )),
     );
   }
 
@@ -49,8 +55,7 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
     final result = await fetchDepartmentsUseCase(NoParams());
     result.fold(
       (_) {}, // silently ignore department load failures
-      (departments) =>
-          emit(state.copyWith(departments: departments)),
+      (departments) => emit(state.copyWith(departments: departments)),
     );
   }
 }

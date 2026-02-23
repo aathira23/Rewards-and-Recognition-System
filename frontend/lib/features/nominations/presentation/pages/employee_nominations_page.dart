@@ -114,7 +114,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                                         ),
                                       ),
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Nominate Someone'),
+                          label: const Text('Nominate'),
                         );
                       },
                     );

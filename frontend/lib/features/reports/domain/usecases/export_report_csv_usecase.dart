@@ -4,13 +4,13 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../repositories/reports_repository.dart';
 
-class ExportReportCsvUseCase extends UseCase<void, ExportReportCsvParams> {
+class ExportReportCsvUseCase extends UseCase<List<int>, ExportReportCsvParams> {
   final ReportsRepository repository;
 
   ExportReportCsvUseCase(this.repository);
 
   @override
-  Future<Either<Failure, void>> call(ExportReportCsvParams params) {
+  Future<Either<Failure, List<int>>> call(ExportReportCsvParams params) {
     return repository.exportReportCsv(params.queryParams);
   }
 }

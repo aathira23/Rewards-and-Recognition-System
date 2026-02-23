@@ -94,50 +94,53 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ─── Header row: title + toggle ───
-              Row(
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 8,
                 children: [
-                  Icon(
-                    isManager
-                        ? Icons.savings_rounded
-                        : Icons.account_balance_wallet_outlined,
-                    color: Colors.white,
-                    size: 26,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isManager
+                            ? Icons.savings_rounded
+                            : Icons.account_balance_wallet_outlined,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        isManager ? 'Manager Wallet' : 'Points Wallet',
+                        style: AppTextStyles.label(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    isManager ? 'Manager Wallet' : 'Points Wallet',
-                    style: AppTextStyles.label(
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
                   if (_canToggle) _buildToggle(isManager),
                 ],
               ),
               const SizedBox(height: 18),
 
               // ─── Animated switcher between wallet contents ───
-              // Fixed height prevents the card from resizing during transition.
-              SizedBox(
-                height: 168,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 320),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.04, 0),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
-                    ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.04, 0),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
                   ),
-                  child: isManager
-                      ? _managerContent(key: const ValueKey('mgr'))
-                      : _personalContent(key: const ValueKey('personal')),
                 ),
+                child: isManager
+                    ? _managerContent(key: const ValueKey('mgr'))
+                    : _personalContent(key: const ValueKey('personal')),
               ),
             ],
           ),
@@ -315,8 +318,10 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 12,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +338,6 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                       ),
                     ],
                   ),
-                  const Spacer(),
                   _rewardButton(),
                 ],
               ),

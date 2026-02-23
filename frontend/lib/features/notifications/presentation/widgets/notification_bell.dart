@@ -78,7 +78,13 @@ class _NotificationBellState extends State<NotificationBell> {
             right: rightEdge,
             child: BlocProvider.value(
               value: _bloc,
-              child: const _NotificationsPanel(),
+              child: _NotificationsPanel(
+                closePanel: () {
+                  _removeOverlay();
+                  if (mounted) setState(() {});
+                },
+                outerContext: context,
+              ),
             ),
           ),
         ],
@@ -150,7 +156,10 @@ class _NotificationBellState extends State<NotificationBell> {
 // ─────────────────────────────────────────────────────────────
 
 class _NotificationsPanel extends StatelessWidget {
-  const _NotificationsPanel();
+  final VoidCallback closePanel;
+  final BuildContext outerContext;
+  const _NotificationsPanel(
+      {required this.closePanel, required this.outerContext});
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +300,8 @@ class _NotificationsPanel extends StatelessWidget {
       itemBuilder: (ctx, i) => _NotificationItem(
         notification: state.notifications[i],
         bloc: context.read<NotificationsBloc>(),
+        onClosePanel: closePanel,
+        outerContext: outerContext,
       ),
     );
   }
@@ -303,7 +314,14 @@ class _NotificationsPanel extends StatelessWidget {
 class _NotificationItem extends StatelessWidget {
   final NotificationEntity notification;
   final NotificationsBloc bloc;
-  const _NotificationItem({required this.notification, required this.bloc});
+  final VoidCallback onClosePanel;
+  final BuildContext outerContext;
+  const _NotificationItem({
+    required this.notification,
+    required this.bloc,
+    required this.onClosePanel,
+    required this.outerContext,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -317,7 +335,10 @@ class _NotificationItem extends StatelessWidget {
         if (!notification.isRead) {
           bloc.add(MarkOneAsReadRequested(notification.id));
         }
-        _showDetailModal(context, icon, color, theme);
+        // Close the overlay panel BEFORE opening the dialog so the
+        // tap-outside barrier doesn't steal the Dismiss tap.
+        onClosePanel();
+        _showDetailModal(outerContext, icon, color, Theme.of(outerContext));
       },
       child: Container(
         color: notification.isRead
@@ -386,105 +407,175 @@ class _NotificationItem extends StatelessWidget {
       BuildContext context, IconData icon, Color color, ThemeData theme) {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 80),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460),
-          child: Padding(
-            padding: const EdgeInsets.all(28),
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header row: icon + type badge + time + close ──
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, color: color, size: 24),
+                // ── Gradient header ──
+                Container(
+                  padding: const EdgeInsets.fromLTRB(22, 22, 16, 18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withValues(alpha: 0.12),
+                        color.withValues(alpha: 0.03),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              notification.type.toUpperCase(),
-                              style: AppTextStyles.tiny(
-                                color: color,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Icon circle
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: color, size: 26),
+                      ),
+                      const SizedBox(width: 14),
+                      // Type badge + time
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                notification.type.toUpperCase(),
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.9,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _timeAgo(notification.createdAt),
-                            style: AppTextStyles.caption(
-                                color: Colors.grey.shade400),
-                          ),
-                        ],
+                            const SizedBox(height: 5),
+                            Row(
+                              children: [
+                                Icon(Icons.schedule_rounded,
+                                    size: 12, color: Colors.grey.shade400),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _timeAgo(notification.createdAt),
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close,
-                          size: 18, color: Colors.grey.shade400),
-                      onPressed: () => Navigator.pop(ctx),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // ── Title ──
-                Text(
-                  notification.title,
-                  style: AppTextStyles.sectionHeader(
-                    color: Colors.black87,
+                      // Close button
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.close,
+                              size: 15, color: Colors.grey.shade500),
+                          onPressed: () => Navigator.pop(ctx),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Divider(color: Colors.grey.shade200, height: 1),
-                const SizedBox(height: 14),
-                // ── Full message (no truncation) ──
-                Text(
-                  notification.message,
-                  style: AppTextStyles.bodyLarge(
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // ── Dismiss button ──
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: TextButton.styleFrom(
-                      backgroundColor:
-                          theme.colorScheme.primary.withValues(alpha: 0.06),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: Text(
-                      'Dismiss',
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                // ── Body ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (notification.title.isNotEmpty) ...[
+                        Text(
+                          notification.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Colors.grey.shade100),
+                        const SizedBox(height: 12),
+                      ],
+                      // Full message
+                      Text(
+                        notification.message,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          color: Colors.grey.shade700,
+                          height: 1.55,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 22),
+                      // ── Dismiss button (full width, coloured) ──
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: color,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Dismiss',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

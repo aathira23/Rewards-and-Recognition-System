@@ -19,13 +19,17 @@ class AppDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+    final horizInset = sw < 480 ? 12.0 : sw < 720 ? 24.0 : 40.0;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(
+          horizontal: horizInset, vertical: 24),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: maxWidth,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,

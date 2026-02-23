@@ -375,164 +375,470 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             ? double.parse(rule['conversion_rate'].toString())
             : 0.1;
 
+        final pts = int.tryParse(_pointsController.text) ?? 0;
+        final cashValue = pts * currentRate;
+        final isPayroll = _selectedConversionType == 'PAYROLL';
+
+        // Status helpers for recent requests
+        Color _statusColor(String s) {
+          if (s == 'APPROVED' || s == 'COMPLETED') return Colors.green;
+          if (s == 'REJECTED' || s == 'CANCELLED') return Colors.red;
+          return Colors.orange;
+        }
+
+        IconData _statusIcon(String s) {
+          if (s == 'APPROVED' || s == 'COMPLETED') return Icons.check_circle_rounded;
+          if (s == 'REJECTED' || s == 'CANCELLED') return Icons.cancel_rounded;
+          return Icons.schedule_rounded;
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Featured Conversion Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.swap_horizontal_circle_outlined,
-                      size: 48, color: Colors.indigo),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Convert Points to Cash',
-                    style: AppTextStyles.pageTitle(color: Colors.indigo),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Current rate: 100 pts = \$${(100 * currentRate).toStringAsFixed(2)}',
-                    style: AppTextStyles.bodyBold(
-                      color: Colors.indigoAccent,
+            // ── Two-panel row ──
+            LayoutBuilder(builder: (context, constraints) {
+              final wide = constraints.maxWidth > 680;
+              final formCard = Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE8EAF6)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B5BDB).withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Form Card
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-                side: BorderSide(
-                    color:
-                        Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Conversion Details',
-                        style: AppTextStyles.sectionTitle()),
-                    const SizedBox(height: 24),
-                    TextField(
-                      controller: _pointsController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        labelText: 'Amount of Points',
-                        hintText: 'Minimum 500 pts',
-                        prefixIcon: const Icon(Icons.toll_rounded),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.clear_rounded),
-                          onPressed: () {
-                            _pointsController.clear();
-                            setState(() {});
-                          },
+                    // Card header
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF3B5BDB), Color(0xFF6741D9)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedConversionType,
-                      decoration: const InputDecoration(
-                        labelText: 'Transfer Destination',
-                        prefixIcon: Icon(Icons.account_balance_rounded),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'PAYROLL', child: Text('Monthly Payroll')),
-                        DropdownMenuItem(
-                            value: 'CSR', child: Text('CSR Charity Fund')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _selectedConversionType = val);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 32),
-                    // Live Calculation
-                    if (_pointsController.text.isNotEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: Colors.green.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'You will receive:',
-                              style:
-                                  AppTextStyles.bodyMedium(color: Colors.green),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            Text(
-                              '\$${((int.tryParse(_pointsController.text) ?? 0) * currentRate).toStringAsFixed(2)}',
-                              style: AppTextStyles.headline1(
-                                color: Colors.green,
+                            child: const Icon(Icons.swap_horiz_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Convert Points',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                '1 pt = \$${currentRate.toStringAsFixed(3)}',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.72),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Points input
+                          TextField(
+                            controller: _pointsController,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setState(() {}),
+                            style: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w600),
+                            decoration: InputDecoration(
+                              labelText: 'Points to Convert',
+                              hintText: 'Min. 500 pts',
+                              filled: true,
+                              fillColor: const Color(0xFFF7F8FD),
+                              prefixIcon: const Icon(Icons.toll_rounded,
+                                  color: Color(0xFF3B5BDB)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFE8EAF6)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFE8EAF6)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFF3B5BDB), width: 1.5),
+                              ),
+                              suffixIcon: pts > 0
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear_rounded,
+                                          size: 18),
+                                      onPressed: () {
+                                        _pointsController.clear();
+                                        setState(() {});
+                                      },
+                                    )
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          // Destination selector as chips
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(
+                                      () => _selectedConversionType = 'PAYROLL'),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isPayroll
+                                          ? const Color(0xFF3B5BDB)
+                                          : const Color(0xFFF7F8FD),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isPayroll
+                                            ? const Color(0xFF3B5BDB)
+                                            : const Color(0xFFE8EAF6),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.account_balance_rounded,
+                                            size: 16,
+                                            color: isPayroll
+                                                ? Colors.white
+                                                : Colors.grey.shade500),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Payroll',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: isPayroll
+                                                ? Colors.white
+                                                : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(
+                                      () => _selectedConversionType = 'CSR'),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: !isPayroll
+                                          ? const Color(0xFF3B5BDB)
+                                          : const Color(0xFFF7F8FD),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: !isPayroll
+                                            ? const Color(0xFF3B5BDB)
+                                            : const Color(0xFFE8EAF6),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.volunteer_activism_rounded,
+                                            size: 16,
+                                            color: !isPayroll
+                                                ? Colors.white
+                                                : Colors.grey.shade500),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'CSR Fund',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: !isPayroll
+                                                ? Colors.white
+                                                : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // Receive amount chip
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              gradient: pts > 0
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFFECFDF5),
+                                        Color(0xFFF0FDF4),
+                                      ],
+                                    )
+                                  : null,
+                              color: pts > 0 ? null : const Color(0xFFF7F8FD),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: pts > 0
+                                    ? const Color(0xFF6EE7B7)
+                                    : const Color(0xFFE8EAF6),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () => _handleSubmitConversion(context),
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.bolt_rounded),
-                            const SizedBox(width: 8),
-                            Text('Confirm & Convert',
-                                style: AppTextStyles.sectionTitle()),
-                          ],
-                        ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'You will receive',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: pts > 0
+                                        ? const Color(0xFF059669)
+                                        : Colors.grey.shade400,
+                                  ),
+                                ),
+                                Text(
+                                  pts > 0
+                                      ? '\$${cashValue.toStringAsFixed(2)}'
+                                      : '—',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: pts > 0
+                                        ? const Color(0xFF059669)
+                                        : Colors.grey.shade300,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  _handleSubmitConversion(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B5BDB),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.bolt_rounded, size: 18),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Confirm & Convert',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
+              );
 
-            const SizedBox(height: 48),
+              final infoPanel = Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F8FD),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE8EAF6)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How it works',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _ConversionStep(
+                      number: '1',
+                      title: 'Enter amount',
+                      subtitle: 'Minimum 500 pts per request',
+                      color: const Color(0xFF3B5BDB),
+                    ),
+                    const SizedBox(height: 12),
+                    _ConversionStep(
+                      number: '2',
+                      title: 'Choose destination',
+                      subtitle: 'Payroll or CSR charity',
+                      color: const Color(0xFF6741D9),
+                    ),
+                    const SizedBox(height: 12),
+                    _ConversionStep(
+                      number: '3',
+                      title: 'Await approval',
+                      subtitle: 'HR reviews within 2 business days',
+                      color: const Color(0xFF059669),
+                    ),
+                    const SizedBox(height: 20),
+                    Divider(color: Colors.grey.shade200, height: 1),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Current Rate',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B5BDB).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '100 pts',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF3B5BDB),
+                            ),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(Icons.arrow_forward_rounded,
+                              size: 16, color: Colors.grey),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '\$${(100 * currentRate).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+
+              if (wide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: formCard),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: infoPanel),
+                  ],
+                );
+              }
+              return Column(children: [
+                formCard,
+                const SizedBox(height: 16),
+                infoPanel
+              ]);
+            }),
+
+            const SizedBox(height: 32),
+            // ── Recent Requests ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Recent Requests', style: AppTextStyles.sectionHeader()),
-                TextButton(
+                const Text(
+                  'Recent Requests',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                TextButton.icon(
                   onPressed: () =>
                       context.read<CatalogBloc>().add(GetHistoryRequested()),
-                  child: const Text('Refresh'),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Refresh'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF3B5BDB),
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             state.conversions.isEmpty
                 ? const EmptyStateView(
                     icon: Icons.history_rounded,
                     title: 'No conversion history',
-                    message: 'Your point conversion requests will appear here.',
+                    message:
+                        'Your point conversion requests will appear here.',
                     padding: 40,
                   )
                 : ListView.builder(
@@ -541,50 +847,89 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                     itemCount: state.conversions.length,
                     itemBuilder: (context, index) {
                       final req = state.conversions[index];
+                      final sc = _statusColor(req.status);
+                      final si = _statusIcon(req.status);
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 13),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFEEEFF5)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: req.status == 'APPROVED' ||
-                                      req.status == 'COMPLETED'
-                                  ? Colors.green.withValues(alpha: 0.1)
-                                  : req.status == 'REJECTED' ||
-                                          req.status == 'CANCELLED'
-                                      ? Colors.red.withValues(alpha: 0.1)
-                                      : Colors.orange.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(9),
+                              decoration: BoxDecoration(
+                                color: sc.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(si, color: sc, size: 18),
                             ),
-                            child: Icon(
-                              req.status == 'APPROVED' ||
-                                      req.status == 'COMPLETED'
-                                  ? Icons.check_rounded
-                                  : req.status == 'REJECTED' ||
-                                          req.status == 'CANCELLED'
-                                      ? Icons.close_rounded
-                                      : Icons.access_time_rounded,
-                              color: req.status == 'APPROVED' ||
-                                      req.status == 'COMPLETED'
-                                  ? Colors.green
-                                  : req.status == 'REJECTED' ||
-                                          req.status == 'CANCELLED'
-                                      ? Colors.red
-                                      : Colors.orange,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${req.pointsConverted} pts → ${req.conversionType}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1A1A2E),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    AppDateFormatter.short(req.createdAt),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          title: Text('${req.pointsConverted} Points',
-                              style: AppTextStyles.bodyBold()),
-                          subtitle: Text(
-                              'To ${req.conversionType} • ${AppDateFormatter.short(req.createdAt)}'),
-                          trailing: Text(
-                            '\$${req.cashAmount.toStringAsFixed(2)}',
-                            style: AppTextStyles.sectionTitle(),
-                          ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '\$${req.cashAmount.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF059669),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: sc.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    req.status,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: sc,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -782,6 +1127,67 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ConversionStep extends StatelessWidget {
+  final String number;
+  final String title;
+  final String subtitle;
+  final Color color;
+  const _ConversionStep({
+    required this.number,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

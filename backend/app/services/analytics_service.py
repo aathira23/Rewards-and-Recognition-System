@@ -4,6 +4,7 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
 from app.models.users import User
+from app.models.departments import Department
 from app.models.recognition_feed import RecognitionFeed
 from app.models.redemptions import Redemption
 from app.models.rewards import Reward
@@ -169,6 +170,8 @@ class AnalyticsService:
             Wallet, PointsLedger.target_wallet_id == Wallet.id
         ).filter(
             Wallet.user_id.in_(user_ids) if user_ids is not None else True,
+            # Only count credits posted to employee wallets — exclude manager budget allocations
+            Wallet.wallet_type == WalletType.EMPLOYEE.value,
             PointsLedger.transaction_type == "CREDIT",
             PointsLedger.created_at >= from_date if from_date else True,
             PointsLedger.created_at <= to_date if to_date else True
@@ -184,6 +187,12 @@ class AnalyticsService:
         # 5. Engagement
         engagement = self.get_engagement_rate(user_ids)
 
+        # 6. Scope name (human-readable label shown in header)
+        scope_name = self._get_scope_name(current_user, scope)
+
+        # 7. Breakdown (per-dept for ORG, per-team/manager for DEPARTMENT)
+        breakdown = self._get_breakdown(current_user, scope, from_date, to_date)
+
         return {
             "summary": {
                 "total_recognitions": total_recognitions,
@@ -194,7 +203,9 @@ class AnalyticsService:
             "top_recognizers": top_recognizers,
             "top_recognized": top_recognized,
             "scope": scope,
-            "user_count": len(user_ids) if user_ids else self.db.query(User).count()
+            "scope_name": scope_name,
+            "user_count": len(user_ids) if user_ids else self.db.query(User).count(),
+            "breakdown": breakdown,
         }
 
     def _get_scope_user_ids(self, user: Any, scope: str) -> Optional[List[int]]:
@@ -213,6 +224,119 @@ class AnalyticsService:
         
         # ORG scope or HR/Admin role - returns None to signify "no filter" (all users)
         return None
+
+    def _get_scope_name(self, user: Any, scope: str) -> str:
+        """Return a human-readable label for the current scope."""
+        if scope == "DEPARTMENT":
+            dept = self.db.query(Department).filter(
+                Department.id == user.department_id
+            ).first()
+            return dept.name if dept else "Department"
+        if scope == "TEAM":
+            return f"{user.name}'s Team"
+        return "Organization"
+
+    def _get_breakdown(
+        self,
+        user: Any,
+        scope: str,
+        from_date: Optional[date],
+        to_date: Optional[date],
+    ) -> List[Dict[str, Any]]:
+        """
+        Return a per-department breakdown for ORG scope, or a per-team
+        (manager) breakdown for DEPARTMENT scope. Returns [] for TEAM scope.
+        """
+        if scope == "ORG":
+            departments = self.db.query(Department).all()
+            result = []
+            for dept in departments:
+                member_ids = [
+                    u.id for u in self.db.query(User.id).filter(
+                        User.department_id == dept.id
+                    ).all()
+                ]
+                if not member_ids:
+                    continue
+                rec_count = self.db.query(func.count(RecognitionFeed.id)).filter(
+                    RecognitionFeed.receiver_id.in_(member_ids),
+                    *(
+                        [RecognitionFeed.created_at >= from_date] if from_date else []
+                    ),
+                    *(
+                        [RecognitionFeed.created_at <= to_date] if to_date else []
+                    ),
+                ).scalar() or 0
+                pts = self.db.query(func.sum(PointsLedger.points)).join(
+                    Wallet, PointsLedger.target_wallet_id == Wallet.id
+                ).filter(
+                    Wallet.user_id.in_(member_ids),
+                    # Only count employee wallet credits (exclude manager allocations)
+                    Wallet.wallet_type == WalletType.EMPLOYEE.value,
+                    PointsLedger.transaction_type == "CREDIT",
+                    *(
+                        [PointsLedger.created_at >= from_date] if from_date else []
+                    ),
+                    *(
+                        [PointsLedger.created_at <= to_date] if to_date else []
+                    ),
+                ).scalar() or 0
+                engagement = self.get_engagement_rate(member_ids)
+                result.append({
+                    "name": dept.name,
+                    "recognition_count": rec_count,
+                    "points": int(pts),
+                    "user_count": len(member_ids),
+                    "engagement": engagement,
+                })
+            result.sort(key=lambda x: x["recognition_count"], reverse=True)
+            return result
+
+        if scope == "DEPARTMENT":
+            dept_id = user.department_id
+            if not dept_id:
+                return []
+            managers = self.db.query(User).filter(
+                User.department_id == dept_id,
+                User.manager_id != None,
+            ).all()
+            # Group by manager
+            manager_ids = list({u.manager_id for u in managers if u.manager_id})
+            result = []
+            for mgr_id in manager_ids:
+                mgr = self.db.query(User).filter(User.id == mgr_id).first()
+                if not mgr:
+                    continue
+                team_ids = [
+                    u.id for u in self.db.query(User.id).filter(
+                        User.manager_id == mgr_id
+                    ).all()
+                ]
+                if not team_ids:
+                    continue
+                rec_count = self.db.query(func.count(RecognitionFeed.id)).filter(
+                    RecognitionFeed.receiver_id.in_(team_ids),
+                ).scalar() or 0
+                pts = self.db.query(func.sum(PointsLedger.points)).join(
+                    Wallet, PointsLedger.target_wallet_id == Wallet.id
+                ).filter(
+                    Wallet.user_id.in_(team_ids),
+                    # Only count employee wallet credits (exclude manager allocations)
+                    Wallet.wallet_type == WalletType.EMPLOYEE.value,
+                    PointsLedger.transaction_type == "CREDIT",
+                ).scalar() or 0
+                engagement = self.get_engagement_rate(team_ids)
+                result.append({
+                    "name": f"{mgr.name}'s Team",
+                    "recognition_count": rec_count,
+                    "points": int(pts),
+                    "user_count": len(team_ids),
+                    "engagement": engagement,
+                })
+            result.sort(key=lambda x: x["recognition_count"], reverse=True)
+            return result
+
+        return []
 
     def get_recognition_trends(self, user_ids: Optional[List[int]], from_date: Optional[date], to_date: Optional[date]):
         """Calculate counts of recognitions per day."""

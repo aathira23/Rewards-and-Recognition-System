@@ -232,9 +232,40 @@ class StoreService:
         return self.db.query(PointsPolicy).filter(PointsPolicy.is_active == True).all()
 
     def create_policy(self, policy_data: Any) -> Any:
-        """Create a new point policy."""
+        """Create a new point policy, deactivating any existing duplicate first.
+
+        Duplicate identity:
+          - CONVERSION rules  → same recognition_type + conversion_reward_type
+          - All other rules   → same recognition_type + event_key (None or value)
+        """
         from app.models.points_policy import PointsPolicy
-        policy = PointsPolicy(**policy_data.model_dump())
+
+        data = policy_data.model_dump()
+        rec_type = data.get("recognition_type")
+
+        if rec_type == "CONVERSION":
+            conv_reward_type = data.get("conversion_reward_type")
+            duplicates = self.db.query(PointsPolicy).filter(
+                PointsPolicy.recognition_type == rec_type,
+                PointsPolicy.conversion_reward_type == conv_reward_type,
+                PointsPolicy.is_active == True,
+            ).all()
+        else:
+            event_key = data.get("event_key")
+            query = self.db.query(PointsPolicy).filter(
+                PointsPolicy.recognition_type == rec_type,
+                PointsPolicy.is_active == True,
+            )
+            if event_key:
+                query = query.filter(PointsPolicy.event_key == event_key)
+            else:
+                query = query.filter(PointsPolicy.event_key == None)
+            duplicates = query.all()
+
+        for old in duplicates:
+            old.is_active = False
+
+        policy = PointsPolicy(**data)
         self.db.add(policy)
         self.db.commit()
         self.db.refresh(policy)
