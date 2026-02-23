@@ -259,6 +259,8 @@ class _ReportsViewState extends State<_ReportsView> {
             bytes: state.exportData!,
             fileName: state.exportFileName!,
           );
+          // Clear so it doesn't trigger again on unrelated state changes
+          context.read<ReportsBloc>().add(const ClearExportData());
         }
 
         if (state.error != null) {

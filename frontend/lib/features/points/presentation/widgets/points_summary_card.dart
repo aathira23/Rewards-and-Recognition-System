@@ -73,6 +73,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
         width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 260), // Stabilize height
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: grad,
@@ -91,13 +92,11 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ─── Header row: title + toggle ───
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                runSpacing: 8,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -181,20 +180,23 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
     required bool active,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.ease,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(17),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.smallBold(
-            color: active ? const Color(0xFF1E56BD) : Colors.white70,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.ease,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: active ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(17),
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.smallBold(
+              color: active ? const Color(0xFF1E56BD) : Colors.white70,
+            ),
           ),
         ),
       ),
@@ -236,9 +238,15 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                 builder: (context) {
                   final statWidgets = [
                     _stat('Total Earned', s.totalEarned.toString(),
-                        Icons.trending_up),
+                        Icons.trending_up,
+                        sub: 'all time'),
                     _stat('Redeemed', s.totalRedeemed.toString(),
-                        Icons.shopping_bag_outlined),
+                        Icons.shopping_bag_outlined,
+                        sub: 'from store'),
+                    if ((s.totalConverted ?? 0) > 0)
+                      _stat('Converted', (s.totalConverted ?? 0).toString(),
+                          Icons.currency_exchange_rounded,
+                          sub: 'to cash/payroll'),
                     _stat(
                         'Expiring Soon',
                         (s.expiringToday + s.expiringThisMonth).toString(),
@@ -297,11 +305,14 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                   Text('Could not load budget',
                       style: AppTextStyles.body(color: Colors.white60)),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () =>
-                        context.read<BudgetBloc>().add(LoadBudgetWallet()),
-                    child: Text('Tap to retry',
-                        style: AppTextStyles.small(color: Colors.white)),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () =>
+                          context.read<BudgetBloc>().add(LoadBudgetWallet()),
+                      child: Text('Tap to retry',
+                          style: AppTextStyles.small(color: Colors.white)),
+                    ),
                   ),
                 ],
               ),
@@ -318,10 +329,8 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                runSpacing: 12,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,28 +371,31 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   // ─── Reward employee quick-action ───
 
   Widget _rewardButton() {
-    return GestureDetector(
-      onTap: () => _showRewardDialog(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.card_giftcard_rounded,
-                color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              'Reward Employee',
-              style: AppTextStyles.bodyBold(
-                color: Colors.white,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _showRewardDialog(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.card_giftcard_rounded,
+                  color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Reward Employee',
+                style: AppTextStyles.bodyBold(
+                  color: Colors.white,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -437,7 +449,8 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                       items: users.where((u) {
                         final role = currentUser.role.toUpperCase();
                         if (role == 'HR' || role == 'ADMIN') return true;
-                        return u.departmentId == currentUser.departmentId;
+                        // MANAGER / DEPT_HEAD: only show their direct reports
+                        return u.managerId == currentUser.id;
                       }).map((user) {
                         return DropdownMenuItem<int>(
                           value: user.id,

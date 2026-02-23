@@ -87,13 +87,9 @@ class _PointsPageState extends State<PointsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppPageHeader(
+                    const AppPageHeader(
                       title: 'Points Overview',
                       subtitle: 'Track your earnings and influence',
-                      action: IconButton.filledTonal(
-                        onPressed: _refreshAll,
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
                     ),
                     LayoutBuilder(
                       builder: (context, constraints) {
@@ -116,6 +112,8 @@ class _PointsPageState extends State<PointsPage> {
                         final rightColumn = LeaderboardPanel(
                           entries: state.leaderboard,
                           currentPeriod: _currentPeriod,
+                          isLoading: state.status == PointsStatus.loading &&
+                              state.leaderboard.isEmpty,
                           onPeriodChanged: (period) {
                             setState(() => _currentPeriod = period);
                             _bloc.add(GetLeaderboardRequested(period: period));

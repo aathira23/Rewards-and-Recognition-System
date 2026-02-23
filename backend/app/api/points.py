@@ -56,6 +56,7 @@ def get_points_history(
         "balance": aggregates["balance"],
         "total_earned": aggregates["total_earned"],
         "total_redeemed": aggregates["total_redeemed"],
+        "total_converted": aggregates.get("total_converted", 0),
         "pending_count": aggregates["pending_count"],
         "history": history,
         "page": page,

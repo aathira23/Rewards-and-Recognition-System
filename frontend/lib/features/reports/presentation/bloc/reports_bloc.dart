@@ -19,6 +19,8 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
     on<LoadReport>(_onLoad);
     on<ExportReportCsv>(_onExport);
     on<LoadDepartmentsForFilter>(_onLoadDepartments);
+    on<ClearExportData>((event, emit) =>
+        emit(state.copyWith(exportData: null, exportFileName: null)));
   }
 
   Future<void> _onLoad(LoadReport event, Emitter<ReportsState> emit) async {

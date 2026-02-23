@@ -28,3 +28,7 @@ class ExportReportCsv extends ReportsEvent {
 class LoadDepartmentsForFilter extends ReportsEvent {
   const LoadDepartmentsForFilter();
 }
+
+class ClearExportData extends ReportsEvent {
+  const ClearExportData();
+}

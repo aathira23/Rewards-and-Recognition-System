@@ -4,6 +4,7 @@ class PointsSummaryEntity extends Equatable {
   final int balance;
   final int totalEarned;
   final int totalRedeemed;
+  final int? totalConverted;
   final int pendingCount;
   final int expiringToday;
   final int expiringThisMonth;
@@ -12,6 +13,7 @@ class PointsSummaryEntity extends Equatable {
     required this.balance,
     required this.totalEarned,
     required this.totalRedeemed,
+    this.totalConverted,
     required this.pendingCount,
     required this.expiringToday,
     required this.expiringThisMonth,
@@ -22,6 +24,7 @@ class PointsSummaryEntity extends Equatable {
         balance,
         totalEarned,
         totalRedeemed,
+        totalConverted,
         pendingCount,
         expiringToday,
         expiringThisMonth

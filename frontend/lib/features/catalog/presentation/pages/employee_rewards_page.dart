@@ -96,50 +96,52 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Builder(
-            builder: (innerContext) => SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: Responsive.pagePadding(context),
-                vertical: Responsive.pagePadding(context) + 8,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppPageHeader(
-                    title: 'Rewards Store',
-                    subtitle: 'Redeem your hard-earned points',
-                    action: IconButton.filledTonal(
-                      onPressed: () => context
-                          .read<CatalogBloc>()
-                          .add(GetCatalogItemsRequested()),
-                      icon: const Icon(Icons.refresh_rounded),
-                    ),
+            builder: (innerContext) => CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.pagePadding(context),
+                    vertical: Responsive.pagePadding(context) + 8,
                   ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const AppPageHeader(
+                        title: 'Rewards Store',
+                        subtitle: 'Redeem your hard-earned points',
+                      ),
 
-                  // Balance Card
-                  BlocBuilder<PointsBloc, PointsState>(
-                    builder: (context, state) {
-                      final balance = state.summary?.balance ?? 0;
-                      return RewardsBalanceCard(balance: balance);
-                    },
-                  ),
-                  const SizedBox(height: 40),
+                      // Balance Card
+                      BlocBuilder<PointsBloc, PointsState>(
+                        builder: (context, state) {
+                          final balance = state.summary?.balance ?? 0;
+                          return RewardsBalanceCard(balance: balance);
+                        },
+                      ),
+                      const SizedBox(height: 40),
 
-                  // Tab Navigation
-                  CatalogTabNavigation(
-                    selectedIndex: _currentTabIndex,
-                    onTabSelected: (index) {
-                      setState(() => _currentTabIndex = index);
-                    },
+                      // Tab Navigation
+                      CatalogTabNavigation(
+                        selectedIndex: _currentTabIndex,
+                        onTabSelected: (index) {
+                          setState(() => _currentTabIndex = index);
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                    ]),
                   ),
-                  const SizedBox(height: 32),
+                ),
 
-                  // Tab Content
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildCurrentTab(innerContext),
+                // Tab Content - Sliverized
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.pagePadding(context),
                   ),
-                ],
-              ),
+                  sliver: _buildCurrentTabSliver(innerContext),
+                ),
+
+                // Bottom padding
+                const SliverToBoxAdapter(child: SizedBox(height: 60)),
+              ],
             ),
           ),
         ),
@@ -233,136 +235,19 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     );
   }
 
-  Widget _buildCurrentTab(BuildContext context) {
-    switch (_currentTabIndex) {
-      case 0:
-        return _buildCatalogTab(context);
-      case 1:
-        return _buildHistoryTab(context);
-      case 2:
-        return _buildConversionTab(context);
-      default:
-        return const SizedBox();
-    }
-  }
-
-  Widget _buildHistoryTab(BuildContext context) {
-    return BlocBuilder<CatalogBloc, CatalogState>(
-      builder: (context, state) {
-        if (state.status == CatalogStatus.loading &&
-            state.redemptions.isEmpty &&
-            state.conversions.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final redemptions = state.redemptions;
-        final conversions = state.conversions;
-
-        if (redemptions.isEmpty && conversions.isEmpty) {
-          return const EmptyStateView(
-            icon: Icons.history_edu_rounded,
-            title: 'No Activities Yet',
-            message:
-                'Your redemption and conversion history will appear here once you perform actions.',
-          );
-        }
-
-        // Merge and sort by date
-        final allActivities = [
-          ...redemptions.map((e) => _HistoryItem(
-                title: e.rewardName,
-                subtitle: e.rewardCategory,
-                points: e.pointsSpent,
-                date: e.createdAt,
-                status: e.status,
-                isConversion: false,
-              )),
-          ...conversions.map((e) => _HistoryItem(
-                title: '${e.pointsConverted} Points converted',
-                subtitle: 'To ${e.conversionType}',
-                points: e.pointsConverted,
-                date: e.createdAt,
-                status: e.status,
-                isConversion: true,
-                cashAmount: e.cashAmount,
-              )),
-        ];
-
-        allActivities.sort((a, b) => b.date.compareTo(a.date));
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: allActivities.length,
-          itemBuilder: (context, index) {
-            final item = allActivities[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color:
-                        Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-              ),
-              child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                leading: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: (item.isConversion
-                            ? Colors.green
-                            : Theme.of(context).colorScheme.primary)
-                        .withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    item.isConversion
-                        ? Icons.currency_exchange_rounded
-                        : Icons.shopping_bag_rounded,
-                    color: item.isConversion
-                        ? Colors.green
-                        : Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                title: Text(
-                  item.title,
-                  style: AppTextStyles.bodyBold(),
-                ),
-                subtitle: Text(
-                  '${item.subtitle} • ${AppDateFormatter.short(item.date)}',
-                  style: AppTextStyles.small(
-                    color: Theme.of(context).hintColor,
-                  ),
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '-${item.points} pts',
-                      style: AppTextStyles.sectionTitle(
-                        color:
-                            item.isConversion ? Colors.green : Colors.redAccent,
-                      ),
-                    ),
-                    StatusBadge(status: item.status),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   final _pointsController = TextEditingController();
   String _selectedConversionType = 'PAYROLL';
+  String _selectedCategory = 'All Categories';
 
-  Widget _buildConversionTab(BuildContext context) {
+  // Maps display labels → backend reward_type values
+  static const _categoryMap = {
+    'Gift Cards': 'GIFT_CARD',
+    'Merchandise': 'MERCH',
+  };
+
+  Widget _buildConversionTab(BuildContext context, {Key? key}) {
     return BlocBuilder<CatalogBloc, CatalogState>(
+      key: key,
       builder: (context, state) {
         // Find rate for selected type
         final rule = state.pointsRules.firstWhere(
@@ -387,7 +272,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         }
 
         IconData _statusIcon(String s) {
-          if (s == 'APPROVED' || s == 'COMPLETED') return Icons.check_circle_rounded;
+          if (s == 'APPROVED' || s == 'COMPLETED')
+            return Icons.check_circle_rounded;
           if (s == 'REJECTED' || s == 'CANCELLED') return Icons.cancel_rounded;
           return Icons.schedule_rounded;
         }
@@ -478,19 +364,24 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             decoration: InputDecoration(
                               labelText: 'Points to Convert',
                               hintText: 'Min. 500 pts',
+                              hintStyle: const TextStyle(
+                                color: Color(0xFFCDD0E3),
+                                fontWeight: FontWeight.w400,
+                                fontSize: 14,
+                              ),
                               filled: true,
                               fillColor: const Color(0xFFF7F8FD),
                               prefixIcon: const Icon(Icons.toll_rounded,
                                   color: Color(0xFF3B5BDB)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Color(0xFFE8EAF6)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE8EAF6)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Color(0xFFE8EAF6)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE8EAF6)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -515,8 +406,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             children: [
                               Expanded(
                                 child: GestureDetector(
-                                  onTap: () => setState(
-                                      () => _selectedConversionType = 'PAYROLL'),
+                                  onTap: () => setState(() =>
+                                      _selectedConversionType = 'PAYROLL'),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 180),
                                     padding: const EdgeInsets.symmetric(
@@ -660,8 +551,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: () =>
-                                  _handleSubmitConversion(context),
+                              onPressed: () => _handleSubmitConversion(context),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF3B5BDB),
                                 foregroundColor: Colors.white,
@@ -750,7 +640,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF3B5BDB).withValues(alpha: 0.08),
+                            color:
+                                const Color(0xFF3B5BDB).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -771,7 +662,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF059669).withValues(alpha: 0.08),
+                            color:
+                                const Color(0xFF059669).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -799,46 +691,26 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   ],
                 );
               }
-              return Column(children: [
-                formCard,
-                const SizedBox(height: 16),
-                infoPanel
-              ]);
+              return Column(
+                  children: [formCard, const SizedBox(height: 16), infoPanel]);
             }),
 
             const SizedBox(height: 32),
             // ── Recent Requests ──
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Recent Requests',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () =>
-                      context.read<CatalogBloc>().add(GetHistoryRequested()),
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Refresh'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF3B5BDB),
-                    textStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
+            const Text(
+              'Recent Requests',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+              ),
             ),
             const SizedBox(height: 12),
             state.conversions.isEmpty
                 ? const EmptyStateView(
                     icon: Icons.history_rounded,
                     title: 'No conversion history',
-                    message:
-                        'Your point conversion requests will appear here.',
+                    message: 'Your point conversion requests will appear here.',
                     padding: 40,
                   )
                 : ListView.builder(
@@ -948,146 +820,362 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       );
       return;
     }
-    context.read<CatalogBloc>().add(
-        SubmitConversionRequested(points: pts, type: _selectedConversionType));
-    _pointsController.clear();
+
+    // Find rate for selected type (to show in confirm dialog)
+    final state = context.read<CatalogBloc>().state;
+    final rule = state.pointsRules.firstWhere(
+      (r) =>
+          r['recognition_type'] == 'CONVERSION' &&
+          r['conversion_reward_type'] == _selectedConversionType,
+      orElse: () => {},
+    );
+    final double currentRate = (rule['conversion_rate'] != null)
+        ? double.parse(rule['conversion_rate'].toString())
+        : 0.1;
+    final cashValue = pts * currentRate;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AppDialog(
+        title: 'Confirm Conversion',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to convert $pts points?',
+              style: AppTextStyles.bodyBold(),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You will receive \$${cashValue.toStringAsFixed(2)} to your ${_selectedConversionType.toLowerCase()} account.',
+              style: AppTextStyles.body(),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      size: 20, color: Colors.amber.shade800),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'This request will be sent to HR for approval.',
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<CatalogBloc>().add(SubmitConversionRequested(
+                    points: pts,
+                    type: _selectedConversionType,
+                  ));
+              _pointsController.clear();
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildCatalogTab(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildCurrentTabSliver(BuildContext context) {
+    switch (_currentTabIndex) {
+      case 0:
+        return _buildCatalogTabSliver(context);
+      case 1:
+        return _buildHistoryTabSliver(context);
+      case 2:
+        return _buildConversionTabSliver(context);
+      default:
+        return const SliverToBoxAdapter(child: SizedBox());
+    }
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Search and Filters
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final narrow = constraints.maxWidth < 500;
-            final searchField = TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search rewards...',
-                prefixIcon: const Icon(Icons.search),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                fillColor: theme.colorScheme.surface,
-              ),
-            );
-            final categoryDropdown = Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: theme.dividerColor.withValues(alpha: 0.1)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: 'All Categories',
-                  items: [
-                    'All Categories',
-                    'Gift Cards',
-                    'Merchandise',
-                    'Experiences'
-                  ]
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (val) {},
-                  style: theme.textTheme.bodyMedium,
-                  isExpanded: narrow,
+  Widget _buildHistoryTabSliver(BuildContext context) {
+    return BlocBuilder<CatalogBloc, CatalogState>(
+      builder: (context, state) {
+        if (state.status == CatalogStatus.loading &&
+            state.redemptions.isEmpty &&
+            state.conversions.isEmpty) {
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final redemptions = state.redemptions;
+        final conversions = state.conversions;
+
+        if (redemptions.isEmpty && conversions.isEmpty) {
+          return const SliverToBoxAdapter(
+            child: EmptyStateView(
+              icon: Icons.history_edu_rounded,
+              title: 'No Activities Yet',
+              message:
+                  'Your redemption and conversion history will appear here once you perform actions.',
+            ),
+          );
+        }
+
+        // Merge and sort
+        final allActivities = [
+          ...redemptions.map((e) => _HistoryItem(
+                title: e.rewardName,
+                subtitle: e.rewardCategory,
+                points: e.pointsSpent,
+                date: e.createdAt,
+                status: e.status,
+                isConversion: false,
+              )),
+          ...conversions.map((e) => _HistoryItem(
+                title: '${e.pointsConverted} Points converted',
+                subtitle: 'To ${e.conversionType}',
+                points: e.pointsConverted,
+                date: e.createdAt,
+                status: e.status,
+                isConversion: true,
+                cashAmount: e.cashAmount,
+              )),
+        ];
+        allActivities.sort((a, b) => b.date.compareTo(a.date));
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final item = allActivities[index];
+              final isLast = index == allActivities.length - 1;
+              return Container(
+                margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .dividerColor
+                          .withValues(alpha: 0.1)),
                 ),
-              ),
-            );
-            if (narrow) {
-              return Column(
-                children: [
-                  searchField,
-                  const SizedBox(height: 12),
-                  categoryDropdown,
-                ],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(child: searchField),
-                const SizedBox(width: 16),
-                categoryDropdown,
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-
-        // Rewards Grid
-        BlocBuilder<CatalogBloc, CatalogState>(
-          builder: (context, catalogState) {
-            if (catalogState.status == CatalogStatus.loading &&
-                catalogState.items.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            // Only show full-screen error on initial load failure.
-            // Action errors (redeem/convert) are shown as snackbars via BlocListener.
-            if (catalogState.status == CatalogStatus.failure &&
-                catalogState.items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline_rounded,
-                        size: 48, color: Colors.redAccent),
-                    const SizedBox(height: 12),
-                    Text(
-                      catalogState.errorMessage ?? 'Failed to load catalog',
-                      textAlign: TextAlign.center,
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (item.isConversion
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.primary)
+                          .withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () => context
-                          .read<CatalogBloc>()
-                          .add(GetCatalogItemsRequested()),
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Retry'),
+                    child: Icon(
+                      item.isConversion
+                          ? Icons.currency_exchange_rounded
+                          : Icons.shopping_bag_rounded,
+                      color: item.isConversion
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.primary,
                     ),
-                  ],
-                ),
-              );
-            }
-
-            final items = catalogState.items.where((item) {
-              final query = _searchController.text.toLowerCase();
-              final matchesQuery = item.name.toLowerCase().contains(query) ||
-                  item.description.toLowerCase().contains(query);
-
-              final selectedCategory = 'All Categories';
-              final matchesCategory = selectedCategory == 'All Categories' ||
-                  item.category == selectedCategory;
-
-              return matchesQuery && matchesCategory;
-            }).toList();
-
-            if (items.isEmpty) {
-              return const EmptyStateView(
-                icon: Icons.search_off_rounded,
-                title: 'No rewards found',
-                message: 'Try adjusting your search or filters.',
-              );
-            }
-
-            return BlocBuilder<PointsBloc, PointsState>(
-              builder: (context, pointsState) {
-                final balance = pointsState.summary?.balance ?? 0;
-
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 280,
-                    crossAxisSpacing: 20,
-                    mainAxisSpacing: 20,
-                    childAspectRatio: 0.72,
                   ),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
+                  title: Text(item.title, style: AppTextStyles.bodyBold()),
+                  subtitle: Text(
+                    '${item.subtitle} • ${AppDateFormatter.short(item.date)}',
+                    style:
+                        AppTextStyles.small(color: Theme.of(context).hintColor),
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '-${item.points} pts',
+                        style: AppTextStyles.sectionTitle(
+                          color: item.isConversion
+                              ? Colors.green
+                              : Colors.redAccent,
+                        ),
+                      ),
+                      StatusBadge(status: item.status),
+                    ],
+                  ),
+                ),
+              );
+            },
+            childCount: allActivities.length,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConversionTabSliver(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: _buildConversionTab(context),
+    );
+  }
+
+  Widget _buildCatalogTabSliver(BuildContext context) {
+    final theme = Theme.of(context);
+    return BlocBuilder<CatalogBloc, CatalogState>(
+      builder: (context, catalogState) {
+        // Normalize in case state holds a stale value no longer in the list
+        const _validCategories = ['All Categories', 'Gift Cards', 'Merchandise'];
+        final effectiveCategory = _validCategories.contains(_selectedCategory)
+            ? _selectedCategory
+            : 'All Categories';
+
+        final items = catalogState.items.where((item) {
+          final query = _searchController.text.toLowerCase();
+          final matchesSearch = (item.name ?? '').toLowerCase().contains(query) ||
+              (item.description ?? '').toLowerCase().contains(query);
+          final matchesCategory = effectiveCategory == 'All Categories' ||
+              (item.category ?? '').toUpperCase() ==
+                  (_categoryMap[effectiveCategory] ??
+                      effectiveCategory.toUpperCase());
+          return matchesSearch && matchesCategory;
+        }).toList();
+
+        final balance = context.read<PointsBloc>().state.summary?.balance ?? 0;
+
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final narrow = constraints.maxWidth < 500;
+                    final searchField = TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search rewards...',
+                        prefixIcon: const Icon(Icons.search),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        fillColor: theme.colorScheme.surface,
+                      ),
+                    );
+                    Widget buildDropdown({required bool expanded}) =>
+                        Container(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: theme.dividerColor
+                                    .withValues(alpha: 0.1)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: const ['All Categories', 'Gift Cards', 'Merchandise']
+                                      .contains(_selectedCategory)
+                                  ? _selectedCategory
+                                  : 'All Categories',
+                              items: const [
+                                'All Categories',
+                                'Gift Cards',
+                                'Merchandise',
+                              ]
+                                  .map((e) => DropdownMenuItem(
+                                      value: e, child: Text(e)))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedCategory = val);
+                                }
+                              },
+                              style: theme.textTheme.bodyMedium,
+                              isExpanded: expanded,
+                            ),
+                          ),
+                        );
+
+                    if (narrow) {
+                      return Column(
+                        children: [
+                          searchField,
+                          const SizedBox(height: 12),
+                          buildDropdown(expanded: true),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: searchField),
+                        const SizedBox(width: 16),
+                        buildDropdown(expanded: false),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+            if (catalogState.status == CatalogStatus.loading &&
+                catalogState.items.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (catalogState.status == CatalogStatus.failure &&
+                catalogState.items.isEmpty)
+              SliverToBoxAdapter(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 48, color: Colors.redAccent),
+                      const SizedBox(height: 12),
+                      Text(
+                        catalogState.errorMessage ?? 'Failed to load catalog',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => context
+                            .read<CatalogBloc>()
+                            .add(GetCatalogItemsRequested()),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (items.isEmpty)
+              const SliverToBoxAdapter(
+                child: EmptyStateView(
+                  icon: Icons.search_off_rounded,
+                  title: 'No rewards found',
+                  message: 'Try adjusting your search or filters.',
+                ),
+              )
+            else
+              SliverGrid(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 280,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 20,
+                  childAspectRatio: 0.72,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
                     final reward = items[index];
                     return RewardItemCard(
                       reward: reward,
@@ -1097,12 +1185,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       },
                     );
                   },
-                );
-              },
-            );
-          },
-        ),
-      ],
+                  childCount: items.length,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

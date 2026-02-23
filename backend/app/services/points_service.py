@@ -185,7 +185,12 @@ class PointsService:
         redeemed = self.db.query(func.sum(Redemption.points_used)).filter(
             Redemption.user_id == user_id
         ).scalar() or 0
-        
+
+        converted = self.db.query(func.sum(PointsConversion.points_converted)).filter(
+            PointsConversion.user_id == user_id,
+            PointsConversion.status.in_(["APPROVED", "PAID"])
+        ).scalar() or 0
+
         pending_count = self.db.query(func.count(PointsConversion.id)).filter(
             PointsConversion.user_id == user_id,
             PointsConversion.status == "PENDING"
@@ -215,6 +220,7 @@ class PointsService:
             "balance": balance,
             "total_earned": int(earned),
             "total_redeemed": int(redeemed),
+            "total_converted": int(converted),
             "pending_count": int(expiring_today), # Repurposing as legacy support if needed
             "expiring_soon": int(expiring_today + expiring_this_month),
             "expiring_today": int(expiring_today),

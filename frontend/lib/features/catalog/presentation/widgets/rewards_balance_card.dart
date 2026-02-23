@@ -36,7 +36,7 @@ class RewardsBalanceCard extends StatelessWidget {
                   const Color(0xFFEC4899), // Pink 500
                 ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: (isDark ? Colors.black : theme.colorScheme.primary)
@@ -47,16 +47,16 @@ class RewardsBalanceCard extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
             // Decorative circles
             Positioned(
-              right: -50,
-              top: -50,
+              right: -30,
+              top: -30,
               child: Container(
-                width: 150,
-                height: 150,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withValues(alpha: 0.1),
@@ -64,7 +64,7 @@ class RewardsBalanceCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -80,7 +80,7 @@ class RewardsBalanceCard extends StatelessWidget {
                               color: Colors.white.withValues(alpha: 0.8),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
@@ -103,7 +103,7 @@ class RewardsBalanceCard extends StatelessWidget {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
@@ -111,15 +111,15 @@ class RewardsBalanceCard extends StatelessWidget {
                         child: const Icon(
                           Icons.account_balance_wallet_rounded,
                           color: Colors.white,
-                          size: 32,
+                          size: 24,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                        horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),

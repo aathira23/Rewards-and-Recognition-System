@@ -88,9 +88,8 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
     GetLeaderboardRequested event,
     Emitter<PointsState> emit,
   ) async {
-    if (state.leaderboard.isEmpty) {
-      emit(state.copyWith(status: PointsStatus.loading));
-    }
+    // Always reload so period switches are always reflected
+    emit(state.copyWith(status: PointsStatus.loading));
 
     final result = await getLeaderboardUseCase(event.period);
     result.fold(

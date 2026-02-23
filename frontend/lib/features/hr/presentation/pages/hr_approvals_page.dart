@@ -410,10 +410,10 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
       BuildContext context, Map<String, dynamic> c, ThemeData theme) {
     final status = c['status']?.toString() ?? 'PENDING';
     final isPending = status == 'PENDING';
-    final userName = c['user']?['name'] ?? 'User #${c['user_id']}';
-    final points = c['points'] ?? 0;
-    final amount = c['amount'] ?? 0;
-    final createdAt = c['created_at']?.toString() ?? '';
+    final userName = c['user_name']?.toString() ?? 'User #${c['user_id']}';
+    final points = c['points_converted'] ?? 0;
+    final amount = c['cash_amount'] ?? 0;
+    final createdAt = c['requested_at']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

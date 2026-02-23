@@ -6,12 +6,14 @@ class LeaderboardPanel extends StatelessWidget {
   final List<LeaderboardEntryEntity> entries;
   final String currentPeriod;
   final Function(String) onPeriodChanged;
+  final bool isLoading;
 
   const LeaderboardPanel({
     super.key,
     required this.entries,
     required this.currentPeriod,
     required this.onPeriodChanged,
+    this.isLoading = false,
   });
 
   @override
@@ -41,7 +43,14 @@ class LeaderboardPanel extends StatelessWidget {
             const SizedBox(height: 20),
             _buildPeriodToggle(),
             const SizedBox(height: 20),
-            if (entries.isEmpty)
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (entries.isEmpty)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.0),

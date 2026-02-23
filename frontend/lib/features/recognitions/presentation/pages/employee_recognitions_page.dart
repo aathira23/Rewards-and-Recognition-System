@@ -130,16 +130,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.refresh,
-                                        size: 20, color: Colors.grey),
-                                    onPressed: () {
-                                      context
-                                          .read<RecognitionsBloc>()
-                                          .add(GetRecognitionFeedRequested());
-                                    },
-                                    tooltip: 'Refresh Feed',
-                                  ),
+
                                 ],
                               ),
                               const SizedBox(height: 16),

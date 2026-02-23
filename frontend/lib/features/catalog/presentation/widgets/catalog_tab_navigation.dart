@@ -15,23 +15,23 @@ class CatalogTabNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         children: [
           Expanded(
-            child:
-                _buildTabItem(context, 0, 'Catalog', Icons.grid_view_rounded),
+            child: _buildTabItem(context, 0, 'Catalog', Icons.grid_view_rounded),
           ),
+          const SizedBox(width: 6),
           Expanded(
             child: _buildTabItem(context, 1, 'History', Icons.history_rounded),
           ),
+          const SizedBox(width: 6),
           Expanded(
-            child:
-                _buildTabItem(context, 2, 'Convert', Icons.swap_horiz_rounded),
+            child: _buildTabItem(context, 2, 'Convert', Icons.swap_horiz_rounded),
           ),
         ],
       ),
@@ -49,7 +49,7 @@ class CatalogTabNavigation extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: isSelected
               ? [
@@ -59,7 +59,13 @@ class CatalogTabNavigation extends StatelessWidget {
                     offset: const Offset(0, 4),
                   )
                 ]
-              : [],
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )
+                ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
