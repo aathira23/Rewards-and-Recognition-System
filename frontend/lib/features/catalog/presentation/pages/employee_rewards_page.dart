@@ -159,7 +159,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       context: context,
       builder: (_) => AppDialog(
         title: 'Not Enough Points',
-        maxWidth: 400,
+        maxWidth: 500,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
