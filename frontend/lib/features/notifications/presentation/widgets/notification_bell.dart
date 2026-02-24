@@ -425,15 +425,13 @@ class _NotificationItem extends StatelessWidget {
               ),
             ),
             if (!notification.isRead)
-              Padding(
-                padding: const EdgeInsets.only(left: 8, top: 3),
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                  ),
+              Container(
+                margin: const EdgeInsets.only(left: 8, top: 4),
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
           ],
@@ -446,121 +444,80 @@ class _NotificationItem extends StatelessWidget {
       BuildContext context, IconData icon, Color color, ThemeData theme) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.45),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
+          constraints: const BoxConstraints(maxWidth: 420),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.14),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Gradient header ──
-                Container(
-                  padding: const EdgeInsets.fromLTRB(22, 22, 16, 18),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        color.withValues(alpha: 0.12),
-                        color.withValues(alpha: 0.03),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                  ),
+                // ── Header bar ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Icon circle
                       Container(
-                        width: 52,
-                        height: 52,
+                        padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(icon, color: color, size: 26),
+                        child: Icon(icon, color: color, size: 20),
                       ),
-                      const SizedBox(width: 14),
-                      // Type badge + time
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 9, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                notification.type.toUpperCase(),
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.9,
-                                ),
+                            Text(
+                              _labelFor(notification.type),
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            Row(
-                              children: [
-                                Icon(Icons.schedule_rounded,
-                                    size: 12, color: Colors.grey.shade400),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _timeAgo(notification.createdAt),
-                                  style: TextStyle(
-                                    color: Colors.grey.shade500,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 2),
+                            Text(
+                              _exactDate(notification.createdAt),
+                              style: TextStyle(
+                                  color: Colors.grey.shade400, fontSize: 12),
                             ),
                           ],
                         ),
                       ),
-                      // Close button
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: Icon(Icons.close,
-                              size: 15, color: Colors.grey.shade500),
-                          onPressed: () => Navigator.pop(ctx),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
+                      IconButton(
+                        icon: Icon(Icons.close,
+                            size: 18, color: Colors.grey.shade400),
+                        onPressed: () => Navigator.pop(ctx),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
                 ),
+
+                Divider(height: 1, color: Colors.grey.shade100),
+
                 // ── Body ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -568,30 +525,89 @@ class _NotificationItem extends StatelessWidget {
                         Text(
                           notification.title,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: Colors.black87,
                             height: 1.3,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: Colors.grey.shade100),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                       ],
-                      // Full message
+
+                      // ── Summary strip ──
+                      Builder(builder: (context) {
+                        final summary = _parseSummary(notification, color);
+                        if (summary.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade100),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  for (int i = 0; i < summary.length; i++) ...[
+                                    if (i > 0)
+                                      Container(
+                                          width: 1,
+                                          height: 32,
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 14),
+                                          color: Colors.grey.shade200),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          summary[i].label,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey.shade500,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          summary[i].value,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: summary[i].valueColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+                        );
+                      }),
+
                       Text(
                         notification.message,
                         style: TextStyle(
-                          fontSize: 14.5,
-                          color: Colors.grey.shade700,
-                          height: 1.55,
+                          fontSize: 13.5,
+                          color: Colors.grey.shade600,
+                          height: 1.6,
                         ),
                       ),
-                      const SizedBox(height: 22),
-                      // ── Dismiss button (full width, coloured) ──
+
+                      // ── Contextual tip ──
+                      _buildContextCard(notification.type, color),
+
+                      const SizedBox(height: 20),
+
+                      // ── Button ──
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -605,13 +621,9 @@ class _NotificationItem extends StatelessWidget {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            'Dismiss',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
+                          child: const Text('Got it',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 14)),
                         ),
                       ),
                     ],
@@ -625,16 +637,222 @@ class _NotificationItem extends StatelessWidget {
     );
   }
 
+  /// Parse structured key facts from the message for the summary strip.
+  List<({String label, String value, Color valueColor})> _parseSummary(
+      NotificationEntity n, Color accent) {
+    final items = <({String label, String value, Color valueColor})>[];
+    final t = n.type.toLowerCase();
+    final msg = n.message;
+
+    // Points
+    final ptsMatch = RegExp(r'(\d+)\s*(?:points?|pts)', caseSensitive: false)
+        .firstMatch(msg);
+    final pts = ptsMatch != null ? int.tryParse(ptsMatch.group(1)!) : null;
+
+    // Quoted item name (badge / reward / award)
+    final quotedMatch = RegExp(r"'([^']+)'").firstMatch(msg);
+    final quotedName = quotedMatch?.group(1);
+
+    // Sender (e.g. "David Chen appreciated")
+    final senderMatch = RegExp(
+            r'^([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\s+(?:appreciated|nominated|awarded|sent|gave)',
+            caseSensitive: true)
+        .firstMatch(msg);
+    final sender = senderMatch?.group(1);
+
+    // Days remaining (expiry)
+    final daysMatch =
+        RegExp(r'(\d+)\s+day', caseSensitive: false).firstMatch(msg);
+
+    if (t == 'ecard' || t == 'award' || t == 'manager_reward') {
+      if (sender != null)
+        items.add((
+          label: 'From',
+          value: sender,
+          valueColor: Colors.black87,
+        ));
+      if (quotedName != null)
+        items.add((
+          label: t == 'award' ? 'Award' : 'Badge',
+          value: quotedName,
+          valueColor: Colors.black87,
+        ));
+      if (pts != null)
+        items.add((
+          label: 'Points Earned',
+          value: '+$pts pts',
+          valueColor: Colors.green.shade600,
+        ));
+    } else if (t == 'expiry_reminder' || t == 'expiry') {
+      if (pts != null)
+        items.add((
+          label: 'Points at Risk',
+          value: '$pts pts',
+          valueColor: Colors.orange.shade700,
+        ));
+      if (daysMatch != null)
+        items.add((
+          label: 'Days Left',
+          value: daysMatch.group(1)!,
+          valueColor: Colors.orange.shade700,
+        ));
+    } else if (t == 'redemption' || msg.toLowerCase().contains('redeemed')) {
+      if (quotedName != null)
+        items.add((
+          label: 'Reward',
+          value: quotedName,
+          valueColor: Colors.black87,
+        ));
+      if (pts != null)
+        items.add((
+          label: 'Points Used',
+          value: '$pts pts',
+          valueColor: Colors.red.shade500,
+        ));
+    } else if (t == 'conversion') {
+      if (pts != null)
+        items.add((
+          label: 'Points Converted',
+          value: '$pts pts',
+          valueColor: Colors.purple.shade600,
+        ));
+    } else if (t == 'celebration') {
+      if (pts != null)
+        items.add((
+          label: 'Points Gifted',
+          value: '+$pts pts',
+          valueColor: Colors.pink.shade500,
+        ));
+    }
+
+    return items;
+  }
+
+  /// Type-specific context/hint card shown below the message.
+  Widget _buildContextCard(String type, Color color) {
+    final hint = _hintFor(type);
+    if (hint == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded,
+                size: 15, color: color.withValues(alpha: 0.7)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                hint,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.grey.shade700,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _labelFor(String type) {
+    switch (type.toLowerCase()) {
+      case 'ecard':
+        return 'RECOGNITION';
+      case 'award':
+        return 'AWARD';
+      case 'manager_reward':
+        return 'MANAGER REWARD';
+      case 'redemption':
+        return 'REDEMPTION';
+      case 'conversion':
+        return 'CASH CONVERSION';
+      case 'celebration':
+        return 'CELEBRATION';
+      case 'expiry_reminder':
+      case 'expiry':
+        return 'EXPIRY ALERT';
+      default:
+        return type.isEmpty ? 'NOTIFICATION' : type.toUpperCase();
+    }
+  }
+
+  String? _hintFor(String type) {
+    switch (type.toLowerCase()) {
+      case 'ecard':
+      case 'manager_reward':
+        return 'Points from recognitions are credited to your wallet. '
+            'Head to the Rewards Store to see what you can redeem.';
+      case 'award':
+        return 'Points from awards are added directly to your wallet. '
+            'You can redeem them in the Rewards Store anytime.';
+      case 'redemption':
+        return 'Your redemption request has been submitted. '
+            'Once fulfilled, the reward will be delivered or credited to your account.';
+      case 'conversion':
+        return 'Your points-to-cash conversion request has been submitted. '
+            'HR will process it during the next payroll cycle.';
+      case 'celebration':
+        return 'Celebration points are added to your wallet automatically. '
+            'Check the Rewards Store to redeem them.';
+      case 'expiry_reminder':
+      case 'expiry':
+        return 'These points will expire soon. Use them before the date to '
+            'avoid losing them — redeem in the Rewards Store or request a cash conversion.';
+      default:
+        return null;
+    }
+  }
+
+  String _exactDate(String dateStr) {
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+      final h = dt.hour.toString().padLeft(2, '0');
+      final m = dt.minute.toString().padLeft(2, '0');
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}, $h:$m';
+    } catch (_) {
+      return '';
+    }
+  }
+
   IconData _iconFor(String type) {
     switch (type.toLowerCase()) {
       case 'award':
         return Icons.emoji_events_rounded;
-      case 'recognition':
+      case 'ecard':
         return Icons.card_giftcard_rounded;
-      case 'points':
-        return Icons.account_balance_wallet_rounded;
+      case 'manager_reward':
+        return Icons.workspace_premium_rounded;
+      case 'redemption':
+        return Icons.storefront_rounded;
+      case 'conversion':
+        return Icons.currency_rupee_rounded;
       case 'celebration':
         return Icons.cake_rounded;
+      case 'expiry_reminder':
       case 'expiry':
         return Icons.timer_off_rounded;
       default:
@@ -646,12 +864,17 @@ class _NotificationItem extends StatelessWidget {
     switch (type.toLowerCase()) {
       case 'award':
         return Colors.amber.shade700;
-      case 'recognition':
+      case 'ecard':
         return Colors.blue.shade600;
-      case 'points':
+      case 'manager_reward':
+        return Colors.indigo.shade500;
+      case 'redemption':
         return Colors.green.shade600;
+      case 'conversion':
+        return Colors.purple.shade600;
       case 'celebration':
         return Colors.pink.shade400;
+      case 'expiry_reminder':
       case 'expiry':
         return Colors.orange.shade600;
       default:
