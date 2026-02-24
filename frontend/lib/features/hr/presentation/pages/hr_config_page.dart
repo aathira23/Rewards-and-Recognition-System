@@ -234,13 +234,18 @@ class _HrConfigViewState extends State<_HrConfigView>
                       const SizedBox(width: 4),
                       _ToggleIconBtn(
                         isActive: isActive,
-                        onTap: () => context.read<HrConfigBloc>().add(
-                              ToggleItem(
-                                entityType: HrConfigEntityType.awardType,
-                                id: a['id'],
-                                currentlyActive: isActive,
+                        onTap: () => _confirmAction(
+                          context: context,
+                          title: isActive ? 'Deactivate Award' : 'Activate Award',
+                          message: 'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${a['name']}"?',
+                          onConfirm: () => context.read<HrConfigBloc>().add(
+                                ToggleItem(
+                                  entityType: HrConfigEntityType.awardType,
+                                  id: a['id'],
+                                  currentlyActive: isActive,
+                                ),
                               ),
-                            ),
+                        ),
                       ),
                     ],
                   ),
@@ -400,15 +405,20 @@ class _HrConfigViewState extends State<_HrConfigView>
                         onTap: () => _showBadgeDialog(context, existing: b),
                       ),
                       const SizedBox(width: 4),
-                      _ToggleIconBtn(
+                       _ToggleIconBtn(
                         isActive: isActive,
-                        onTap: () => context.read<HrConfigBloc>().add(
-                              ToggleItem(
-                                entityType: HrConfigEntityType.badge,
-                                id: b['id'],
-                                currentlyActive: isActive,
+                        onTap: () => _confirmAction(
+                          context: context,
+                          title: isActive ? 'Deactivate Badge' : 'Activate Badge',
+                          message: 'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${b['name']}"?',
+                          onConfirm: () => context.read<HrConfigBloc>().add(
+                                ToggleItem(
+                                  entityType: HrConfigEntityType.badge,
+                                  id: b['id'],
+                                  currentlyActive: isActive,
+                                ),
                               ),
-                            ),
+                        ),
                       ),
                     ],
                   ),
@@ -545,13 +555,18 @@ class _HrConfigViewState extends State<_HrConfigView>
                       const SizedBox(width: 4),
                       _ToggleIconBtn(
                         isActive: isActive,
-                        onTap: () => context.read<HrConfigBloc>().add(
-                              ToggleItem(
-                                entityType: HrConfigEntityType.reward,
-                                id: r['id'],
-                                currentlyActive: isActive,
+                        onTap: () => _confirmAction(
+                          context: context,
+                          title: isActive ? 'Deactivate Reward' : 'Activate Reward',
+                          message: 'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${r['name']}"?',
+                          onConfirm: () => context.read<HrConfigBloc>().add(
+                                ToggleItem(
+                                  entityType: HrConfigEntityType.reward,
+                                  id: r['id'],
+                                  currentlyActive: isActive,
+                                ),
                               ),
-                            ),
+                        ),
                       ),
                     ],
                   ),
@@ -900,49 +915,58 @@ class _HrConfigViewState extends State<_HrConfigView>
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
-                  if (isEdit) {
-                    final data = <String, dynamic>{
-                      'is_active': existing['is_active'] ?? true,
-                    };
-                    if (selectedType == 'CONVERSION') {
-                      if (rateC.text.isNotEmpty) {
-                        data['conversion_rate'] = double.tryParse(rateC.text);
+                  final saveData = () {
+                    if (isEdit) {
+                      final data = <String, dynamic>{
+                        'is_active': existing['is_active'] ?? true,
+                      };
+                      if (selectedType == 'CONVERSION') {
+                        if (rateC.text.isNotEmpty) {
+                          data['conversion_rate'] = double.tryParse(rateC.text);
+                        }
+                      } else {
+                        if (pointsC.text.isNotEmpty) {
+                          data['points'] = int.tryParse(pointsC.text);
+                        }
                       }
+                      outerCtx.read<HrConfigBloc>().add(SaveItem(
+                            entityType: HrConfigEntityType.policyRule,
+                            data: data,
+                            id: existing['id'],
+                          ));
                     } else {
-                      if (pointsC.text.isNotEmpty) {
-                        data['points'] = int.tryParse(pointsC.text);
+                      final data = <String, dynamic>{
+                        'recognition_type': selectedType,
+                        'is_active': true,
+                      };
+                      if (selectedType == 'ECARD') {
+                        data['points'] = int.tryParse(pointsC.text) ?? 0;
+                      } else if (selectedType == 'CELEBRATION') {
+                        data['points'] = int.tryParse(pointsC.text) ?? 0;
+                        if (eventC.text.isNotEmpty) {
+                          data['event_key'] = eventC.text;
+                        }
+                      } else if (selectedType == 'CONVERSION') {
+                        data['points'] = 0;
+                        if (rateC.text.isNotEmpty) {
+                          data['conversion_rate'] = double.tryParse(rateC.text);
+                        }
+                        data['conversion_reward_type'] = selectedConvType;
                       }
+                      outerCtx.read<HrConfigBloc>().add(SaveItem(
+                            entityType: HrConfigEntityType.policyRule,
+                            data: data,
+                          ));
                     }
-                    outerCtx.read<HrConfigBloc>().add(SaveItem(
-                          entityType: HrConfigEntityType.policyRule,
-                          data: data,
-                          id: existing['id'],
-                        ));
-                  } else {
-                    final data = <String, dynamic>{
-                      'recognition_type': selectedType,
-                      'is_active': true,
-                    };
-                    if (selectedType == 'ECARD') {
-                      data['points'] = int.tryParse(pointsC.text) ?? 0;
-                    } else if (selectedType == 'CELEBRATION') {
-                      data['points'] = int.tryParse(pointsC.text) ?? 0;
-                      if (eventC.text.isNotEmpty) {
-                        data['event_key'] = eventC.text;
-                      }
-                    } else if (selectedType == 'CONVERSION') {
-                      data['points'] = 0;
-                      if (rateC.text.isNotEmpty) {
-                        data['conversion_rate'] = double.tryParse(rateC.text);
-                      }
-                      data['conversion_reward_type'] = selectedConvType;
-                    }
-                    outerCtx.read<HrConfigBloc>().add(SaveItem(
-                          entityType: HrConfigEntityType.policyRule,
-                          data: data,
-                        ));
-                  }
-                  Navigator.pop(dialogCtx);
+                    Navigator.pop(dialogCtx);
+                  };
+
+                  _confirmAction(
+                    context: outerCtx,
+                    title: 'Update Policy',
+                    message: 'Are you sure you want to save these policy changes?',
+                    onConfirm: saveData,
+                  );
                 },
                 child: const Text('Save Changes'),
               ),
@@ -1178,10 +1202,51 @@ class _HrConfigViewState extends State<_HrConfigView>
           const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () {
-              onSave();
-              Navigator.pop(context);
+              _confirmAction(
+                context: context,
+                title: 'Confirm Save',
+                message: 'Are you sure you want to save these changes?',
+                onConfirm: () {
+                  onSave();
+                  Navigator.pop(context);
+                },
+              );
             },
             child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmAction({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required VoidCallback onConfirm,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AppDialog(
+        title: title,
+        maxWidth: 400,
+        showCloseButton: false,
+        content: Text(
+          message,
+          style: AppTextStyles.bodyLarge(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel',
+                style: AppTextStyles.bodyBold(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onConfirm();
+            },
+            child: const Text('Confirm'),
           ),
         ],
       ),
