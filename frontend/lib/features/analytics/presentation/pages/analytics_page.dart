@@ -828,7 +828,7 @@ class _TrendStat extends StatelessWidget {
   }
 }
 
-class _TrendChart extends StatelessWidget {
+class _TrendChart extends StatefulWidget {
   final List<Map<String, dynamic>> trends;
   final Color color;
   final double avg;
@@ -836,15 +836,33 @@ class _TrendChart extends StatelessWidget {
       {required this.trends, required this.color, required this.avg});
 
   @override
+  State<_TrendChart> createState() => _TrendChartState();
+}
+
+class _TrendChartState extends State<_TrendChart> {
+  Offset? _hoverPos;
+
+  @override
   Widget build(BuildContext context) {
-    final display =
-        trends.length > 30 ? trends.sublist(trends.length - 30) : trends;
-    return SizedBox(
-      height: 200,
-      child: LayoutBuilder(
-        builder: (context, constraints) => CustomPaint(
-          size: Size(constraints.maxWidth, 200),
-          painter: _TrendPainter(data: display, color: color, avg: avg),
+    final display = widget.trends.length > 30
+        ? widget.trends.sublist(widget.trends.length - 30)
+        : widget.trends;
+
+    return MouseRegion(
+      onHover: (event) => setState(() => _hoverPos = event.localPosition),
+      onExit: (event) => setState(() => _hoverPos = null),
+      child: SizedBox(
+        height: 200,
+        child: LayoutBuilder(
+          builder: (context, constraints) => CustomPaint(
+            size: Size(constraints.maxWidth, 200),
+            painter: _TrendPainter(
+              data: display,
+              color: widget.color,
+              avg: widget.avg,
+              hoverPos: _hoverPos,
+            ),
+          ),
         ),
       ),
     );
@@ -855,7 +873,13 @@ class _TrendPainter extends CustomPainter {
   final List<Map<String, dynamic>> data;
   final Color color;
   final double avg;
-  _TrendPainter({required this.data, required this.color, required this.avg});
+  final Offset? hoverPos;
+  _TrendPainter({
+    required this.data,
+    required this.color,
+    required this.avg,
+    this.hoverPos,
+  });
 
   String _dateLabel(String dateStr, int totalPoints) {
     if (dateStr.length < 10) return dateStr;
@@ -1059,9 +1083,103 @@ class _TrendPainter extends CustomPainter {
           Offset(pts[i].dx - tp.width / 2,
               topPad + ch + bottomPad - tp.height - 2));
     }
+
+    // ── INTERACTIVE HOVER TOOLTIP ─────────────────────────────────
+    if (hoverPos != null) {
+      // Find nearest point
+      int nearestIdx = -1;
+      double minDist = double.infinity;
+
+      for (int i = 0; i < pts.length; i++) {
+        final d = (hoverPos!.dx - pts[i].dx).abs();
+        if (d < minDist) {
+          minDist = d;
+          nearestIdx = i;
+        }
+      }
+
+      if (nearestIdx != -1 && minDist < 40) {
+        final target = pts[nearestIdx];
+        final item = data[nearestIdx];
+        final count = (item['count'] as num?)?.toInt() ?? 0;
+        final dateStr = item['date']?.toString() ?? '';
+
+        // Draw vertical guide line
+        canvas.drawLine(
+          Offset(target.dx, topPad),
+          Offset(target.dx, topPad + ch),
+          Paint()
+            ..color = color.withValues(alpha: 0.3)
+            ..strokeWidth = 1,
+        );
+
+        // Highlight point
+        canvas.drawCircle(target, 5, Paint()..color = color);
+        canvas.drawCircle(
+            target, 8, Paint()..color = color.withValues(alpha: 0.2));
+
+        // Tooltip content
+        final dateText = _dateLabel(dateStr, 0); // show full day/month
+        final tp = TextPainter(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '$dateText\n',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white70,
+                  height: 1.4,
+                ),
+              ),
+              TextSpan(
+                text: '$count Recognitions',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        final tooltipW = tp.width + 20;
+        final tooltipH = tp.height + 16;
+
+        // Position tooltip to avoid edges
+        double tx = target.dx - tooltipW / 2;
+        if (tx < 0) tx = 8;
+        if (tx + tooltipW > size.width) tx = size.width - tooltipW - 8;
+
+        double ty = target.dy - tooltipH - 12;
+        if (ty < 0) ty = target.dy + 12;
+
+        final tooltipRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(tx, ty, tooltipW, tooltipH),
+          const Radius.circular(8),
+        );
+
+        // Shadow
+        canvas.drawRRect(
+          tooltipRect,
+          Paint()
+            ..color = Colors.black.withValues(alpha: 0.2)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+
+        // Background
+        canvas.drawRRect(tooltipRect, Paint()..color = const Color(0xFF1F2937));
+
+        tp.paint(canvas, Offset(tx + 10, ty + 8));
+      }
+    }
   }
 
   @override
   bool shouldRepaint(covariant _TrendPainter old) =>
-      data != old.data || color != old.color || avg != old.avg;
+      data != old.data ||
+      color != old.color ||
+      avg != old.avg ||
+      hoverPos != old.hoverPos;
 }

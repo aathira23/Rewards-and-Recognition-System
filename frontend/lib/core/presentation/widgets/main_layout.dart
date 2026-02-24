@@ -239,28 +239,36 @@ class _MainLayoutState extends State<MainLayout> {
         children: [
           Tooltip(
             message: widget.onLogout != null ? 'Logout' : widget.userName,
-            child: GestureDetector(
-              onTap: widget.onLogout != null
-                  ? () => _showLogoutConfirmation(context)
-                  : null,
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                child: Text(
-                  widget.userName.isNotEmpty
-                      ? widget.userName[0].toUpperCase()
-                      : 'U',
-                  style: AppTextStyles.smallBold(color: Colors.white),
+            child: MouseRegion(
+              cursor: widget.onLogout != null
+                  ? SystemMouseCursors.click
+                  : MouseCursor.defer,
+              child: GestureDetector(
+                onTap: widget.onLogout != null
+                    ? () => _showLogoutConfirmation(context)
+                    : null,
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  child: Text(
+                    widget.userName.isNotEmpty
+                        ? widget.userName[0].toUpperCase()
+                        : 'U',
+                    style: AppTextStyles.smallBold(color: Colors.white),
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 4),
           if (widget.onLogout != null)
-            GestureDetector(
-              onTap: () => _showLogoutConfirmation(context),
-              child: Icon(Icons.logout_rounded,
-                  size: 14, color: Colors.white.withValues(alpha: 0.45)),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => _showLogoutConfirmation(context),
+                child: Icon(Icons.logout_rounded,
+                    size: 14, color: Colors.white.withValues(alpha: 0.45)),
+              ),
             ),
         ],
       ),
