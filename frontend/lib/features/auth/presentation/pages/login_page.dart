@@ -155,12 +155,12 @@ class _LoginPageState extends State<LoginPage> {
                               TextFormField(
                                 controller: _emailController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Username',
-                                  hintText: 'Enter your email or username',
+                                  labelText: 'Email',
+                                  hintText: 'Enter your email',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please enter your username';
+                                    return 'Please enter your email';
                                   }
                                   return null;
                                 },
