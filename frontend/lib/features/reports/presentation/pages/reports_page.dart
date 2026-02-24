@@ -387,7 +387,7 @@ class _ReportsViewState extends State<_ReportsView> {
                       if (!narrow) ...[
                         OutlinedButton.icon(
                           onPressed: () => _fetchReport(type),
-                          icon: const Icon(Icons.refresh, size: 15),
+                          icon: const Icon(Icons.refresh_rounded, size: 15),
                           label: const Text('Refresh'),
                         ),
                         const SizedBox(width: 10),
@@ -406,7 +406,7 @@ class _ReportsViewState extends State<_ReportsView> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _fetchReport(type),
-                            icon: const Icon(Icons.refresh, size: 15),
+                            icon: const Icon(Icons.refresh_rounded, size: 15),
                             label: const Text('Refresh'),
                           ),
                         ),

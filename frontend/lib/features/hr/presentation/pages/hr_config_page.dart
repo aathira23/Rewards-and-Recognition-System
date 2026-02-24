@@ -1225,23 +1225,10 @@ class _RefreshBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Icon(Icons.refresh_rounded,
-              size: 18, color: Colors.grey.shade500),
-        ),
-      ),
+    return IconButton(
+      tooltip: 'Refresh Configuration',
+      icon: const Icon(Icons.refresh_rounded, size: 20),
+      onPressed: onTap,
     );
   }
 }

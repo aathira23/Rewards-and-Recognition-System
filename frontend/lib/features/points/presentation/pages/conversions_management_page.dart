@@ -58,7 +58,7 @@ class _ConversionsManagementView extends StatelessWidget {
                   subtitle:
                       'Approve or reject employee points conversion requests',
                   action: IconButton(
-                    icon: const Icon(Icons.refresh),
+                    icon: const Icon(Icons.refresh_rounded),
                     onPressed: () => context
                         .read<ConversionsMgmtBloc>()
                         .add(LoadPendingConversions()),

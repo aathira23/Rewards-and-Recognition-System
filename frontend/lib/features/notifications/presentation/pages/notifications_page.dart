@@ -61,7 +61,7 @@ class _NotificationsView extends StatelessWidget {
                         ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.refresh, size: 20),
+                        icon: const Icon(Icons.refresh_rounded, size: 20),
                         onPressed: () {
                           context
                               .read<NotificationsBloc>()

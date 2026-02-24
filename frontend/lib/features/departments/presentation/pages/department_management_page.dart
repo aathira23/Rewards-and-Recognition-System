@@ -66,7 +66,7 @@ class _DepartmentManagementView extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh_rounded),
                         onPressed: () => context
                             .read<DepartmentBloc>()
                             .add(LoadDepartments()),

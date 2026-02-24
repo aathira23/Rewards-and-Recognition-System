@@ -712,7 +712,7 @@ class _RefreshBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: 'Refresh all',
-      icon: const Icon(Icons.refresh_rounded),
+      icon: const Icon(Icons.refresh_rounded, size: 20),
       onPressed: onTap,
     );
   }

@@ -80,9 +80,9 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                 children: [
                   // ── Page title ──────────────────────────────────
                   AppPageHeader(
-                    action: IconButton.filledTonal(
+                    action: IconButton(
                       onPressed: _refresh,
-                      icon: const Icon(Icons.refresh_rounded),
+                      icon: const Icon(Icons.refresh_rounded, size: 20),
                       tooltip: 'Refresh',
                     ),
                   ),

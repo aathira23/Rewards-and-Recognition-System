@@ -226,7 +226,7 @@ class _NotificationsPanel extends StatelessWidget {
                               style: TextStyle(fontSize: 12)),
                         ),
                       IconButton(
-                        icon: const Icon(Icons.refresh, size: 16),
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
                         padding: const EdgeInsets.all(6),
                         constraints: const BoxConstraints(),
                         tooltip: 'Refresh',

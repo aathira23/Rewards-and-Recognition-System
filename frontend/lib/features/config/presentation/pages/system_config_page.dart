@@ -59,7 +59,7 @@ class _SystemConfigView extends StatelessWidget {
                   title: 'Configuration',
                   subtitle: 'Manage system settings and point rules',
                   action: IconButton(
-                    icon: const Icon(Icons.refresh),
+                    icon: const Icon(Icons.refresh_rounded),
                     onPressed: () =>
                         context.read<ConfigBloc>().add(LoadConfig()),
                   ),
