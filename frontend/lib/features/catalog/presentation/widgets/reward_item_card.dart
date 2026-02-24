@@ -186,7 +186,7 @@ class RewardItemCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis, 
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -198,35 +198,43 @@ class RewardItemCard extends StatelessWidget {
 
                 // Points and Stock row
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Points section
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          reward.pointsCost.toString(),
-                          style: AppTextStyles.headline2(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 3),
-                          child: Text(
-                            'pts',
-                            style: AppTextStyles.smallMedium(
-                              color: theme.hintColor,
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.bottomLeft,
+                              child: Text(
+                                reward.pointsCost.toString(),
+                                style: AppTextStyles.headline2(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 3),
+                            child: Text(
+                              'pts',
+                              style: AppTextStyles.smallMedium(
+                                color: theme.hintColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-
+                    const SizedBox(width: 6),
                     // Stock indicator
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 6, vertical: 4),
                       decoration: BoxDecoration(
                         color: reward.stockQuantity > 0
                             ? Colors.blue.withValues(alpha: 0.08)
@@ -238,7 +246,7 @@ class RewardItemCard extends StatelessWidget {
                             ? '${reward.stockQuantity} in stock'
                             : 'Out of stock',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: reward.stockQuantity > 0
                               ? Colors.blue[700]
@@ -270,9 +278,7 @@ class RewardItemCard extends StatelessWidget {
                       disabledForegroundColor: Colors.grey.shade500,
                     ),
                     child: Text(
-                      hasInsufficientPoints
-                          ? 'Insufficient Points'
-                          : 'Redeem',
+                      hasInsufficientPoints ? 'Insufficient Points' : 'Redeem',
                       style: AppTextStyles.bodyBold(),
                     ),
                   ),
