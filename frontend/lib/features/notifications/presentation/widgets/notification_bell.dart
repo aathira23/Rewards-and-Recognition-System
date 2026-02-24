@@ -115,7 +115,9 @@ class _NotificationBellState extends State<NotificationBell> {
                       ? Icons.notifications_rounded
                       : Icons.notifications_none_outlined,
                   size: 24,
-                  color: isOpen ? Theme.of(context).colorScheme.primary : null,
+                  color: isOpen
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.85),
                 ),
                 onPressed: _togglePanel,
                 tooltip: 'Notifications',
