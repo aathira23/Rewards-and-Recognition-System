@@ -31,9 +31,8 @@ class RewardsBalanceCard extends StatelessWidget {
                   theme.colorScheme.secondary.withValues(alpha: 0.7),
                 ]
               : [
-                  const Color(0xFF4F46E5), // Indigo 600
-                  const Color(0xFF7C3AED), // Violet 600
-                  const Color(0xFFEC4899), // Pink 500
+                  const Color(0xFF1E56BD),
+                  const Color(0xFF3B7BF2),
                 ],
         ),
         borderRadius: BorderRadius.circular(16),

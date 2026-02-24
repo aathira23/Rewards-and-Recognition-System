@@ -285,7 +285,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   border: Border.all(color: const Color(0xFFE8EAF6)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B5BDB).withValues(alpha: 0.06),
+                      color: const Color(0xFF1E56BD).withValues(alpha: 0.06),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -298,11 +298,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF3B5BDB), Color(0xFF6741D9)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
+                        color: Color(0xFF1E56BD),
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(20),
                           topRight: Radius.circular(20),
@@ -366,7 +362,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               filled: true,
                               fillColor: const Color(0xFFF7F8FD),
                               prefixIcon: const Icon(Icons.toll_rounded,
-                                  color: Color(0xFF3B5BDB)),
+                                  color: Color(0xFF1E56BD)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide:
@@ -380,7 +376,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                    color: Color(0xFF3B5BDB), width: 1.5),
+                                    color: Color(0xFF1E56BD), width: 1.5),
                               ),
                               suffixIcon: pts > 0
                                   ? IconButton(
@@ -408,12 +404,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isPayroll
-                                          ? const Color(0xFF3B5BDB)
+                                          ? const Color(0xFF1E56BD)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isPayroll
-                                            ? const Color(0xFF3B5BDB)
+                                            ? const Color(0xFF1E56BD)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -453,12 +449,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isPayroll
-                                          ? const Color(0xFF3B5BDB)
+                                          ? const Color(0xFF1E56BD)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: !isPayroll
-                                            ? const Color(0xFF3B5BDB)
+                                            ? const Color(0xFF1E56BD)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -547,7 +543,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             child: ElevatedButton(
                               onPressed: () => _handleSubmitConversion(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3B5BDB),
+                                backgroundColor: const Color(0xFF1E56BD),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(

@@ -264,25 +264,15 @@ class RewardItemCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      backgroundColor: reward.stockQuantity <= 0
-                          ? Colors.red.shade50
-                          : theme.colorScheme.primary,
-                      foregroundColor: reward.stockQuantity <= 0
-                          ? Colors.red.shade400
-                          : theme.colorScheme.onPrimary,
-                      disabledBackgroundColor: reward.stockQuantity <= 0
-                          ? Colors.red.shade50
-                          : theme.colorScheme.primary.withValues(alpha: 0.1),
-                      disabledForegroundColor: reward.stockQuantity <= 0
-                          ? Colors.red.shade400
-                          : theme.hintColor,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      disabledBackgroundColor: Colors.grey.shade200,
+                      disabledForegroundColor: Colors.grey.shade500,
                     ),
                     child: Text(
-                      reward.stockQuantity <= 0
-                          ? 'Out of Stock'
-                          : (hasInsufficientPoints
-                              ? 'Short on Points'
-                              : 'Redeem Now'),
+                      hasInsufficientPoints
+                          ? 'Insufficient Points'
+                          : 'Redeem',
                       style: AppTextStyles.bodyBold(),
                     ),
                   ),
