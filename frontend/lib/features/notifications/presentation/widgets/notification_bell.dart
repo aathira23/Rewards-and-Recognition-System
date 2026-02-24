@@ -6,6 +6,7 @@ import '../../domain/entities/notification_entity.dart';
 import '../bloc/notifications_bloc.dart';
 import '../bloc/notifications_event.dart';
 import '../bloc/notifications_state.dart';
+import '../pages/notifications_history_page.dart';
 
 /// Bell icon in the top bar with an unread count badge.
 /// Clicking it toggles a fixed-size dropdown panel showing all notifications.
@@ -241,9 +242,41 @@ class _NotificationsPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Divider(height: 1, thickness: 1),
                 // ── Body ──
                 Flexible(child: _buildBody(context, state, theme)),
+                // ── Footer ──
+                const Divider(height: 1, thickness: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: TextButton(
+                    onPressed: () {
+                      closePanel();
+                      Navigator.push(
+                        outerContext,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsHistoryPage(),
+                        ),
+                      );
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'View All History',
+                          style: AppTextStyles.bodyBold(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             );
           },
@@ -348,33 +381,39 @@ class _NotificationItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(9),
+            Padding(
+              padding:
+                  const EdgeInsets.only(top: 2), // Align icon with first line
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 18, color: color),
               ),
-              child: Icon(icon, size: 18, color: color),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    notification.title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: notification.isRead
-                          ? FontWeight.w500
-                          : FontWeight.w700,
+                  if (notification.title.isNotEmpty) ...[
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: notification.isRead
+                            ? FontWeight.w500
+                            : FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
+                    const SizedBox(height: 2),
+                  ],
                   Text(
                     notification.message,
                     style: AppTextStyles.small(color: Colors.grey.shade600),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),

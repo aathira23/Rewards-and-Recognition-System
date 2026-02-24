@@ -1048,10 +1048,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         final items = catalogState.items.where((item) {
           final query = _searchController.text.toLowerCase();
           final matchesSearch =
-              (item.name ?? '').toLowerCase().contains(query) ||
-                  (item.description ?? '').toLowerCase().contains(query);
+              item.name.toLowerCase().contains(query) ||
+                  item.description.toLowerCase().contains(query);
           final matchesCategory = effectiveCategory == 'All Categories' ||
-              (item.category ?? '').toUpperCase() ==
+              item.category.toUpperCase() ==
                   (_categoryMap[effectiveCategory] ??
                       effectiveCategory.toUpperCase());
           return matchesSearch && matchesCategory;
