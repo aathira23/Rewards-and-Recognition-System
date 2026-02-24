@@ -449,7 +449,11 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                       items: users.where((u) {
                         final role = currentUser.role.toUpperCase();
                         if (role == 'HR' || role == 'ADMIN') return true;
-                        // MANAGER / DEPT_HEAD: only show their direct reports
+                        if (role == 'DEPT_HEAD') {
+                          return u.departmentId == currentUser.departmentId &&
+                              u.id != currentUser.id;
+                        }
+                        // MANAGER: only show their direct reports
                         return u.managerId == currentUser.id;
                       }).map((user) {
                         return DropdownMenuItem<int>(

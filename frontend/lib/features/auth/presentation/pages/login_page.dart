@@ -83,65 +83,13 @@ class _LoginPageState extends State<LoginPage> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0xFF9E7AFF), // Purple
-                        Color(0xFF4C8DFF), // Blue
-                        Color(0xFF00C6FF), // Cyan
+                        Color(0xFF6366F1), // Indigo
+                        Color(0xFF3B82F6), // Blue
+                        Color(0xFF06B6D4), // Cyan
                       ],
                     ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Illustration Placeholder (mimicking the image)
-                      Container(
-                        height: 300,
-                        padding: const EdgeInsets.all(40),
-                        child: Icon(
-                          Icons
-                              .rocket_launch_rounded, // Placeholder for illustration
-                          size: 200,
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Agility',
-                        style: AppTextStyles.display(
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 60),
-                        child: Text(
-                          'We seize the opportunity and respond quickly by demonstrating a digital mindset.',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.loginSubtitle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      // Carousel Indicator dots
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          5,
-                          (index) => Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: index == 0 ? 20 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: index == 0
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: const _LoginCarousel(),
                 ),
               ),
 
@@ -159,21 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Logos as per design
-                        // Replace with Image.asset when ready
-                        Icon(
-                          Icons.account_balance_wallet_rounded,
-                          size: 48,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'ASHOK LEYLAND',
-                          style: AppTextStyles.headline1(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
                         Text(
                           'Welcome to',
                           style: AppTextStyles.loginSubtitle(
@@ -197,8 +131,6 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                         const SizedBox(height: 40),
-
-                        const SizedBox(height: 24),
                         Row(
                           children: [
                             Expanded(child: Divider(color: Colors.grey[300])),
@@ -216,7 +148,6 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                         const SizedBox(height: 24),
-
                         Form(
                           key: _formKey,
                           child: Column(
@@ -299,7 +230,8 @@ class _LoginPageState extends State<LoginPage> {
                                 builder: (context, state) {
                                   final isLoading = state is AuthLoading;
                                   return ElevatedButton(
-                                    onPressed: isLoading ? null : _onLoginPressed,
+                                    onPressed:
+                                        isLoading ? null : _onLoginPressed,
                                     style: ElevatedButton.styleFrom(
                                       minimumSize:
                                           const Size(double.infinity, 46),
@@ -329,6 +261,182 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LoginCarousel extends StatefulWidget {
+  const _LoginCarousel();
+
+  @override
+  State<_LoginCarousel> createState() => _LoginCarouselState();
+}
+
+class _LoginCarouselState extends State<_LoginCarousel> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  Timer? _timer;
+
+  final List<Map<String, dynamic>> _slides = [
+    {
+      'icon': Icons.emoji_events_rounded,
+      'title': 'Recognize Excellence',
+      'subtitle':
+          'Celebrate your peers\' contributions and core values through meaningful recognitions.',
+    },
+    {
+      'icon': Icons.stars_rounded,
+      'title': 'Earn Rewards',
+      'subtitle':
+          'Accumulate points for every milestone, achievement, and positive impact you create.',
+    },
+    {
+      'icon': Icons.shopping_bag_rounded,
+      'title': 'Redeem Gifts',
+      'subtitle':
+          'Choose from a wide variety of rewards in our catalog, from vouchers to premium products.',
+    },
+    {
+      'icon': Icons.celebration_rounded,
+      'title': 'Celebrate Together',
+      'subtitle':
+          'Stay connected with birthdays, work anniversaries, and company-wide achievements.',
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = _currentPage + 1;
+        if (nextPage >= _slides.length) {
+          nextPage = 0;
+        }
+
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (int page) {
+              setState(() {
+                _currentPage = page;
+              });
+            },
+            itemCount: _slides.length,
+            itemBuilder: (context, index) {
+              final slide = _slides[index];
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    height: 280,
+                    padding: const EdgeInsets.all(40),
+                    child: TweenAnimationBuilder<double>(
+                      key: ValueKey(index),
+                      duration: const Duration(milliseconds: 500),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Icon(
+                            slide['icon'],
+                            size: 180,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Text(
+                      slide['title'],
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.displayMedium(
+                        color: Colors.white,
+                      ).copyWith(fontSize: 36),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 60),
+                    child: Text(
+                      slide['subtitle'],
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.loginSubtitle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        // Carousel Indicator dots
+        Padding(
+          padding: const EdgeInsets.only(bottom: 60),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              _slides.length,
+              (index) => GestureDetector(
+                onTap: () {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                  );
+                  _startTimer(); // Reset timer on manual click
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    width: index == _currentPage ? 24 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: index == _currentPage
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

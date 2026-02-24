@@ -13,6 +13,7 @@ from app.models.award_approvals import AwardApproval
 from app.models.users import User
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
+from app.services.recognition_service import RecognitionService
 from app.utils.enums import AwardStatus, ApprovalStatus, ReferenceType, UserRole
 
 class AwardsService:
@@ -22,6 +23,7 @@ class AwardsService:
         self.db = db
         self.points_service = PointsService(db)
         self.notification_service = NotificationService(db)
+        self.recognition_service = RecognitionService(db)
 
     def nominate_for_award(
         self,
@@ -111,6 +113,15 @@ class AwardsService:
                 self.db.add(approval)
                 current_approvals.append(level)
             
+            # Create feed entry for Award
+            self.recognition_service.create_feed_entry(
+                actor_id=award.nominator_id,
+                receiver_id=award.nominee_id,
+                source_type=ReferenceType.AWARD.value,
+                source_id=award.id,
+                message=f"Honored with the {award.award_type.name} Award! 🎉"
+            )
+
             # Award points immediately if HR auto-approved
             self.points_service.award_points(
                 user_id=award.nominee_id,
@@ -146,6 +157,16 @@ class AwardsService:
             # Check if all approvals are now complete due to nominator's role
             if self._all_approvals_complete(required_levels, current_approvals):
                 award.status = AwardStatus.APPROVED.value
+                
+                # Create feed entry for Award
+                self.recognition_service.create_feed_entry(
+                    actor_id=award.nominator_id,
+                    receiver_id=award.nominee_id,
+                    source_type=ReferenceType.AWARD.value,
+                    source_id=award.id,
+                    message=f"Honored with the {award.award_type.name} Award! 🎉"
+                )
+
                 self.points_service.award_points(
                     user_id=award.nominee_id,
                     points=award.points_awarded,
@@ -278,6 +299,15 @@ class AwardsService:
             # All approvals obtained - mark as APPROVED and award points
             award.status = AwardStatus.APPROVED.value
             
+            # Create feed entry for Award
+            self.recognition_service.create_feed_entry(
+                actor_id=award.nominator_id,
+                receiver_id=award.nominee_id,
+                source_type=ReferenceType.AWARD.value,
+                source_id=award.id,
+                message=f"Honored with the {award.award_type.name} Award! 🎉"
+            )
+            
             # Award points to nominee
             self.points_service.award_points(
                 user_id=award.nominee_id,
@@ -357,6 +387,24 @@ class AwardsService:
         # 2. Update award status to REJECTED
         award.status = AwardStatus.REJECTED.value
         
+        # 3. Notify nominee
+        self.notification_service.create_notification(
+            user_id=award.nominee_id,
+            message=f"Update on your nomination: The {award.award_type.name} award nomination has not been approved at this time.",
+            source_type=ReferenceType.AWARD.value,
+            source_id=award.id
+        )
+
+        # 4. Notify nominator (the person who submitted it)
+        approver = self.db.query(User).filter(User.id == approver_id).first()
+        approver_name = approver.name if approver else approval_level
+        self.notification_service.create_notification(
+            user_id=award.nominator_id,
+            message=f"Your nomination for {award.nominee.name} ({award.award_type.name}) was rejected by {approver_name} at the {approval_level} level. Reason: {comments}",
+            source_type=ReferenceType.AWARD.value,
+            source_id=award.id
+        )
+
         self.db.commit()
         self.db.refresh(award)
         award.next_required_level = None

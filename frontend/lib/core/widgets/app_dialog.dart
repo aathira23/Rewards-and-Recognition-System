@@ -20,12 +20,15 @@ class AppDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
-    final horizInset = sw < 480 ? 12.0 : sw < 720 ? 24.0 : 40.0;
+    final horizInset = sw < 480
+        ? 12.0
+        : sw < 720
+            ? 24.0
+            : 40.0;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(
-          horizontal: horizInset, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: horizInset, vertical: 24),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: maxWidth,
@@ -57,17 +60,12 @@ class AppDialog extends StatelessWidget {
             if (actions != null && actions!.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions!.map((action) {
-                    final index = actions!.indexOf(action);
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: index == 0 ? 0 : 12,
-                      ),
-                      child: action,
-                    );
-                  }).toList(),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: actions!,
                 ),
               ),
             ],

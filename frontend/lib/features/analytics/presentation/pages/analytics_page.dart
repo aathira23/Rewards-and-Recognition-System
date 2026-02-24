@@ -707,10 +707,25 @@ class _BreakdownRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(
-                '$recCount',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700, color: primary),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$recCount',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: primary),
+                  ),
+                  Text(
+                    'Recognitions',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey.shade400,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

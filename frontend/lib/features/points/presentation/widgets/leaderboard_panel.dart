@@ -18,14 +18,16 @@ class LeaderboardPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -58,10 +60,19 @@ class LeaderboardPanel extends StatelessWidget {
                 ),
               )
             else
-              Column(
-                children: entries
-                    .map((entry) => _buildLeaderboardItem(context, entry))
-                    .toList(),
+              SizedBox(
+                height: 310, // Exactly 5 items (5 * 62px)
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: entries
+                        .take(10)
+                        .map((entry) => SizedBox(
+                              height: 62, // Fixed height per item
+                              child: _buildLeaderboardItem(context, entry),
+                            ))
+                        .toList(),
+                  ),
+                ),
               ),
           ],
         ),
@@ -120,47 +131,47 @@ class LeaderboardPanel extends StatelessWidget {
 
   Widget _buildLeaderboardItem(
       BuildContext context, LeaderboardEntryEntity entry) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 32,
-            child: _getRankIcon(entry.rank),
+    return Row(
+      children: [
+        SizedBox(
+          width: 32,
+          child: _getRankIcon(entry.rank),
+        ),
+        const SizedBox(width: 12),
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.blue.shade50,
+          child: Text(
+            entry.name.isNotEmpty
+                ? entry.name.substring(0, 1).toUpperCase()
+                : '?',
+            style: AppTextStyles.cardTitle(
+              color: Colors.blue.shade700,
+            ),
           ),
-          const SizedBox(width: 12),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.blue.shade50,
-            child: Text(
-              entry.name.isNotEmpty
-                  ? entry.name.substring(0, 1).toUpperCase()
-                  : '?',
-              style: AppTextStyles.cardTitle(
-                color: Colors.blue.shade700,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center, // Center vertically
+            children: [
+              Text(
+                entry.name,
+                style: AppTextStyles.cardTitle(),
+                maxLines: 1, // Keep to 1 line for alignment
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.name,
-                  style: AppTextStyles.cardTitle(),
+              Text(
+                '${entry.score} points',
+                style: AppTextStyles.small(
+                  color: Colors.grey.shade600,
                 ),
-                Text(
-                  '${entry.score} points',
-                  style: AppTextStyles.small(
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

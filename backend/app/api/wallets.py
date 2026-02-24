@@ -71,9 +71,10 @@ def manager_reward_employee(
     current_user = Depends(get_current_user)
 ):
     """Manager rewards employee from their wallet."""
-    # Only managers may reward employees
-    if getattr(current_user, "role", None) != UserRole.MANAGER.value:
-        return forbidden("Only managers can reward employees")
+    # Only managers, dept heads, HR or Admin may reward employees
+    allowed_roles = (UserRole.MANAGER.value, UserRole.DEPT_HEAD.value, UserRole.HR.value, UserRole.ADMIN.value)
+    if getattr(current_user, "role", None) not in allowed_roles:
+        return forbidden("You do not have permission to reward employees from a budget")
 
     service = WalletsService(db)
     try:

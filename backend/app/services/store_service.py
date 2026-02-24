@@ -224,6 +224,16 @@ class StoreService:
         conversion.approved_at = datetime.now()
         
         self.db.commit()
+        self.db.refresh(conversion)
+
+        # Notify User
+        self.notification_service.create_notification(
+            user_id=conversion.user_id,
+            message=f"Your points conversion request for {conversion.points_converted} points has been rejected.",
+            source_type=ReferenceType.CONVERSION.value,
+            source_id=conversion.id
+        )
+
         return conversion
 
     def get_policies(self) -> List[Any]:

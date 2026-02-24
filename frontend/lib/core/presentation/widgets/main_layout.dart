@@ -35,6 +35,38 @@ class _MainLayoutState extends State<MainLayout> {
     _selectedIndex = widget.initialIndex;
   }
 
+  void _showLogoutConfirmation(BuildContext context) {
+    if (widget.onLogout == null) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Confirm Logout'),
+        content:
+            const Text('Are you sure you want to log out of the application?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              widget.onLogout!();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void didUpdateWidget(MainLayout oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -111,7 +143,7 @@ class _MainLayoutState extends State<MainLayout> {
   // ── User profile mini card ──────────────────────────────────────
   Widget _buildUserProfile(ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Row(
         children: [
           CircleAvatar(
@@ -123,7 +155,7 @@ class _MainLayoutState extends State<MainLayout> {
               style: AppTextStyles.smallBold(color: theme.colorScheme.primary),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,6 +171,13 @@ class _MainLayoutState extends State<MainLayout> {
               ],
             ),
           ),
+          if (widget.onLogout != null)
+            IconButton(
+              icon:
+                  Icon(Icons.logout_rounded, size: 20, color: Colors.grey[400]),
+              onPressed: () => _showLogoutConfirmation(context),
+              tooltip: 'Logout',
+            ),
         ],
       ),
     );
@@ -185,18 +224,6 @@ class _MainLayoutState extends State<MainLayout> {
                     ),
                     const Divider(height: 1),
                     _buildUserProfile(theme),
-                    if (widget.onLogout != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: widget.onLogout,
-                            icon: const Icon(Icons.logout_rounded, size: 18),
-                            label: const Text('Logout'),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -264,12 +291,6 @@ class _MainLayoutState extends State<MainLayout> {
                         ),
                       if (isMobile) const Spacer(),
                       const NotificationBell(),
-                      if (widget.onLogout != null && showSidebar)
-                        IconButton(
-                          icon: const Icon(Icons.logout_rounded, size: 24),
-                          onPressed: widget.onLogout,
-                          tooltip: 'Logout',
-                        ),
                     ],
                   ),
                 ),

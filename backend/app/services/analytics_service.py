@@ -300,8 +300,11 @@ class AnalyticsService:
                 User.department_id == dept_id,
                 User.manager_id != None,
             ).all()
-            # Group by manager
-            manager_ids = list({u.manager_id for u in managers if u.manager_id})
+            # Group by manager (excluding the Department Head themselves)
+            manager_ids = list({
+                u.manager_id for u in managers 
+                if u.manager_id and u.manager_id != user.id
+            })
             result = []
             for mgr_id in manager_ids:
                 mgr = self.db.query(User).filter(User.id == mgr_id).first()

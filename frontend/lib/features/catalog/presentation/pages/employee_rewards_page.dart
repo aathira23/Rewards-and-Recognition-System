@@ -834,6 +834,13 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         : 0.1;
     final cashValue = pts * currentRate;
 
+    final balance = context.read<PointsBloc>().state.summary?.balance ?? 0;
+    if (balance < pts) {
+      _showInsufficientPointsDialog(
+          context, "Insufficient points. Balance: $balance, Requested: $pts");
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (dialogContext) => AppDialog(
@@ -1035,15 +1042,20 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     return BlocBuilder<CatalogBloc, CatalogState>(
       builder: (context, catalogState) {
         // Normalize in case state holds a stale value no longer in the list
-        const _validCategories = ['All Categories', 'Gift Cards', 'Merchandise'];
+        const _validCategories = [
+          'All Categories',
+          'Gift Cards',
+          'Merchandise'
+        ];
         final effectiveCategory = _validCategories.contains(_selectedCategory)
             ? _selectedCategory
             : 'All Categories';
 
         final items = catalogState.items.where((item) {
           final query = _searchController.text.toLowerCase();
-          final matchesSearch = (item.name ?? '').toLowerCase().contains(query) ||
-              (item.description ?? '').toLowerCase().contains(query);
+          final matchesSearch =
+              (item.name ?? '').toLowerCase().contains(query) ||
+                  (item.description ?? '').toLowerCase().contains(query);
           final matchesCategory = effectiveCategory == 'All Categories' ||
               (item.category ?? '').toUpperCase() ==
                   (_categoryMap[effectiveCategory] ??
@@ -1070,21 +1082,22 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                         fillColor: theme.colorScheme.surface,
                       ),
                     );
-                    Widget buildDropdown({required bool expanded}) =>
-                        Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
+                    Widget buildDropdown({required bool expanded}) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                                color: theme.dividerColor
-                                    .withValues(alpha: 0.1)),
+                                color:
+                                    theme.dividerColor.withValues(alpha: 0.1)),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: const ['All Categories', 'Gift Cards', 'Merchandise']
-                                      .contains(_selectedCategory)
+                              value: const [
+                                'All Categories',
+                                'Gift Cards',
+                                'Merchandise'
+                              ].contains(_selectedCategory)
                                   ? _selectedCategory
                                   : 'All Categories',
                               items: const [

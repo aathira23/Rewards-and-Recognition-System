@@ -101,6 +101,21 @@ class WalletsService:
 
     def manager_reward_employee(self, manager_id: int, employee_id: int, points: int, reason: str):
         """Manager rewards employee from their wallet."""
+        # 0. Validate permission/hierarchy
+        manager = self.db.query(User).filter(User.id == manager_id).first()
+        employee = self.db.query(User).filter(User.id == employee_id).first()
+        
+        if not manager or not employee:
+            raise ValueError("Manager or Employee not found.")
+            
+        if manager.role == UserRole.MANAGER.value:
+            if employee.manager_id != manager.id:
+                raise ValueError("Managers can only reward their direct reports.")
+        elif manager.role == UserRole.DEPT_HEAD.value:
+            if employee.department_id != manager.department_id:
+                raise ValueError("Department Heads can only reward employees within their department.")
+        # HR/Admin can reward anyone
+        
         # 1. Get manager wallet
         manager_wallet = self.get_manager_wallet(manager_id)
         if not manager_wallet:

@@ -42,26 +42,35 @@ class AppreciationComposer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  'Send an Appreciation',
-                  style: AppTextStyles.pageTitle(),
-                ),
-                TextButton(
-                  onPressed: () => _showSentAppreciationsDialog(context),
-                  child: Text(
-                    'Appreciations Sent',
-                    style: AppTextStyles.bodyBold(
-                      color: const Color(0xFF1A60FF),
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    'Send an Appreciation',
+                    style: AppTextStyles.pageTitle(),
+                  ),
+                  TextButton(
+                    onPressed: () => _showSentAppreciationsDialog(context),
+                    style: TextButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Appreciations Sent',
+                      style: AppTextStyles.bodyBold(
+                        color: const Color(0xFF1A60FF),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             Text(
