@@ -186,7 +186,7 @@ class RewardItemCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis, 
                         ),
                       ),
                       const SizedBox(width: 8),

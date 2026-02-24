@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/utils/responsive.dart';
 import 'package:rr_frontend/features/notifications/presentation/widgets/notification_bell.dart';
@@ -10,7 +11,6 @@ class MainLayout extends StatefulWidget {
   final int initialIndex;
   final String userName;
   final String userRole;
-
   final VoidCallback? onLogout;
 
   const MainLayout({
@@ -36,9 +36,23 @@ class _MainLayoutState extends State<MainLayout> {
     _selectedIndex = widget.initialIndex;
   }
 
+  @override
+  void didUpdateWidget(MainLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedIndex >= widget.destinations.length) {
+      _selectedIndex = 0;
+    }
+  }
+
+  void _selectIndex(int index) {
+    setState(() => _selectedIndex = index);
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+    }
+  }
+
   void _showLogoutConfirmation(BuildContext context) {
     if (widget.onLogout == null) return;
-
     showDialog(
       context: context,
       builder: (dialogContext) => AppDialog(
@@ -52,7 +66,8 @@ class _MainLayoutState extends State<MainLayout> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: AppTextStyles.bodyBold(color: Colors.grey[600])),
+            child: Text('Cancel',
+                style: AppTextStyles.bodyBold(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () {
@@ -64,72 +79,121 @@ class _MainLayoutState extends State<MainLayout> {
               foregroundColor: Colors.white,
               elevation: 0,
             ),
-            child: Text('Logout', style: AppTextStyles.bodyBold(color: Colors.white)),
+            child: Text('Logout',
+                style: AppTextStyles.bodyBold(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  @override
-  void didUpdateWidget(MainLayout oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_selectedIndex >= widget.destinations.length) {
-      _selectedIndex = 0;
-    }
+  // ── Compact icon+label sidebar nav (desktop) ──────────────────────
+  Widget _buildCompactNavList() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      itemCount: widget.destinations.length,
+      itemBuilder: (context, index) {
+        final dest = widget.destinations[index];
+        final isSelected = _selectedIndex == index;
+
+        return Tooltip(
+          message: dest.title,
+          preferBelow: false,
+          child: InkWell(
+            onTap: () => _selectIndex(index),
+            splashColor: Colors.white.withValues(alpha: 0.1),
+            highlightColor: Colors.white.withValues(alpha: 0.06),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon container — white rounded square when selected
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 44,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      dest.icon,
+                      size: 22,
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Label
+                  Text(
+                    dest.title,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.55),
+                      letterSpacing: 0.1,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  void _selectIndex(int index) {
-    setState(() => _selectedIndex = index);
-    // Close the drawer if open (mobile)
-    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  // ── Shared navigation list builder ──────────────────────────────
-  Widget _buildNavList(ThemeData theme, {bool inDrawer = false}) {
+  // ── Row-style nav for mobile drawer ──────────────────────────────
+  Widget _buildDrawerNavList(ThemeData theme) {
     return ListView.separated(
-      padding: EdgeInsets.symmetric(horizontal: inDrawer ? 12 : 16),
-      shrinkWrap: inDrawer,
-      physics: inDrawer ? const NeverScrollableScrollPhysics() : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: widget.destinations.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
       itemBuilder: (context, index) {
-        final destination = widget.destinations[index];
+        final dest = widget.destinations[index];
         final isSelected = _selectedIndex == index;
-
         return Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => _selectIndex(index),
             borderRadius: BorderRadius.circular(8),
+            splashColor: Colors.white.withValues(alpha: 0.1),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                    ? Colors.white.withValues(alpha: 0.15)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    destination.icon,
-                    size: 20,
-                    color: isSelected
-                        ? theme.colorScheme.primary
-                        : Colors.grey[600],
-                  ),
-                  const SizedBox(width: 16),
+                  Icon(dest.icon,
+                      size: 20,
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.6)),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      destination.title,
+                      dest.title,
                       style: AppTextStyles.navItem(
                         isSelected: isSelected,
                         color: isSelected
-                            ? theme.colorScheme.primary
-                            : Colors.grey[600],
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.65),
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -144,19 +208,96 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  // ── User profile mini card ──────────────────────────────────────
-  Widget _buildUserProfile(ThemeData theme) {
+  // ── Compact brand (centered icon only) ───────────────────────────
+  Widget _buildCompactBrand() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.hub_outlined, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+
+  // ── Compact user avatar at bottom ────────────────────────────────
+  Widget _buildCompactUserProfile() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: widget.onLogout != null ? 'Logout' : widget.userName,
+            child: GestureDetector(
+              onTap: widget.onLogout != null
+                  ? () => _showLogoutConfirmation(context)
+                  : null,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                child: Text(
+                  widget.userName.isNotEmpty
+                      ? widget.userName[0].toUpperCase()
+                      : 'U',
+                  style: AppTextStyles.smallBold(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (widget.onLogout != null)
+            GestureDetector(
+              onTap: () => _showLogoutConfirmation(context),
+              child: Icon(Icons.logout_rounded,
+                  size: 14, color: Colors.white.withValues(alpha: 0.45)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Full-width brand for mobile drawer ───────────────────────────
+  Widget _buildDrawerBrand() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+      child: Row(
+        children: [
+          const Icon(Icons.hub_outlined, color: Colors.white),
+          const SizedBox(width: 12),
+          Text('engage', style: AppTextStyles.headline1(color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
+  // ── Mobile drawer user profile ───────────────────────────────────
+  Widget _buildDrawerUserProfile() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             child: Text(
               widget.userName.isNotEmpty
                   ? widget.userName[0].toUpperCase()
                   : 'U',
-              style: AppTextStyles.smallBold(color: theme.colorScheme.primary),
+              style: AppTextStyles.smallBold(color: Colors.white),
             ),
           ),
           const SizedBox(width: 12),
@@ -165,11 +306,12 @@ class _MainLayoutState extends State<MainLayout> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.userName,
-                    style: AppTextStyles.bodyBold(),
+                    style: AppTextStyles.bodyBold(color: Colors.white),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1),
                 Text(widget.userRole,
-                    style: AppTextStyles.caption(color: Colors.grey),
+                    style: AppTextStyles.caption(
+                        color: Colors.white.withValues(alpha: 0.6)),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1),
               ],
@@ -177,28 +319,11 @@ class _MainLayoutState extends State<MainLayout> {
           ),
           if (widget.onLogout != null)
             IconButton(
-              icon:
-                  Icon(Icons.logout_rounded, size: 20, color: Colors.grey[400]),
+              icon: Icon(Icons.logout_rounded,
+                  size: 20, color: Colors.white.withValues(alpha: 0.6)),
               onPressed: () => _showLogoutConfirmation(context),
               tooltip: 'Logout',
             ),
-        ],
-      ),
-    );
-  }
-
-  // ── Brand header ────────────────────────────────────────────────
-  Widget _buildBrand(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        children: [
-          Icon(Icons.hub_outlined, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
-          Text(
-            'engage',
-            style: AppTextStyles.headline1(color: theme.colorScheme.primary),
-          ),
         ],
       ),
     );
@@ -213,21 +338,20 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       key: _scaffoldKey,
 
-      // ── Mobile Drawer ─────────────────────────────────────────
+      // ── Mobile Drawer ───────────────────────────────────────────
       drawer: showSidebar
           ? null
           : Drawer(
+              backgroundColor: AppTheme.brandSecondary,
               child: SafeArea(
                 child: Column(
                   children: [
-                    _buildBrand(theme),
-                    const Divider(height: 1),
+                    _buildDrawerBrand(),
+                    Divider(
+                        height: 1, color: Colors.white.withValues(alpha: 0.12)),
                     const SizedBox(height: 8),
-                    Expanded(
-                      child: _buildNavList(theme, inDrawer: true),
-                    ),
-                    const Divider(height: 1),
-                    _buildUserProfile(theme),
+                    Expanded(child: _buildDrawerNavList(theme)),
+                    _buildDrawerUserProfile(),
                   ],
                 ),
               ),
@@ -235,50 +359,48 @@ class _MainLayoutState extends State<MainLayout> {
 
       body: Row(
         children: [
-          // ── Desktop Sidebar ─────────────────────────────────────
+          // ── Desktop Compact Sidebar ──────────────────────────────
           if (showSidebar)
             Container(
-              width: 260,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                border: Border(
-                  right: BorderSide(
-                      color: theme.dividerColor.withValues(alpha: 0.1)),
-                ),
-              ),
+              width: 72,
+              color: AppTheme.brandSecondary,
               child: Column(
                 children: [
-                  _buildBrand(theme),
-                  const SizedBox(height: 20),
-                  Expanded(child: _buildNavList(theme)),
-                  const Divider(height: 1),
-                  _buildUserProfile(theme),
+                  _buildCompactBrand(),
+                  Divider(
+                      height: 1, color: Colors.white.withValues(alpha: 0.12)),
+                  const SizedBox(height: 4),
+                  Expanded(child: _buildCompactNavList()),
+                  _buildCompactUserProfile(),
                 ],
               ),
             ),
 
-          // ── Main Content ────────────────────────────────────────
+          // ── Main Content ─────────────────────────────────────────
           Expanded(
             child: Column(
               children: [
                 // Top Bar
                 Container(
-                  height: isMobile ? 60 : 76,
+                  height: isMobile ? 60 : 64,
                   padding: EdgeInsets.symmetric(
                     horizontal: isMobile ? 16 : 24,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    border: Border(
-                      bottom: BorderSide(
-                          color: theme.dividerColor.withValues(alpha: 0.1)),
-                    ),
+                    color: AppTheme.brandBlue,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
                       if (!showSidebar)
                         IconButton(
-                          icon: const Icon(Icons.menu),
+                          icon: const Icon(Icons.menu, color: Colors.white),
                           onPressed: () =>
                               _scaffoldKey.currentState?.openDrawer(),
                         ),
@@ -290,9 +412,8 @@ class _MainLayoutState extends State<MainLayout> {
                             Text(
                               widget.destinations[_selectedIndex].heading ??
                                   widget.destinations[_selectedIndex].title,
-                              style: AppTextStyles.headline1(
-                                color: theme.colorScheme.onSurface,
-                              ),
+                              style:
+                                  AppTextStyles.headline1(color: Colors.white),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -302,8 +423,7 @@ class _MainLayoutState extends State<MainLayout> {
                               Text(
                                 widget.destinations[_selectedIndex].subtitle!,
                                 style: AppTextStyles.small(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.5),
+                                  color: Colors.white.withValues(alpha: 0.7),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
