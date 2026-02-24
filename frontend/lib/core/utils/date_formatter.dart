@@ -52,4 +52,12 @@ class AppDateFormatter {
     }
     return '—';
   }
+
+  /// e.g. 14:30
+  static String formatTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '—';
+    final parsed = parse(dateStr);
+    if (parsed == null) return '—';
+    return DateFormat('HH:mm').format(parsed);
+  }
 }

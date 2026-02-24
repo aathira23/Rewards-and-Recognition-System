@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../injection_container.dart';
 import '../../../budgets/presentation/bloc/budget_bloc.dart';
 import '../bloc/points_bloc.dart';
@@ -299,7 +301,7 @@ class _PointsPageState extends State<PointsPage> {
         Expanded(flex: 4, child: children[1]),
         Expanded(flex: 2, child: children[2]),
         Expanded(flex: 2, child: children[3]),
-        const SizedBox(width: 28),
+        const SizedBox(width: 44),
       ],
     );
   }
@@ -357,14 +359,9 @@ class _PointsPageState extends State<PointsPage> {
             ),
           ),
           SizedBox(
-            width: 28,
-            child: PopupMenuButton<String>(
-              icon:
-                  Icon(Icons.more_vert, size: 18, color: Colors.grey.shade400),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'details', child: Text('View Details')),
-              ],
-              onSelected: (_) {},
+            width: 44,
+            child: _ViewLink(
+              onTap: () => _showTransactionDetails(tx),
             ),
           ),
         ],
@@ -411,6 +408,102 @@ class _PointsPageState extends State<PointsPage> {
               onTap: hasNext ? () => _fetchHistory(page: _page + 1) : null,
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  void _showTransactionDetails(PointTransactionEntity tx) {
+    final isCredit = tx.points.startsWith('+');
+    final ptColor =
+        isCredit ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: 'Transaction Details',
+        maxWidth: 460,
+        showCloseButton: false,
+        content: Column(
+          children: [
+            // Header with amount
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: ptColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: ptColor.withValues(alpha: 0.1)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    tx.points,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: ptColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Points',
+                    style: AppTextStyles.bodyBold(
+                        color: ptColor.withValues(alpha: 0.7)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Details list
+            _detailRow('Description', tx.description, isLarge: true),
+            _detailRow('Status', tx.type, isBadge: true),
+            _detailRow('Date', tx.date),
+            if (tx.createdAtFull != null)
+              _detailRow('Time', AppDateFormatter.formatTime(tx.createdAtFull!)),
+            _detailRow('Reference', tx.referenceType ?? 'GENERAL'),
+            _detailRow('Transaction ID', tx.id.toString()),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value,
+      {bool isBadge = false, bool isLarge = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment:
+            isLarge ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: AppTextStyles.caption(color: Colors.grey.shade500),
+            ),
+          ),
+          Expanded(
+            child: isBadge
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: StatusBadge(status: value),
+                  )
+                : Text(
+                    value,
+                    style: isLarge
+                        ? AppTextStyles.bodyBold()
+                        : AppTextStyles.bodyMedium(),
+                  ),
+          ),
         ],
       ),
     );
@@ -529,6 +622,38 @@ class _PageBtn extends StatelessWidget {
         child: Icon(icon,
             size: 18,
             color: enabled ? Colors.grey.shade700 : Colors.grey.shade300),
+      ),
+    );
+  }
+}
+
+class _ViewLink extends StatefulWidget {
+  final VoidCallback onTap;
+  const _ViewLink({required this.onTap});
+
+  @override
+  State<_ViewLink> createState() => _ViewLinkState();
+}
+
+class _ViewLinkState extends State<_ViewLink> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Text(
+          'View',
+          style: TextStyle(
+            color: AppTheme.brandBlue,
+            fontSize: 13,
+            fontWeight: _isHovered ? FontWeight.w800 : FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
