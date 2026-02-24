@@ -332,7 +332,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                 ),
                               ),
                               Text(
-                                '1 pt = \$${currentRate.toStringAsFixed(3)}',
+                                '1 pt = ₹${currentRate.toStringAsFixed(3)}',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.72),
                                   fontSize: 12,
@@ -527,7 +527,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                 ),
                                 Text(
                                   pts > 0
-                                      ? '\$${cashValue.toStringAsFixed(2)}'
+                                      ? '₹${cashValue.toStringAsFixed(2)}'
                                       : '—',
                                   style: TextStyle(
                                     fontSize: 20,
@@ -661,7 +661,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '\$${(100 * currentRate).toStringAsFixed(2)}',
+                            '₹${(100 * currentRate).toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -768,7 +768,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '\$${req.cashAmount.toStringAsFixed(2)}',
+                                  '₹${req.cashAmount.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
@@ -851,7 +851,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'You will receive \$${cashValue.toStringAsFixed(2)} to your ${_selectedConversionType.toLowerCase()} account.',
+              'You will receive ₹${cashValue.toStringAsFixed(2)} to your ${_selectedConversionType.toLowerCase()} account.',
               style: AppTextStyles.body(),
             ),
             const SizedBox(height: 16),
@@ -1077,41 +1077,51 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                         fillColor: theme.colorScheme.surface,
                       ),
                     );
-                    Widget buildDropdown({required bool expanded}) => DropdownMenu<String>(
-                            initialSelection: const [
-                              'All Categories',
-                              'Gift Cards',
-                              'Merchandise'
-                            ].contains(_selectedCategory)
-                                ? _selectedCategory
-                                : 'All Categories',
-                            expandedInsets: expanded ? EdgeInsets.zero : null,
-                            width: expanded ? null : 200,
-                            inputDecorationTheme: InputDecorationTheme(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
-                              ),
-                              filled: true,
-                              fillColor: theme.colorScheme.surface,
+                    Widget buildDropdown({required bool expanded}) =>
+                        DropdownMenu<String>(
+                          initialSelection: const [
+                            'All Categories',
+                            'Gift Cards',
+                            'Merchandise'
+                          ].contains(_selectedCategory)
+                              ? _selectedCategory
+                              : 'All Categories',
+                          expandedInsets: expanded ? EdgeInsets.zero : null,
+                          width: expanded ? null : 200,
+                          inputDecorationTheme: InputDecorationTheme(
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: theme.dividerColor
+                                      .withValues(alpha: 0.1)),
                             ),
-                            textStyle: theme.textTheme.bodyMedium,
-                            dropdownMenuEntries: const [
-                              DropdownMenuEntry(value: 'All Categories', label: 'All Categories'),
-                              DropdownMenuEntry(value: 'Gift Cards', label: 'Gift Cards'),
-                              DropdownMenuEntry(value: 'Merchandise', label: 'Merchandise'),
-                            ],
-                            onSelected: (val) {
-                              if (val != null) {
-                                setState(() => _selectedCategory = val);
-                              }
-                            },
-                          );
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: theme.dividerColor
+                                      .withValues(alpha: 0.1)),
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                          ),
+                          textStyle: theme.textTheme.bodyMedium,
+                          dropdownMenuEntries: const [
+                            DropdownMenuEntry(
+                                value: 'All Categories',
+                                label: 'All Categories'),
+                            DropdownMenuEntry(
+                                value: 'Gift Cards', label: 'Gift Cards'),
+                            DropdownMenuEntry(
+                                value: 'Merchandise', label: 'Merchandise'),
+                          ],
+                          onSelected: (val) {
+                            if (val != null) {
+                              setState(() => _selectedCategory = val);
+                            }
+                          },
+                        );
 
                     if (narrow) {
                       return Column(

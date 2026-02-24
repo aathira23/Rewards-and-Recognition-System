@@ -35,18 +35,17 @@ class RewardItemCard extends StatelessWidget {
         children: [
           // Image / Icon Container
           Expanded(
-            flex: 3,
+            flex: 4,
             child: Stack(
               children: [
                 Container(
-                  margin: const EdgeInsets.all(8),
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(16),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.04),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
                     child: Hero(
                       tag: 'reward_${reward.id}',
                       child: reward.imageUrl != null &&
@@ -54,52 +53,88 @@ class RewardItemCard extends StatelessWidget {
                           ? Image.network(
                               reward.imageUrl!.trim(),
                               fit: BoxFit.cover,
+                              alignment: Alignment.center,
                               loadingBuilder:
                                   (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                    strokeWidth: 2,
+                                return Container(
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.05),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
-                                debugPrint(
-                                    'Error loading image ${reward.imageUrl}: $error');
-                                return Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        _getIconForCategory(reward.category),
-                                        size: 40,
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.5),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Image failed to load',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: theme.colorScheme.error
-                                                .withValues(alpha: 0.7)),
-                                      ),
-                                    ],
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        theme.colorScheme.primary
+                                            .withValues(alpha: 0.08),
+                                        theme.colorScheme.primary
+                                            .withValues(alpha: 0.03),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          _getIconForCategory(reward.category),
+                                          size: 56,
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Image unavailable',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: 0.4)),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
                             )
-                          : Center(
-                              child: Icon(
-                                _getIconForCategory(reward.category),
-                                size: 48,
-                                color: theme.colorScheme.primary,
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    theme.colorScheme.primary
+                                        .withValues(alpha: 0.08),
+                                    theme.colorScheme.primary
+                                        .withValues(alpha: 0.03),
+                                  ],
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  _getIconForCategory(reward.category),
+                                  size: 64,
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.4),
+                                ),
                               ),
                             ),
                     ),
@@ -107,21 +142,22 @@ class RewardItemCard extends StatelessWidget {
                 ),
                 // Transparent Ref ID Badge overlayed on image
                 Positioned(
-                  top: 16,
-                  right: 16,
+                  top: 12,
+                  right: 12,
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Ref: #${reward.id}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ),

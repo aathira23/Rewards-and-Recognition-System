@@ -287,7 +287,7 @@ class _PayrollViewState extends State<_PayrollView> {
           ),
           Expanded(
             flex: 2,
-            child: Text('\$${cash.toStringAsFixed(2)}',
+            child: Text('₹${cash.toStringAsFixed(2)}',
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

@@ -32,25 +32,53 @@ class AppreciationStats extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Appreciations Received',
+                  style: AppTextStyles.pageTitle(),
+                ),
+                if (stats.receivedCount > 0)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${stats.receivedCount} Total',
+                      style: AppTextStyles.bodyBold(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
-              'Appreciations Received',
-              style: AppTextStyles.sectionHeader(),
+              'Your achievements and recognitions from colleagues',
+              style: AppTextStyles.body(color: Colors.grey),
             ),
             const SizedBox(height: 24),
             if (stats.receivedCount == 0)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.all(48),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.grey.withValues(alpha: 0.1)),
+                  color: Colors.grey.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16),
+                  border:
+                      Border.all(color: Colors.grey.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   children: [
                     Icon(Icons.emoji_events_outlined,
-                        size: 48, color: Colors.grey[300]),
+                        size: 64, color: Colors.grey[300]),
                     const SizedBox(height: 16),
                     Text(
                       'No appreciations yet',
@@ -58,82 +86,146 @@ class AppreciationStats extends StatelessWidget {
                         color: Colors.grey[500],
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Great work starts with small steps. Keep going!',
+                      style: AppTextStyles.small(color: Colors.grey[400]),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               )
             else
-              SizedBox(
-                height: 180,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: stats.badgeCounts.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final badgeName = stats.badgeCounts.keys.elementAt(index);
-                    final count = stats.badgeCounts.values.elementAt(index);
-                    return _buildStatCard(context, badgeName, count);
-                  },
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 150,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.7,
                 ),
+                itemCount: stats.badgeCounts.length,
+                itemBuilder: (context, index) {
+                  final badgeName = stats.badgeCounts.keys.elementAt(index);
+                  final count = stats.badgeCounts.values.elementAt(index);
+                  return _ReceivedBadgeCard(
+                    badgeName: badgeName,
+                    count: count,
+                  );
+                },
               ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatCard(BuildContext context, String badgeName, int count) {
-    final theme = Theme.of(context);
-    return Container(
-      width: 250,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+class _ReceivedBadgeCard extends StatefulWidget {
+  final String badgeName;
+  final int count;
+
+  const _ReceivedBadgeCard({
+    required this.badgeName,
+    required this.count,
+  });
+
+  @override
+  State<_ReceivedBadgeCard> createState() => _ReceivedBadgeCardState();
+}
+
+class _ReceivedBadgeCardState extends State<_ReceivedBadgeCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeInfo = BadgeUtils.getDisplayInfo(widget.badgeName);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.05 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _isHovered
+                  ? badgeInfo.color.withValues(alpha: 0.5)
+                  : Colors.grey[200]!,
+              width: _isHovered ? 1.5 : 1,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              if (_isHovered)
+                BoxShadow(
+                  color: badgeInfo.color.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+            ],
+          ),
+          child: Column(
             children: [
-              _getBadgeIcon(badgeName),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  badgeName,
-                  style: AppTextStyles.bodyLarge(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+              // Icon section
+              SizedBox(
+                height: 60,
+                child: Center(
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: badgeInfo.color.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: badgeInfo.hasEmoji
+                          ? Text(badgeInfo.emoji!, style: AppTextStyles.emoji())
+                          : Icon(badgeInfo.icon,
+                              color: badgeInfo.color, size: 28),
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Name section
+              SizedBox(
+                height: 40,
+                child: Center(
+                  child: Text(
+                    widget.badgeName,
+                    style: AppTextStyles.cardTitle(),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // Count section
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeInfo.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${widget.count}x',
+                  style: AppTextStyles.bodyBold(
+                    color: badgeInfo.color,
+                  ).copyWith(fontSize: 14),
                 ),
               ),
             ],
           ),
-          Text(
-            count.toString(),
-            style: AppTextStyles.display(
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _getBadgeIcon(String badgeName) {
-    final info = BadgeUtils.getDisplayInfo(badgeName);
-    final color = info.effectiveIconColor;
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(info.icon, color: color, size: 20),
     );
   }
 }

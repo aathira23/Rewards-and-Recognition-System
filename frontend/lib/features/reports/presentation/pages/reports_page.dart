@@ -871,9 +871,9 @@ class _ReportsViewState extends State<_ReportsView> {
           const Color(0xFF6366F1)),
       _Stat('Points Converted', '${_fmt(totalPts)} pts', Icons.stars_rounded,
           const Color(0xFFF59E0B)),
-      _Stat('Cash Value', '\$${totalCash.toStringAsFixed(2)}',
+      _Stat('Cash Value', '₹${totalCash.toStringAsFixed(2)}',
           Icons.payments_rounded, const Color(0xFF10B981)),
-      _Stat('Avg Rate', '\$${avgRate.toStringAsFixed(3)}/pt',
+      _Stat('Avg Rate', '₹${avgRate.toStringAsFixed(3)}/pt',
           Icons.trending_up_rounded, const Color(0xFF3B82F6)),
     ];
   }
@@ -1021,7 +1021,7 @@ class _ReportsViewState extends State<_ReportsView> {
     // Cash
     if (key == 'cash_amount') {
       final n = (val is num) ? val.toDouble() : 0.0;
-      return Text('\$${n.toStringAsFixed(2)}',
+      return Text('₹${n.toStringAsFixed(2)}',
           style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
