@@ -186,7 +186,7 @@ class RewardItemCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis, 
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -278,9 +278,7 @@ class RewardItemCard extends StatelessWidget {
                       disabledForegroundColor: Colors.grey.shade500,
                     ),
                     child: Text(
-                      hasInsufficientPoints
-                          ? 'Insufficient Points'
-                          : 'Redeem',
+                      hasInsufficientPoints ? 'Insufficient Points' : 'Redeem',
                       style: AppTextStyles.bodyBold(),
                     ),
                   ),

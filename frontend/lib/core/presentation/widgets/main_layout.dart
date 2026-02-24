@@ -30,6 +30,10 @@ class _MainLayoutState extends State<MainLayout> {
   late int _selectedIndex;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Overlay for user profile popup
+  final GlobalKey _avatarKey = GlobalKey();
+  OverlayEntry? _profileOverlay;
+
   @override
   void initState() {
     super.initState();
@@ -44,11 +48,79 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
+  @override
+  void dispose() {
+    _removeProfileOverlay();
+    super.dispose();
+  }
+
   void _selectIndex(int index) {
     setState(() => _selectedIndex = index);
+    _removeProfileOverlay();
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
     }
+  }
+
+  // ── Profile overlay ────────────────────────────────────────────────
+  void _removeProfileOverlay() {
+    _profileOverlay?.remove();
+    _profileOverlay = null;
+  }
+
+  void _toggleProfilePopup() {
+    if (_profileOverlay != null) {
+      _removeProfileOverlay();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final box = _avatarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+
+    final pos = box.localToGlobal(Offset.zero);
+    final sz = box.size;
+
+    _profileOverlay = OverlayEntry(
+      builder: (_) => Stack(
+        children: [
+          // Tap-outside barrier
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                _removeProfileOverlay();
+                if (mounted) setState(() {});
+              },
+              child: const SizedBox.expand(),
+            ),
+          ),
+          // Popup card — positioned to the right of the avatar
+          Positioned(
+            left: pos.dx + sz.width + 10,
+            bottom: MediaQuery.of(context).size.height - pos.dy - sz.height,
+            child: _ProfilePopupCard(
+              userName: widget.userName,
+              userRole: widget.userRole,
+              onLogout: widget.onLogout != null
+                  ? () {
+                      _removeProfileOverlay();
+                      if (mounted) setState(() {});
+                      _showLogoutConfirmation(context);
+                    }
+                  : null,
+              onClose: () {
+                _removeProfileOverlay();
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_profileOverlay!);
+    if (mounted) setState(() {});
   }
 
   void _showLogoutConfirmation(BuildContext context) {
@@ -108,7 +180,6 @@ class _MainLayoutState extends State<MainLayout> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icon container — white rounded square when selected
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     width: 44,
@@ -128,7 +199,6 @@ class _MainLayoutState extends State<MainLayout> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Label
                   Text(
                     dest.title,
                     style: TextStyle(
@@ -208,7 +278,7 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  // ── Compact brand (centered icon only) ───────────────────────────
+  // ── Compact brand ─────────────────────────────────────────────────
   Widget _buildCompactBrand() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -226,48 +296,49 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  // ── Compact user avatar at bottom ────────────────────────────────
+  // ── Compact user avatar — clicking opens popup ────────────────────
   Widget _buildCompactUserProfile() {
+    final isPopupOpen = _profileOverlay != null;
     return Container(
       decoration: BoxDecoration(
         border: Border(
             top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
       ),
       padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Tooltip(
-            message: widget.onLogout != null ? 'Logout' : widget.userName,
-            child: GestureDetector(
-              onTap: widget.onLogout != null
-                  ? () => _showLogoutConfirmation(context)
-                  : null,
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                child: Text(
-                  widget.userName.isNotEmpty
-                      ? widget.userName[0].toUpperCase()
-                      : 'U',
-                  style: AppTextStyles.smallBold(color: Colors.white),
-                ),
+      child: Center(
+        child: GestureDetector(
+          key: _avatarKey,
+          onTap: _toggleProfilePopup,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isPopupOpen
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.3),
+                width: isPopupOpen ? 2 : 1.5,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: isPopupOpen
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.white.withValues(alpha: 0.18),
+              child: Text(
+                widget.userName.isNotEmpty
+                    ? widget.userName[0].toUpperCase()
+                    : 'U',
+                style: AppTextStyles.smallBold(color: Colors.white),
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          if (widget.onLogout != null)
-            GestureDetector(
-              onTap: () => _showLogoutConfirmation(context),
-              child: Icon(Icons.logout_rounded,
-                  size: 14, color: Colors.white.withValues(alpha: 0.45)),
-            ),
-        ],
+        ),
       ),
     );
   }
 
-  // ── Full-width brand for mobile drawer ───────────────────────────
+  // ── Mobile drawer brand + user ────────────────────────────────────
   Widget _buildDrawerBrand() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
@@ -281,7 +352,6 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  // ── Mobile drawer user profile ───────────────────────────────────
   Widget _buildDrawerUserProfile() {
     return Container(
       decoration: BoxDecoration(
@@ -338,7 +408,7 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       key: _scaffoldKey,
 
-      // ── Mobile Drawer ───────────────────────────────────────────
+      // ── Mobile Drawer ─────────────────────────────────────────────
       drawer: showSidebar
           ? null
           : Drawer(
@@ -359,7 +429,7 @@ class _MainLayoutState extends State<MainLayout> {
 
       body: Row(
         children: [
-          // ── Desktop Compact Sidebar ──────────────────────────────
+          // ── Desktop Compact Sidebar ────────────────────────────────
           if (showSidebar)
             Container(
               width: 72,
@@ -376,7 +446,7 @@ class _MainLayoutState extends State<MainLayout> {
               ),
             ),
 
-          // ── Main Content ─────────────────────────────────────────
+          // ── Main Content ───────────────────────────────────────────
           Expanded(
             child: Column(
               children: [
@@ -447,6 +517,122 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile popup card — appears to the right of the avatar
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProfilePopupCard extends StatelessWidget {
+  final String userName;
+  final String userRole;
+  final VoidCallback? onLogout;
+  final VoidCallback onClose;
+
+  const _ProfilePopupCard({
+    required this.userName,
+    required this.userRole,
+    required this.onLogout,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 16,
+      borderRadius: BorderRadius.circular(14),
+      shadowColor: Colors.black.withValues(alpha: 0.18),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: 230,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── User info header ──
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+              decoration: BoxDecoration(
+                color: AppTheme.brandSecondary.withValues(alpha: 0.06),
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor:
+                        AppTheme.brandSecondary.withValues(alpha: 0.15),
+                    child: Text(
+                      userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                      style: AppTextStyles.sectionTitle(
+                          color: AppTheme.brandSecondary),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
+                          style: AppTextStyles.bodyBold(),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          userRole,
+                          style: AppTextStyles.caption(
+                              color: Colors.grey.shade500),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Logout row ──
+            if (onLogout != null)
+              InkWell(
+                onTap: onLogout,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.logout_rounded,
+                            size: 16, color: Colors.red.shade600),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Logout',
+                        style:
+                            AppTextStyles.bodyBold(color: Colors.red.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
