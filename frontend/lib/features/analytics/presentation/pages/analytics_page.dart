@@ -163,24 +163,6 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
     );
   }
 
-  String _scopeSubtitle(AnalyticsEntity? data) {
-    if (data == null) return 'Loading...';
-    final name = data.scopeName;
-    switch (_activeScope) {
-      case 'ORG':
-        return 'Organization-wide · ${data.userCount} employees';
-      case 'DEPARTMENT':
-        return name.isNotEmpty
-            ? '$name · ${data.userCount} members'
-            : 'Department · ${data.userCount} members';
-      case 'TEAM':
-        return name.isNotEmpty
-            ? '$name · ${data.userCount} members'
-            : 'Your team · ${data.userCount} members';
-      default:
-        return '';
-    }
-  }
 
   // ── KPI metric cards ─────────────────────────────────────────────
   Widget _buildMetricCards(ThemeData theme, AnalyticsEntity? data) {

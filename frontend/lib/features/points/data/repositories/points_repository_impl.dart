@@ -15,7 +15,7 @@ class PointsRepositoryImpl implements PointsRepository {
   @override
   Future<Either<Failure, PointsSummaryEntity>> getPointsSummary() async {
     try {
-      final summary = await remoteDataSource.getPointsSummary();
+      final summary = await remoteDataSource.getPointsSummary();  
       return Right(summary);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
