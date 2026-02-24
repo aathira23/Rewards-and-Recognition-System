@@ -259,9 +259,9 @@ class _MainLayoutState extends State<MainLayout> {
               children: [
                 // Top Bar
                 Container(
-                  height: isMobile ? 56 : 70,
+                  height: isMobile ? 60 : 76,
                   padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 8 : 24,
+                    horizontal: isMobile ? 16 : 24,
                   ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
@@ -278,18 +278,36 @@ class _MainLayoutState extends State<MainLayout> {
                           onPressed: () =>
                               _scaffoldKey.currentState?.openDrawer(),
                         ),
-                      if (!isMobile)
-                        Expanded(
-                          child: Text(
-                            'Rewards & Recognition',
-                            style: AppTextStyles.headline1(
-                              color: theme.colorScheme.onSurface,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              widget.destinations[_selectedIndex].heading ??
+                                  widget.destinations[_selectedIndex].title,
+                              style: AppTextStyles.headline1(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                            if (widget.destinations[_selectedIndex].subtitle !=
+                                null) ...[
+                              const SizedBox(height: 1),
+                              Text(
+                                widget.destinations[_selectedIndex].subtitle!,
+                                style: AppTextStyles.small(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ],
+                          ],
                         ),
-                      if (isMobile) const Spacer(),
+                      ),
                       const NotificationBell(),
                     ],
                   ),

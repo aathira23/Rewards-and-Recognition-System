@@ -89,8 +89,6 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
             children: [
               // ── Header ────────────────────────────────────────────
               AppPageHeader(
-                title: 'Nominations',
-                subtitle: 'Nominate a colleague or check your award status',
                 action: BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, authState) {
                     UserEntity? currentUser;

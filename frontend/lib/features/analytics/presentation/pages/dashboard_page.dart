@@ -69,21 +69,25 @@ class DashboardPage extends StatelessWidget {
       return [
         NavDestination(
           title: 'Analytics',
+          subtitle: 'Organisation-wide performance insights',
           icon: Icons.analytics_rounded,
           page: AnalyticsPage(userRole: r),
         ),
         const NavDestination(
           title: 'Reports',
+          subtitle: 'Generate, filter and export detailed reports',
           icon: Icons.summarize_rounded,
           page: ReportsPage(),
         ),
         const NavDestination(
           title: 'Configuration',
+          subtitle: 'Manage awards, badges, catalog & point rules',
           icon: Icons.tune_rounded,
           page: HrConfigPage(),
         ),
         const NavDestination(
           title: 'Approvals & Allocation',
+          subtitle: 'Review nominations, conversions & allocate budgets',
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
         ),
@@ -95,26 +99,35 @@ class DashboardPage extends StatelessWidget {
       return [
         const NavDestination(
           title: 'Recognitions',
+          heading: 'Recognitions Center',
+          subtitle: 'Appreciate and celebrate your colleagues',
           icon: Icons.card_giftcard_rounded,
           page: EmployeeRecognitionsPage(),
         ),
         NavDestination(
           title: 'Points',
+          heading: 'Points Overview',
+          subtitle: 'Track your earnings and influence',
           icon: Icons.account_balance_wallet_rounded,
           page: PointsPage(userRole: r),
         ),
         const NavDestination(
           title: 'Rewards',
+          heading: 'Rewards Store',
+          subtitle: 'Redeem your hard-earned points',
           icon: Icons.shopping_bag_rounded,
           page: EmployeeRewardsPage(),
         ),
         const NavDestination(
           title: 'Approvals',
+          heading: 'Nomination Approvals',
+          subtitle: 'Review and action pending award nominations',
           icon: Icons.task_alt_rounded,
           page: ManagerApprovalsPage(),
         ),
         NavDestination(
           title: 'Analytics',
+          subtitle: 'Performance insights for your team',
           icon: Icons.analytics_rounded,
           page: AnalyticsPage(userRole: r),
         ),
@@ -125,21 +138,28 @@ class DashboardPage extends StatelessWidget {
     return [
       const NavDestination(
         title: 'Recognitions',
+        heading: 'Recognitions Center',
+        subtitle: 'Appreciate and celebrate your colleagues',
         icon: Icons.card_giftcard_rounded,
         page: EmployeeRecognitionsPage(),
       ),
       NavDestination(
         title: 'Points',
+        heading: 'Points Overview',
+        subtitle: 'Track your earnings and influence',
         icon: Icons.account_balance_wallet_rounded,
         page: PointsPage(userRole: r),
       ),
       const NavDestination(
         title: 'Rewards',
+        heading: 'Rewards Store',
+        subtitle: 'Redeem your hard-earned points',
         icon: Icons.shopping_bag_rounded,
         page: EmployeeRewardsPage(),
       ),
       const NavDestination(
         title: 'Nominations',
+        subtitle: 'Nominate a colleague or check your award status',
         icon: Icons.emoji_events_rounded,
         page: EmployeeNominationsPage(),
       ),

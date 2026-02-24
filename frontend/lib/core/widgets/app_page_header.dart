@@ -4,27 +4,39 @@ import '../../core/utils/responsive.dart';
 
 /// A standardized header used at the top of main pages.
 class AppPageHeader extends StatelessWidget {
-  final String title;
+  final String? title;
   final String? subtitle;
   final Widget? action;
 
   const AppPageHeader({
     super.key,
-    required this.title,
+    this.title,
     this.subtitle,
     this.action,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasText = title != null || subtitle != null;
+
+    // Nothing to render
+    if (!hasText && action == null) return const SizedBox(height: 24);
+
+    // Action-only (title/subtitle moved to top bar)
+    if (!hasText) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Align(alignment: Alignment.centerRight, child: action!),
+      );
+    }
+
     final isMobile = Responsive.isMobile(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (isMobile && action != null) ...[
-          // Mobile: stack title + action vertically
-          Text(title, style: AppTextStyles.pageTitle()),
+          if (title != null) Text(title!, style: AppTextStyles.pageTitle()),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(
@@ -41,7 +53,8 @@ class AppPageHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: AppTextStyles.pageTitle()),
+                    if (title != null)
+                      Text(title!, style: AppTextStyles.pageTitle()),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
                       Text(

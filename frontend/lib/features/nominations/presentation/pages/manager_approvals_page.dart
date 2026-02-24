@@ -118,8 +118,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
             children: [
               // ── Header ──────────────────────────────────────────
               AppPageHeader(
-                title: 'Nomination Approvals',
-                subtitle: 'Review and action pending award nominations',
                 action: BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, authState) {
                     UserEntity? currentUser;

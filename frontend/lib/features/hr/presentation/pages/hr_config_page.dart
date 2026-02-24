@@ -99,9 +99,6 @@ class _HrConfigViewState extends State<_HrConfigView>
                   0,
                 ),
                 child: AppPageHeader(
-                  title: 'Configuration',
-                  subtitle:
-                      'Manage awards, badges, catalog, point rules & system settings',
                   action: _RefreshBtn(
                     onTap: () =>
                         context.read<HrConfigBloc>().add(LoadAllHrConfig()),

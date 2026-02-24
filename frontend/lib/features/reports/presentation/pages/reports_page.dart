@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/file_download_helper.dart';
@@ -289,11 +288,6 @@ class _ReportsViewState extends State<_ReportsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppPageHeader(
-            title: 'Reports',
-            subtitle:
-                'Generate, filter and export detailed organizational reports',
-          ),
           LayoutBuilder(builder: (ctx, constraints) {
             final w = constraints.maxWidth;
             // desktop ≥1100 → 3 cols, tablet ≥600 → 2 cols, mobile → 1 col

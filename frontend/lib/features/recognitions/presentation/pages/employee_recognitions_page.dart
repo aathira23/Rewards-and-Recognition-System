@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_dialog.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
 import '../bloc/recognitions_bloc.dart';
@@ -54,10 +53,6 @@ class EmployeeRecognitionsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppPageHeader(
-                  title: 'Recognitions Center',
-                  subtitle: 'Appreciate and celebrate your colleagues',
-                ),
                 BlocBuilder<RecognitionsBloc, RecognitionsState>(
                   builder: (context, state) {
                     if (state.status == RecognitionStatus.loading &&
@@ -130,7 +125,6 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-
                                 ],
                               ),
                               const SizedBox(height: 16),

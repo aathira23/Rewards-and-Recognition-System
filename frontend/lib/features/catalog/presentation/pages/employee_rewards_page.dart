@@ -5,7 +5,6 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/status_badge.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/reward_entity.dart';
@@ -105,11 +104,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      const AppPageHeader(
-                        title: 'Rewards Store',
-                        subtitle: 'Redeem your hard-earned points',
-                      ),
-
                       // Balance Card
                       BlocBuilder<PointsBloc, PointsState>(
                         builder: (context, state) {

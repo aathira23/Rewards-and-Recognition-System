@@ -81,9 +81,6 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                   0,
                 ),
                 child: AppPageHeader(
-                  title: 'Approvals & Allocation',
-                  subtitle:
-                      'Review nominations, conversion requests & allocate budgets',
                   action: _RefreshBtn(onTap: () {
                     context.read<HrApprovalsBloc>()
                       ..add(LoadNominations())

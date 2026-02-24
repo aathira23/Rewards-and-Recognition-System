@@ -80,8 +80,6 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                 children: [
                   // ── Page title ──────────────────────────────────
                   AppPageHeader(
-                    title: 'Analytics',
-                    subtitle: _scopeSubtitle(data),
                     action: IconButton.filledTonal(
                       onPressed: _refresh,
                       icon: const Icon(Icons.refresh_rounded),
