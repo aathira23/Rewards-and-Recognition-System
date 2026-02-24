@@ -350,16 +350,18 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Recognition Activity',
-                      style: AppTextStyles.cardTitle()),
-                  const SizedBox(height: 2),
-                  Text('Daily recognition count over time',
-                      style:
-                          AppTextStyles.caption(color: Colors.grey.shade400)),
-                ],
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Recognition Activity',
+                        style: AppTextStyles.cardTitle()),
+                    const SizedBox(height: 2),
+                    Text('Daily recognition count over time',
+                        style: AppTextStyles.caption(
+                            color: Colors.grey.shade400)),
+                  ],
+                ),
               ),
               const Spacer(),
               if (trends.isNotEmpty) ...[
@@ -367,12 +369,12 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                     label: 'Total',
                     value: '$total',
                     color: theme.colorScheme.primary),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 _TrendStat(
                     label: 'Avg/day',
                     value: avg.toStringAsFixed(1),
                     color: const Color(0xFF0D9488)),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 _TrendStat(
                     label: 'Peak',
                     value: peakLabel ?? '',

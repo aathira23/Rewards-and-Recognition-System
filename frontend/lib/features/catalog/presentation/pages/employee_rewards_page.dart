@@ -1183,9 +1183,9 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
               SliverGrid(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 320,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 20,
-                  childAspectRatio: 0.7,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.62,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
