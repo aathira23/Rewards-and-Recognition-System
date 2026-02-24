@@ -477,29 +477,33 @@ class _TypeDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String?>(
-          value: value,
-          style: AppTextStyles.small(color: Colors.black87),
-          icon: Icon(Icons.keyboard_arrow_down,
-              size: 16, color: Colors.grey.shade500),
-          items: const [
-            DropdownMenuItem(value: null, child: Text('All Types')),
-            DropdownMenuItem(value: 'received', child: Text('Earned')),
-            DropdownMenuItem(value: 'spent', child: Text('Redeemed')),
-            DropdownMenuItem(value: 'pending', child: Text('Pending')),
-            DropdownMenuItem(value: 'expired', child: Text('Expired')),
-          ],
-          onChanged: onChanged,
+    return DropdownMenu<String?>(
+      initialSelection: value,
+      width: 140,
+      inputDecorationTheme: InputDecorationTheme(
+        isDense: true,
+        constraints: const BoxConstraints(maxHeight: 34),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
       ),
+      textStyle: AppTextStyles.small(color: Colors.black87),
+      trailingIcon: Icon(Icons.keyboard_arrow_down,
+          size: 16, color: Colors.grey.shade500),
+      dropdownMenuEntries: const [
+        DropdownMenuEntry(value: null, label: 'All Types'),
+        DropdownMenuEntry(value: 'received', label: 'Earned'),
+        DropdownMenuEntry(value: 'spent', label: 'Redeemed'),
+        DropdownMenuEntry(value: 'pending', label: 'Pending'),
+        DropdownMenuEntry(value: 'expired', label: 'Expired'),
+      ],
+      onSelected: onChanged,
     );
   }
 }

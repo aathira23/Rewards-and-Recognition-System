@@ -109,7 +109,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
 
     return AppDialog(
       title: 'Nominate an Employee',
-      maxWidth: 620,
+      showCloseButton: false,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

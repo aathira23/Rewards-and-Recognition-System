@@ -236,7 +236,8 @@ class _SystemConfigView extends StatelessWidget {
       context: context,
       builder: (ctx) => AppDialog(
         title: 'Edit: ${config.key}',
-        maxWidth: 420,
+        maxWidth: 400,
+        showCloseButton: false,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

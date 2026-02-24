@@ -44,14 +44,15 @@ class _MainLayoutState extends State<MainLayout> {
       builder: (dialogContext) => AppDialog(
         title: 'Confirm Logout',
         maxWidth: 400,
-        content: const Text(
+        showCloseButton: false,
+        content: Text(
           'Are you sure you want to log out of the application?',
-          style: TextStyle(fontSize: 16),
+          style: AppTextStyles.bodyLarge(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+            child: Text('Cancel', style: AppTextStyles.bodyBold(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () {
@@ -63,7 +64,7 @@ class _MainLayoutState extends State<MainLayout> {
               foregroundColor: Colors.white,
               elevation: 0,
             ),
-            child: const Text('Logout'),
+            child: Text('Logout', style: AppTextStyles.bodyBold(color: Colors.white)),
           ),
         ],
       ),

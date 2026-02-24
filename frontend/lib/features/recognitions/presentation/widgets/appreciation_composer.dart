@@ -112,6 +112,7 @@ class AppreciationComposer extends StatelessWidget {
         value: bloc,
         child: AppDialog(
           title: 'Appreciations Sent',
+          maxWidth: 600,
           content: BlocBuilder<RecognitionsBloc, RecognitionsState>(
             builder: (context, state) {
               final recognitions = state.stats?.sentRecognitions ?? [];

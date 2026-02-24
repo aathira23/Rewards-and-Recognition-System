@@ -23,52 +23,52 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  // ─── Display & Headlines (Outfit) ────────────────────────────────
+  // ─── Display & Headlines (Inter) ────────────────────────────────
 
   /// 48 / bold — Hero numbers, brand name on login
-  static TextStyle display({Color? color}) => GoogleFonts.outfit(
+  static TextStyle display({Color? color}) => GoogleFonts.inter(
         fontSize: 48,
         fontWeight: FontWeight.bold,
         color: color,
       );
 
   /// 42 / bold — Large animated numbers (points, stats)
-  static TextStyle displayLarge({Color? color}) => GoogleFonts.outfit(
+  static TextStyle displayLarge({Color? color}) => GoogleFonts.inter(
         fontSize: 42,
         fontWeight: FontWeight.bold,
         color: color,
       );
 
   /// 28 / bold — Extra large values (budget amounts)
-  static TextStyle displayMedium({Color? color}) => GoogleFonts.outfit(
+  static TextStyle displayMedium({Color? color}) => GoogleFonts.inter(
         fontSize: 28,
         fontWeight: FontWeight.bold,
         color: color,
       );
 
   /// 24 / bold — Secondary headlines, sidebar brand
-  static TextStyle headline1({Color? color}) => GoogleFonts.outfit(
+  static TextStyle headline1({Color? color}) => GoogleFonts.inter(
         fontSize: 24,
         fontWeight: FontWeight.bold,
         color: color,
       );
 
   /// 22 / w700 — Large stat numbers, section titles
-  static TextStyle headline2({Color? color}) => GoogleFonts.outfit(
+  static TextStyle headline2({Color? color}) => GoogleFonts.inter(
         fontSize: 22,
         fontWeight: FontWeight.w700,
         color: color,
       );
 
   /// 20 / bold — All page titles (consistent everywhere)
-  static TextStyle pageTitle({Color? color}) => GoogleFonts.outfit(
+  static TextStyle pageTitle({Color? color}) => GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.bold,
         color: color,
       );
 
   /// 18 / bold — Sub-section titles, card group headers
-  static TextStyle sectionHeader({Color? color}) => GoogleFonts.outfit(
+  static TextStyle sectionHeader({Color? color}) => GoogleFonts.inter(
         fontSize: 18,
         fontWeight: FontWeight.bold,
         color: color,

@@ -338,7 +338,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
       context: context,
       builder: (ctx) => AppDialog(
         title: isApprove ? 'Approve Nomination' : 'Reject Nomination',
-        maxWidth: 420,
+        maxWidth: 400,
+        showCloseButton: false,
         content: TextField(
           controller: commentsC,
           decoration: const InputDecoration(
@@ -536,18 +537,24 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
               Expanded(
                 child: StatefulBuilder(
                   builder: (ctx, setLocal) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: selectedRole,
-                      decoration: const InputDecoration(
-                        labelText: 'Role filter (optional)',
+                    return DropdownMenu<String>(
+                      initialSelection: selectedRole,
+                      expandedInsets: EdgeInsets.zero,
+                      inputDecorationTheme: InputDecorationTheme(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'MANAGER', child: Text('Manager')),
-                        DropdownMenuItem(
-                            value: 'DEPT_HEAD', child: Text('Dept Head')),
+                      label: const Text('Role filter (optional)'),
+                      dropdownMenuEntries: const [
+                        DropdownMenuEntry(value: 'MANAGER', label: 'Manager'),
+                        DropdownMenuEntry(value: 'DEPT_HEAD', label: 'Dept Head'),
                       ],
-                      onChanged: (v) => setLocal(() => selectedRole = v),
+                      onSelected: (v) => setLocal(() => selectedRole = v),
                     );
                   },
                 ),
@@ -643,7 +650,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
       context: context,
       builder: (ctx) => AppDialog(
         title: 'Allocate Budget',
-        maxWidth: 380,
+        maxWidth: 400,
+        showCloseButton: false,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

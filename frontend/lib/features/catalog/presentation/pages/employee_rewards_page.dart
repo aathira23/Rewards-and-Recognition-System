@@ -159,7 +159,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       context: context,
       builder: (_) => AppDialog(
         title: 'Not Enough Points',
-        maxWidth: 340,
+        maxWidth: 400,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -839,6 +839,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       context: context,
       builder: (dialogContext) => AppDialog(
         title: 'Confirm Conversion',
+        maxWidth: 400,
+        showCloseButton: false,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1048,10 +1050,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         final items = catalogState.items.where((item) {
           final query = _searchController.text.toLowerCase();
           final matchesSearch =
-              (item.name ?? '').toLowerCase().contains(query) ||
-                  (item.description ?? '').toLowerCase().contains(query);
+              item.name.toLowerCase().contains(query) ||
+                  item.description.toLowerCase().contains(query);
           final matchesCategory = effectiveCategory == 'All Categories' ||
-              (item.category ?? '').toUpperCase() ==
+              item.category.toUpperCase() ==
                   (_categoryMap[effectiveCategory] ??
                       effectiveCategory.toUpperCase());
           return matchesSearch && matchesCategory;
@@ -1076,42 +1078,41 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                         fillColor: theme.colorScheme.surface,
                       ),
                     );
-                    Widget buildDropdown({required bool expanded}) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color:
-                                    theme.dividerColor.withValues(alpha: 0.1)),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: const [
-                                'All Categories',
-                                'Gift Cards',
-                                'Merchandise'
-                              ].contains(_selectedCategory)
-                                  ? _selectedCategory
-                                  : 'All Categories',
-                              items: const [
-                                'All Categories',
-                                'Gift Cards',
-                                'Merchandise',
-                              ]
-                                  .map((e) => DropdownMenuItem(
-                                      value: e, child: Text(e)))
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedCategory = val);
-                                }
-                              },
-                              style: theme.textTheme.bodyMedium,
-                              isExpanded: expanded,
+                    Widget buildDropdown({required bool expanded}) => DropdownMenu<String>(
+                            initialSelection: const [
+                              'All Categories',
+                              'Gift Cards',
+                              'Merchandise'
+                            ].contains(_selectedCategory)
+                                ? _selectedCategory
+                                : 'All Categories',
+                            expandedInsets: expanded ? EdgeInsets.zero : null,
+                            width: expanded ? null : 200,
+                            inputDecorationTheme: InputDecorationTheme(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+                              ),
+                              filled: true,
+                              fillColor: theme.colorScheme.surface,
                             ),
-                          ),
-                        );
+                            textStyle: theme.textTheme.bodyMedium,
+                            dropdownMenuEntries: const [
+                              DropdownMenuEntry(value: 'All Categories', label: 'All Categories'),
+                              DropdownMenuEntry(value: 'Gift Cards', label: 'Gift Cards'),
+                              DropdownMenuEntry(value: 'Merchandise', label: 'Merchandise'),
+                            ],
+                            onSelected: (val) {
+                              if (val != null) {
+                                setState(() => _selectedCategory = val);
+                              }
+                            },
+                          );
 
                     if (narrow) {
                       return Column(
@@ -1206,6 +1207,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       context: context,
       builder: (dialogContext) => AppDialog(
         title: 'Confirm Redemption',
+        maxWidth: 400,
+        showCloseButton: false,
         content: Text(
             'Are you sure you want to redeem "${reward.name}" for ${reward.pointsCost} points?'),
         actions: [

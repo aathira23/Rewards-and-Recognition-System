@@ -417,45 +417,44 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
       builder: (ctx) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AppDialog(
           title: 'Reward Employee',
-          content: SizedBox(
-            width: 380,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (users.isEmpty || currentUser == null)
-                    const Text('Loading users...',
-                        style: TextStyle(fontSize: 12, color: Colors.grey))
-                  else
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedEmployeeId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Employee',
+          maxWidth: 600,
+          showCloseButton: false,
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (users.isEmpty || currentUser == null)
+                  const Text('Loading users...',
+                      style: TextStyle(fontSize: 12, color: Colors.grey))
+                else
+                    DropdownMenu<int>(
+                      initialSelection: selectedEmployeeId,
+                      expandedInsets: EdgeInsets.zero,
+                      inputDecorationTheme: const InputDecorationTheme(
                         filled: true,
                         contentPadding:
                             EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      hint: const Text('Search or select employee'),
-                      items: users.where((u) {
+                      label: const Text('Select Employee'),
+                      hintText: 'Search or select employee',
+                      dropdownMenuEntries: users.where((u) {
                         final role = currentUser.role.toUpperCase();
                         if (role == 'HR' || role == 'ADMIN') return true;
                         if (role == 'DEPT_HEAD') {
                           return u.departmentId == currentUser.departmentId &&
                               u.id != currentUser.id;
                         }
-                        // MANAGER: only show their direct reports
                         return u.managerId == currentUser.id;
                       }).map((user) {
-                        return DropdownMenuItem<int>(
+                        return DropdownMenuEntry<int>(
                           value: user.id,
-                          child: Text(user.name),
+                          label: user.name,
                         );
                       }).toList(),
-                      onChanged: (val) =>
-                          setDialogState(() => selectedEmployeeId = val),
-                      validator: (v) => v == null ? 'Required' : null,
+                      onSelected: (val) {
+                        setDialogState(() => selectedEmployeeId = val);
+                      },
                     ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -474,7 +473,6 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                 ],
               ),
             ),
-          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),

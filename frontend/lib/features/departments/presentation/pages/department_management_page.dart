@@ -172,6 +172,8 @@ class _DepartmentManagementView extends StatelessWidget {
       context: context,
       builder: (ctx) => AppDialog(
         title: 'Create Department',
+        maxWidth: 400,
+        showCloseButton: false,
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'Department Name'),
@@ -200,6 +202,8 @@ class _DepartmentManagementView extends StatelessWidget {
       context: context,
       builder: (ctx) => AppDialog(
         title: 'Edit Department',
+        maxWidth: 400,
+        showCloseButton: false,
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'Department Name'),

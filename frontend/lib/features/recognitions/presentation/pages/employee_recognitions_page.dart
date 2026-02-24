@@ -177,7 +177,8 @@ class EmployeeRecognitionsPage extends StatelessWidget {
       builder: (dialogContext) {
         return AppDialog(
           title: 'Send ${badge.name}',
-          maxWidth: 500,
+          maxWidth: 600,
+          showCloseButton: false,
           content: Form(
             key: formKey,
             child: Column(
@@ -189,9 +190,12 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                   style: AppTextStyles.sectionTitle(),
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  decoration: InputDecoration(
-                    hintText: 'Search employee name...',
+                DropdownMenu<int>(
+                  initialSelection: selectedReceiverId,
+                  expandedInsets: EdgeInsets.zero,
+                  menuHeight: 250, // Constrain height to prevent it from opening upwards
+                  inputDecorationTheme: InputDecorationTheme(
+                    hintStyle: AppTextStyles.body(color: Colors.grey.shade500),
                     filled: true,
                     fillColor: Colors.grey[100],
                     border: OutlineInputBorder(
@@ -201,15 +205,15 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                   ),
-                  items: users.map((user) {
-                    return DropdownMenuItem<int>(
+                  hintText: 'Search employee name...',
+                  dropdownMenuEntries: users.map((user) {
+                    return DropdownMenuEntry<int>(
                       value: user.id,
-                      child: Text(user.name),
+                      label: user.name,
                     );
                   }).toList(),
-                  onChanged: (value) => selectedReceiverId = value,
-                  validator: (value) =>
-                      value == null ? 'Please select a colleague' : null,
+                  onSelected: (value) => selectedReceiverId = value,
+                  textStyle: AppTextStyles.body(),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -218,9 +222,11 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
+                  style: AppTextStyles.body(),
                   decoration: InputDecoration(
                     hintText:
                         'Write a personalized message explaining why you\'re recognizing this person...',
+                    hintStyle: AppTextStyles.body(color: Colors.grey.shade500),
                     filled: true,
                     fillColor: Colors.grey[100],
                     border: OutlineInputBorder(

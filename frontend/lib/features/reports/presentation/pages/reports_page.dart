@@ -548,39 +548,44 @@ class _ReportsViewState extends State<_ReportsView> {
 
           // Department filter
           if (type.hasDeptFilter && state.departments.isNotEmpty) ...[
-            Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color:
-                    _deptId != null ? Colors.blue.shade50 : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
+            DropdownMenu<int?>(
+              initialSelection: _deptId,
+              width: 180,
+              inputDecorationTheme: InputDecorationTheme(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
                     color: _deptId != null
                         ? Colors.blue.shade200
-                        : Colors.grey.shade300),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int?>(
-                  value: _deptId,
-                  hint: Text('All Departments',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                  isDense: true,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
-                  items: [
-                    const DropdownMenuItem(
-                        value: null, child: Text('All Departments')),
-                    ...state.departments.map((d) => DropdownMenuItem(
-                        value: d['id'] as int?,
-                        child: Text(d['name']?.toString() ?? ''))),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _deptId = v);
-                    _fetchReport(type);
-                  },
+                        : Colors.grey.shade300,
+                  ),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: _deptId != null
+                        ? Colors.blue.shade200
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                filled: true,
+                fillColor:
+                    _deptId != null ? Colors.blue.shade50 : Colors.grey.shade50,
               ),
+              textStyle: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+              label: Text('All Departments', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              dropdownMenuEntries: [
+                const DropdownMenuEntry(value: null, label: 'All Departments'),
+                ...state.departments.map((d) => DropdownMenuEntry(
+                    value: d['id'] as int?,
+                    label: d['name']?.toString() ?? '')),
+              ],
+              onSelected: (v) {
+                setState(() => _deptId = v);
+                _fetchReport(type);
+              },
             ),
           ],
 

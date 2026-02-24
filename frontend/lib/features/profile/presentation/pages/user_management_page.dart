@@ -190,7 +190,7 @@ class _UserManagementView extends StatelessWidget {
       context: context,
       builder: (ctx) => AppDialog(
         title: 'Create New User',
-        maxWidth: 500,
+        showCloseButton: false,
         content: Form(
           key: formKey,
           child: Column(
@@ -215,13 +215,26 @@ class _UserManagementView extends StatelessWidget {
                 onChanged: (v) => password = v,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Role'),
-                initialValue: role,
-                items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
-                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                    .toList(),
-                onChanged: (v) => role = v ?? 'EMPLOYEE',
+              DropdownMenu<String>(
+                label: const Text('Role'),
+                initialSelection: role,
+                expandedInsets: EdgeInsets.zero,
+                inputDecorationTheme: InputDecorationTheme(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                ),
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(value: 'EMPLOYEE', label: 'EMPLOYEE'),
+                  DropdownMenuEntry(value: 'MANAGER', label: 'MANAGER'),
+                  DropdownMenuEntry(value: 'DEPT_HEAD', label: 'DEPT_HEAD'),
+                  DropdownMenuEntry(value: 'HR', label: 'HR'),
+                  DropdownMenuEntry(value: 'ADMIN', label: 'ADMIN'),
+                ],
+                onSelected: (v) => role = v ?? 'EMPLOYEE',
               ),
             ],
           ),
@@ -263,7 +276,7 @@ class _UserManagementView extends StatelessWidget {
       context: context,
       builder: (ctx) => AppDialog(
         title: 'Edit ${user['name']}',
-        maxWidth: 500,
+        showCloseButton: false,
         content: Form(
           key: formKey,
           child: Column(
@@ -275,13 +288,26 @@ class _UserManagementView extends StatelessWidget {
                 onChanged: (v) => name = v,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Role'),
-                initialValue: role,
-                items: ['EMPLOYEE', 'MANAGER', 'DEPT_HEAD', 'HR', 'ADMIN']
-                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                    .toList(),
-                onChanged: (v) => role = v ?? role,
+              DropdownMenu<String>(
+                label: const Text('Role'),
+                initialSelection: role,
+                expandedInsets: EdgeInsets.zero,
+                inputDecorationTheme: InputDecorationTheme(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                ),
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(value: 'EMPLOYEE', label: 'EMPLOYEE'),
+                  DropdownMenuEntry(value: 'MANAGER', label: 'MANAGER'),
+                  DropdownMenuEntry(value: 'DEPT_HEAD', label: 'DEPT_HEAD'),
+                  DropdownMenuEntry(value: 'HR', label: 'HR'),
+                  DropdownMenuEntry(value: 'ADMIN', label: 'ADMIN'),
+                ],
+                onSelected: (v) => role = v ?? role,
               ),
             ],
           ),

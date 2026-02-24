@@ -710,7 +710,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
       builder: (dialogContext) {
         return AppDialog(
           title: isApprove ? 'Approve Nomination' : 'Reject Nomination',
-          maxWidth: 460,
+          maxWidth: 400,
+          showCloseButton: false,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

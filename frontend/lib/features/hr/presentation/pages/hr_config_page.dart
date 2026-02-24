@@ -755,17 +755,21 @@ class _HrConfigViewState extends State<_HrConfigView>
               if (!isEdit)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: DropdownButtonFormField<String>(
-                    initialValue: eventC.text.isNotEmpty ? eventC.text : null,
-                    decoration: const InputDecoration(labelText: 'Event'),
-                    hint: const Text('Select event'),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'BIRTHDAY', child: Text('BIRTHDAY')),
-                      DropdownMenuItem(
-                          value: 'ANNIVERSARY', child: Text('ANNIVERSARY')),
+                  child: DropdownMenu<String>(
+                    initialSelection: eventC.text.isNotEmpty ? eventC.text : null,
+                    expandedInsets: EdgeInsets.zero,
+                    inputDecorationTheme: InputDecorationTheme(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    label: const Text('Event'),
+                    dropdownMenuEntries: const [
+                      DropdownMenuEntry(value: 'BIRTHDAY', label: 'BIRTHDAY'),
+                      DropdownMenuEntry(value: 'ANNIVERSARY', label: 'ANNIVERSARY'),
                     ],
-                    onChanged: (v) {
+                    onSelected: (v) {
                       if (v != null) {
                         setDialogState(() => eventC.text = v);
                       }
@@ -798,16 +802,21 @@ class _HrConfigViewState extends State<_HrConfigView>
               if (!isEdit)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: DropdownButtonFormField<String>(
-                    initialValue: selectedConvType,
-                    decoration: const InputDecoration(
-                        labelText: 'Conversion Reward Type'),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'PAYROLL', child: Text('PAYROLL')),
-                      DropdownMenuItem(value: 'CSR', child: Text('CSR')),
+                  child: DropdownMenu<String>(
+                    initialSelection: selectedConvType,
+                    expandedInsets: EdgeInsets.zero,
+                    inputDecorationTheme: InputDecorationTheme(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    label: const Text('Conversion Reward Type'),
+                    dropdownMenuEntries: const [
+                      DropdownMenuEntry(value: 'PAYROLL', label: 'PAYROLL'),
+                      DropdownMenuEntry(value: 'CSR', label: 'CSR'),
                     ],
-                    onChanged: (v) {
+                    onSelected: (v) {
                       if (v != null) {
                         setDialogState(() => selectedConvType = v);
                       }
@@ -819,7 +828,8 @@ class _HrConfigViewState extends State<_HrConfigView>
 
           return AppDialog(
             title: isEdit ? 'Edit Policy Rule' : 'Create Policy Rule',
-            maxWidth: 500,
+            maxWidth: 600,
+            showCloseButton: false,
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -828,18 +838,22 @@ class _HrConfigViewState extends State<_HrConfigView>
                 if (!isEdit)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: DropdownButtonFormField<String>(
-                      initialValue: selectedType,
-                      decoration:
-                          const InputDecoration(labelText: 'Recognition Type'),
-                      items: const [
-                        DropdownMenuItem(value: 'ECARD', child: Text('ECARD')),
-                        DropdownMenuItem(
-                            value: 'CELEBRATION', child: Text('CELEBRATION')),
-                        DropdownMenuItem(
-                            value: 'CONVERSION', child: Text('CONVERSION')),
+                    child: DropdownMenu<String>(
+                      initialSelection: selectedType,
+                      expandedInsets: EdgeInsets.zero,
+                      inputDecorationTheme: InputDecorationTheme(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      label: const Text('Recognition Type'),
+                      dropdownMenuEntries: const [
+                        DropdownMenuEntry(value: 'ECARD', label: 'ECARD'),
+                        DropdownMenuEntry(value: 'CELEBRATION', label: 'CELEBRATION'),
+                        DropdownMenuEntry(value: 'CONVERSION', label: 'CONVERSION'),
                       ],
-                      onChanged: (v) {
+                      onSelected: (v) {
                         if (v != null) {
                           setDialogState(() {
                             selectedType = v;
@@ -1076,6 +1090,7 @@ class _HrConfigViewState extends State<_HrConfigView>
       builder: (_) => AppDialog(
         title: title,
         maxWidth: 500,
+        showCloseButton: false,
         content: StatefulBuilder(builder: (ctx, setDialogState) {
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -1091,23 +1106,26 @@ class _HrConfigViewState extends State<_HrConfigView>
               ...fields.map((f) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: f.dropdownOptions != null
-                        ? DropdownButtonFormField<String>(
-                            initialValue: f.dropdownOptions!
+                        ? DropdownMenu<String>(
+                            initialSelection: f.dropdownOptions!
                                     .map((o) => _mapToBackend(o))
                                     .contains(f.controller.text)
                                 ? f.controller.text
                                 : null,
-                            decoration: InputDecoration(
-                              labelText: f.label,
-                              hintText: f.hint ?? 'Select an option',
-                              hintStyle: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade400),
+                            expandedInsets: EdgeInsets.zero,
+                            inputDecorationTheme: InputDecorationTheme(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            items: f.dropdownOptions!
-                                .map((o) => DropdownMenuItem(
-                                    value: _mapToBackend(o), child: Text(o)))
+                            label: Text(f.label),
+                            hintText: f.hint ?? 'Select an option',
+                            dropdownMenuEntries: f.dropdownOptions!
+                                .map((o) => DropdownMenuEntry(
+                                    value: _mapToBackend(o), label: o))
                                 .toList(),
-                            onChanged: (v) {
+                            onSelected: (v) {
                               if (v != null) {
                                 f.controller.text = v;
                                 setDialogState(() {});

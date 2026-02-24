@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'app_text_styles.dart';
+
 class AppTheme {
   // Brand Colors
   static const Color brandBlue = Color(0xFF1E56BD);
@@ -75,6 +77,8 @@ class AppTheme {
   static InputDecorationTheme _inputDecoration(Color primary, Color border) {
     return InputDecorationTheme(
       filled: true,
+      hintStyle: AppTextStyles.body(color: Colors.grey.shade500),
+      labelStyle: AppTextStyles.body(),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: border),
@@ -86,6 +90,14 @@ class AppTheme {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
