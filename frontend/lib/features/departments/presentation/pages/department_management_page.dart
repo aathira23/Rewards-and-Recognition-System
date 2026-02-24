@@ -6,6 +6,7 @@ import '../../../../injection_container.dart';
 import '../../domain/entities/department_entity.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../bloc/department_bloc.dart';
 import '../bloc/department_event.dart';
 import '../bloc/department_state.dart';
@@ -169,8 +170,8 @@ class _DepartmentManagementView extends StatelessWidget {
     final bloc = context.read<DepartmentBloc>();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create Department'),
+      builder: (ctx) => AppDialog(
+        title: 'Create Department',
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'Department Name'),
@@ -197,8 +198,8 @@ class _DepartmentManagementView extends StatelessWidget {
     final bloc = context.read<DepartmentBloc>();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Department'),
+      builder: (ctx) => AppDialog(
+        title: 'Edit Department',
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'Department Name'),

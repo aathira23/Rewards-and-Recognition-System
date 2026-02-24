@@ -6,6 +6,7 @@ import '../../../budgets/presentation/bloc/budget_bloc.dart';
 import '../../../budgets/presentation/bloc/budget_event.dart';
 import '../../../budgets/presentation/bloc/budget_state.dart';
 import '../../domain/entities/points_summary_entity.dart';
+import '../../../../core/widgets/app_dialog.dart';
 
 /// Wallet card with a toggle between "My Points" and "Manager Wallet".
 /// The toggle only appears for MANAGER / DEPT_HEAD / HR roles.
@@ -414,17 +415,8 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.card_giftcard_rounded,
-                  color: Theme.of(context).colorScheme.primary, size: 22),
-              const SizedBox(width: 10),
-              const Text('Reward Employee'),
-            ],
-          ),
+        builder: (dialogContext, setDialogState) => AppDialog(
+          title: 'Reward Employee',
           content: SizedBox(
             width: 380,
             child: Form(

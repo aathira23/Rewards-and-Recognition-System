@@ -3,6 +3,7 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/utils/responsive.dart';
 import 'package:rr_frontend/features/notifications/presentation/widgets/notification_bell.dart';
+import 'package:rr_frontend/core/widgets/app_dialog.dart';
 
 class MainLayout extends StatefulWidget {
   final List<NavDestination> destinations;
@@ -40,11 +41,13 @@ class _MainLayoutState extends State<MainLayout> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Confirm Logout'),
-        content:
-            const Text('Are you sure you want to log out of the application?'),
+      builder: (dialogContext) => AppDialog(
+        title: 'Confirm Logout',
+        maxWidth: 400,
+        content: const Text(
+          'Are you sure you want to log out of the application?',
+          style: TextStyle(fontSize: 16),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
