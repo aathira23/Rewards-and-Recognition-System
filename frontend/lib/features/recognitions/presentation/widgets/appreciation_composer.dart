@@ -125,7 +125,7 @@ class AppreciationComposer extends StatelessWidget {
   }
 }
 
-class _BadgeCard extends StatelessWidget {
+class _BadgeCard extends StatefulWidget {
   final BadgeEntity badge;
   final VoidCallback onTap;
 
@@ -135,79 +135,111 @@ class _BadgeCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final badgeInfo = BadgeUtils.getDisplayInfo(badge.name);
+  State<_BadgeCard> createState() => _BadgeCardState();
+}
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[200]!),
+class _BadgeCardState extends State<_BadgeCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeInfo = BadgeUtils.getDisplayInfo(widget.badge.name);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedScale(
+        scale: _isHovered ? 1.05 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: InkWell(
+          onTap: widget.onTap,
           borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.surface,
-        ),
-        child: Column(
-          children: [
-            // Icon section - standard height
-            SizedBox(
-              height: 60,
-              child: Center(
-                child: Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: badgeInfo.color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _isHovered
+                    ? badgeInfo.color.withValues(alpha: 0.5)
+                    : Colors.grey[200]!,
+                width: _isHovered ? 1.5 : 1,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: [
+                if (_isHovered)
+                  BoxShadow(
+                    color: badgeInfo.color.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
                   ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Icon section - standard height
+                SizedBox(
+                  height: 60,
                   child: Center(
-                    child: badge.iconUrl != null
-                        ? ClipOval(
-                            child: Image.network(
-                              badge.iconUrl!,
-                              width: 38,
-                              height: 38,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => badgeInfo.hasEmoji
-                                  ? Text(badgeInfo.emoji!,
-                                      style: AppTextStyles.emoji())
-                                  : Icon(badgeInfo.icon,
-                                      color: badgeInfo.color, size: 28),
-                            ),
-                          )
-                        : badgeInfo.hasEmoji
-                            ? Text(badgeInfo.emoji!,
-                                style: AppTextStyles.emoji())
-                            : Icon(badgeInfo.icon,
-                                color: badgeInfo.color, size: 28),
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: badgeInfo.color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: widget.badge.iconUrl != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  widget.badge.iconUrl!,
+                                  width: 38,
+                                  height: 38,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      badgeInfo.hasEmoji
+                                          ? Text(badgeInfo.emoji!,
+                                              style: AppTextStyles.emoji())
+                                          : Icon(badgeInfo.icon,
+                                              color: badgeInfo.color, size: 28),
+                                ),
+                              )
+                            : badgeInfo.hasEmoji
+                                ? Text(badgeInfo.emoji!,
+                                    style: AppTextStyles.emoji())
+                                : Icon(badgeInfo.icon,
+                                    color: badgeInfo.color, size: 28),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Name section - standard 2-line height
-            SizedBox(
-              height: 40,
-              child: Center(
-                child: Text(
-                  badge.name,
-                  style: AppTextStyles.cardTitle(),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 12),
+                // Name section - standard 2-line height
+                SizedBox(
+                  height: 40,
+                  child: Center(
+                    child: Text(
+                      widget.badge.name,
+                      style: AppTextStyles.cardTitle(),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
-              ),
+                const Spacer(),
+                // Points section
+                Text(
+                  '${widget.badge.points ?? 50} pts',
+                  style: AppTextStyles.bodyMedium(
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
             ),
-            const Spacer(),
-            // Points section
-            Text(
-              '${badge.points ?? 50} pts',
-              style: AppTextStyles.bodyMedium(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

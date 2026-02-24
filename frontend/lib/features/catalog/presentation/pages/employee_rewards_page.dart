@@ -1049,9 +1049,8 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
 
         final items = catalogState.items.where((item) {
           final query = _searchController.text.toLowerCase();
-          final matchesSearch =
-              item.name.toLowerCase().contains(query) ||
-                  item.description.toLowerCase().contains(query);
+          final matchesSearch = item.name.toLowerCase().contains(query) ||
+              item.description.toLowerCase().contains(query);
           final matchesCategory = effectiveCategory == 'All Categories' ||
               item.category.toUpperCase() ==
                   (_categoryMap[effectiveCategory] ??
@@ -1177,10 +1176,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             else
               SliverGrid(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 280,
+                  maxCrossAxisExtent: 320,
                   crossAxisSpacing: 20,
                   mainAxisSpacing: 20,
-                  childAspectRatio: 0.72,
+                  childAspectRatio: 0.7,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {

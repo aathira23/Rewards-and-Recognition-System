@@ -55,7 +55,7 @@ from app.core.config import settings
 if getattr(settings, "DEBUG", False):
     try:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS stock INTEGER;"))
+            conn.execute(text("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
     except Exception:
         # Best-effort only; don't raise so app can continue to start.
         pass

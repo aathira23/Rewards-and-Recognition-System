@@ -36,27 +36,102 @@ class RewardItemCard extends StatelessWidget {
           // Image / Icon Container
           Expanded(
             flex: 3,
-            child: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Center(
-                child: Hero(
-                  tag: 'reward_${reward.id}',
-                  child: Icon(
-                    _getIconForCategory(reward.category),
-                    size: 48,
-                    color: theme.colorScheme.primary,
+            child: Stack(
+              children: [
+                Container(
+                  margin: const EdgeInsets.all(8),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Hero(
+                      tag: 'reward_${reward.id}',
+                      child: reward.imageUrl != null &&
+                              reward.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              reward.imageUrl!.trim(),
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint(
+                                    'Error loading image ${reward.imageUrl}: $error');
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _getIconForCategory(reward.category),
+                                        size: 40,
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.5),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Image failed to load',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: theme.colorScheme.error
+                                                .withValues(alpha: 0.7)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Icon(
+                                _getIconForCategory(reward.category),
+                                size: 48,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                    ),
                   ),
                 ),
-              ),
+                // Transparent Ref ID Badge overlayed on image
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Ref: #${reward.id}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           // Content
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -70,7 +145,10 @@ class RewardItemCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           reward.name,
-                          style: AppTextStyles.label(),
+                          style: AppTextStyles.label().copyWith(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -80,52 +158,95 @@ class RewardItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                // Points section
-                SizedBox(
-                  height: 32,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        reward.pointsCost.toString(),
-                        style: AppTextStyles.headline2(
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(
-                          'pts',
-                          style: AppTextStyles.smallMedium(
-                            color: theme.hintColor,
+                const SizedBox(height: 12),
+
+                // Points and Stock row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Points section
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          reward.pointsCost.toString(),
+                          style: AppTextStyles.headline2(
+                            color: theme.colorScheme.primary,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            'pts',
+                            style: AppTextStyles.smallMedium(
+                              color: theme.hintColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Stock indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: reward.stockQuantity > 0
+                            ? Colors.blue.withValues(alpha: 0.08)
+                            : Colors.red.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                    ],
-                  ),
+                      child: Text(
+                        reward.stockQuantity > 0
+                            ? '${reward.stockQuantity} in stock'
+                            : 'Out of stock',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: reward.stockQuantity > 0
+                              ? Colors.blue[700]
+                              : Colors.red[700],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  height: 42,
+                  height: 44,
                   child: ElevatedButton(
-                    onPressed: hasInsufficientPoints ? null : onRedeem,
+                    onPressed:
+                        (hasInsufficientPoints || reward.stockQuantity <= 0)
+                            ? null
+                            : onRedeem,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      disabledBackgroundColor:
-                          theme.colorScheme.primary.withValues(alpha: 0.1),
-                      disabledForegroundColor: theme.hintColor,
+                      backgroundColor: reward.stockQuantity <= 0
+                          ? Colors.red.shade50
+                          : theme.colorScheme.primary,
+                      foregroundColor: reward.stockQuantity <= 0
+                          ? Colors.red.shade400
+                          : theme.colorScheme.onPrimary,
+                      disabledBackgroundColor: reward.stockQuantity <= 0
+                          ? Colors.red.shade50
+                          : theme.colorScheme.primary.withValues(alpha: 0.1),
+                      disabledForegroundColor: reward.stockQuantity <= 0
+                          ? Colors.red.shade400
+                          : theme.hintColor,
                     ),
                     child: Text(
-                      hasInsufficientPoints ? 'Short on Points' : 'Redeem Now',
+                      reward.stockQuantity <= 0
+                          ? 'Out of Stock'
+                          : (hasInsufficientPoints
+                              ? 'Short on Points'
+                              : 'Redeem Now'),
                       style: AppTextStyles.bodyBold(),
                     ),
                   ),

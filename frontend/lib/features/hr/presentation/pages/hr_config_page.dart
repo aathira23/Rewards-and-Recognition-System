@@ -497,12 +497,30 @@ class _HrConfigViewState extends State<_HrConfigView>
                 final isActive = r['is_active'] ?? true;
                 final stock = r['stock_quantity'];
                 return [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(r['name']?.toString() ?? '',
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      if (r['image_url'] != null &&
+                          r['image_url'].toString().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              r['image_url'].toString(),
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 16),
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(r['name']?.toString() ?? '',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
                     ],
                   ),
                   StatusBadge(status: r['reward_type']?.toString() ?? ''),
@@ -555,6 +573,7 @@ class _HrConfigViewState extends State<_HrConfigView>
             '${existing?['points_required'] ?? existing?['points_cost'] ?? ''}');
     final stockC = TextEditingController(
         text: existing?['stock_quantity']?.toString() ?? '');
+    final imgUrlC = TextEditingController(text: existing?['image_url'] ?? '');
 
     _showFormDialog(
       context: context,
@@ -571,6 +590,7 @@ class _HrConfigViewState extends State<_HrConfigView>
             controller: stockC,
             isNumber: true,
             hint: 'Leave empty for unlimited'),
+        _Field(label: 'Image URL', controller: imgUrlC, hint: 'https://...'),
       ],
       onSave: () {
         final data = <String, dynamic>{
@@ -578,6 +598,7 @@ class _HrConfigViewState extends State<_HrConfigView>
           // convert friendly label (e.g. 'GIFT CARD') to backend value ('GIFT_CARD')
           'reward_type': _mapToBackend(typeC.text),
           'points_required': int.tryParse(pointsC.text) ?? 0,
+          'image_url': imgUrlC.text.trim().isEmpty ? null : imgUrlC.text.trim(),
         };
         if (stockC.text.isNotEmpty) {
           data['stock_quantity'] = int.tryParse(stockC.text);
