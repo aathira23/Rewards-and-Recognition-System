@@ -27,8 +27,8 @@ class NominationsRepositoryImpl implements NominationsRepository {
   @override
   Future<Either<Failure, List<NominationEntity>>> getNominations() async {
     try {
-      final result = await remoteDataSource.getNominations();
-      return Right(result);
+      final (_, items) = await remoteDataSource.getNominations(perPage: 100);
+      return Right(items);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {

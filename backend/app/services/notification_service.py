@@ -32,16 +32,20 @@ class NotificationService:
         self,
         user_id: int,
         unread_only: bool = False,
-        skip: int = 0,
-        limit: int = 20
-    ) -> List[Notification]:
-        """Get notifications for a user."""
+        page: int = 1,
+        per_page: int = 20
+    ):
+        """Get notifications for a user. Returns (total, items)."""
+        from app.utils.constants import clamp_pagination
+        page, per_page, skip = clamp_pagination(page, per_page)
         query = self.db.query(Notification).filter(Notification.user_id == user_id)
         
         if unread_only:
             query = query.filter(Notification.is_read == False)
-            
-        return query.order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
+
+        total = query.count()
+        items = query.order_by(Notification.created_at.desc()).offset(skip).limit(per_page).all()
+        return total, items
 
     def get_unread_count(self, user_id: int) -> int:
         """Get count of unread notifications."""

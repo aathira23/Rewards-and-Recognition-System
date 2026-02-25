@@ -12,7 +12,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
   @override
   Future<Either<Failure, List<RewardEntity>>> getCatalogItems() async {
     try {
-      final items = await remoteDataSource.getCatalogItems();
+      final (_, items) = await remoteDataSource.getCatalogItems(perPage: 100);
       return Right(items);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

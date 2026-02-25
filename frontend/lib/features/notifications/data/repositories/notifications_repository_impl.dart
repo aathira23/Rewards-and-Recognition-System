@@ -12,8 +12,8 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   @override
   Future<Either<Failure, List<NotificationEntity>>> getNotifications() async {
     try {
-      final result = await remoteDataSource.getNotifications();
-      return Right(result);
+      final (_, items) = await remoteDataSource.getNotifications(perPage: 100);
+      return Right(items);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {

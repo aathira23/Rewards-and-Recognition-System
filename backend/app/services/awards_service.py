@@ -415,10 +415,12 @@ class AwardsService:
         user_id: int,
         role: str,
         status_filter: Optional[str] = None,
-        skip: int = 0,
-        limit: int = 20
-    ) -> List[Award]:
-        """Get award nominations based on user role."""
+        page: int = 1,
+        per_page: int = 20
+    ):
+        """Get award nominations based on user role. Returns (total, items)."""
+        from app.utils.constants import clamp_pagination
+        page, per_page, skip = clamp_pagination(page, per_page)
         query = self.db.query(Award)
         
         # Visibility rules:
@@ -450,7 +452,8 @@ class AwardsService:
         if status_filter:
             query = query.filter(Award.status == status_filter)
 
-        awards = query.order_by(Award.created_at.desc()).offset(skip).limit(limit).all()
+        total = query.count()
+        awards = query.order_by(Award.created_at.desc()).offset(skip).limit(per_page).all()
         
         # Attach next_required_level to each award for the API response
         for award in awards:
@@ -462,7 +465,7 @@ class AwardsService:
             completed_levels = self._get_existing_approvals(award.id)
             award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
             
-        return awards
+        return total, awards
 
     def get_nomination(self, award_id: int) -> Optional[Award]:
         """Get specific nomination details."""

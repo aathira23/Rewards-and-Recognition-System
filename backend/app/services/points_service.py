@@ -237,6 +237,9 @@ class PointsService:
         per_page: int = 20,
     ) -> Tuple[int, List[Dict[str, Any]]]:
         """Fetch paginated points history including merged pending/expired entries."""
+        from app.utils.constants import clamp_pagination
+        page, per_page, skip = clamp_pagination(page, per_page)
+
         wallet = self.get_employee_wallet(user_id)
         if not wallet:
             return 0, []
@@ -256,100 +259,143 @@ class PointsService:
                 q = q.filter(PointsLedger.created_at <= end_dt)
             except ValueError: pass
 
-        # Handle specific category filtering
-        include_pending = True
+        # ── Expired-only view ──────────────────────────────────
+        if category and category.lower() == "expired":
+            today = date.today()
+            batch_q = self.db.query(PointsBatch).filter(
+                PointsBatch.user_id == user_id,
+                PointsBatch.expiry_date <= today,
+                PointsBatch.remaining_points > 0
+            )
+            total = batch_q.count()
+            rows = batch_q.order_by(desc(PointsBatch.expiry_date)).offset(skip).limit(per_page).all()
+            items = [{
+                "id": f"batch-{b.id}",
+                "date": b.expiry_date.strftime("%d/%m/%Y"),
+                "created_at_full": b.expiry_date.isoformat() if b.expiry_date else "",
+                "description": f"Points Expired - {b.source_type}",
+                "type": "Expired",
+                "points": f"-{int(b.remaining_points)}",
+                "direction": "Debit",
+                "reference_type": "EXPIRY",
+            } for b in rows]
+            return total, items
+
+        # ── Pending-only view ──────────────────────────────────
+        if category and category.lower() == "pending":
+            pending_q = self.db.query(PointsConversion).filter(
+                PointsConversion.user_id == user_id,
+                PointsConversion.status == "PENDING"
+            )
+            total = pending_q.count()
+            pending_rows = pending_q.order_by(desc(PointsConversion.requested_at)).offset(skip).limit(per_page).all()
+            items = []
+            for p in pending_rows:
+                req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
+                req_full = p.requested_at.isoformat() if p.requested_at else ""
+                items.append({
+                    "id": f"conv-{p.id}",
+                    "date": req_date,
+                    "created_at_full": req_full,
+                    "description": f"Conversion Request: {p.conversion_type}\nAwaiting HR Approval",
+                    "type": "Pending",
+                    "points": f"-{int(p.points_converted)}",
+                    "direction": "Debit",
+                    "reference_type": "CONVERSION",
+                })
+            return total, items
+
+        # ── Category-filtered view (received / spent) ─────────
         if category:
             cat = category.lower()
             if cat == "received":
                 q = q.filter(PointsLedger.transaction_type == TransactionType.CREDIT.value)
-                include_pending = False
             elif cat == "spent":
                 q = q.filter(PointsLedger.transaction_type == TransactionType.DEBIT.value)
-                include_pending = False
-            elif cat == "pending":
-                # Only show pending conversions, hide all ledger records
-                q = q.filter(PointsLedger.id == -1)
-                include_pending = True
-            elif cat == "expired":
-                include_pending = False
-                # Return expired batches
-                today = date.today()
-                batch_q = self.db.query(PointsBatch).filter(
-                    PointsBatch.user_id == user_id,
-                    PointsBatch.expiry_date <= today,
-                    PointsBatch.remaining_points > 0
-                )
-                total = batch_q.count()
-                rows = batch_q.order_by(desc(PointsBatch.expiry_date)).offset((page-1)*per_page).limit(per_page).all()
-                items = [{
-                    "id": f"batch-{b.id}",
-                    "date": b.expiry_date.strftime("%d/%m/%Y"),
-                    "created_at_full": b.expiry_date.isoformat() if b.expiry_date else "",
-                    "description": f"Points Expired - {b.source_type}",
-                    "type": "Expired",
-                    "points": f"-{int(b.remaining_points)}",
-                    "direction": "Debit",
-                    "reference_type": "EXPIRY",
-                } for b in rows]
-                return total, items
 
-        total_ledger = q.count()
-        rows = q.order_by(desc(PointsLedger.created_at)).offset((page - 1) * per_page).limit(per_page).all()
-        items = [self._map_ledger_row(r, wallet.id) for r in rows]
+        # ── Count & fetch page from ledger ─────────────────────
+        ledger_total = q.count()
 
-        # Merge Expired Batches (for All Types view)
-        # Batches with remaining_points > 0 past expiry haven't been processed by
-        # the job yet (once processed the ledger entry is created and remaining_points
-        # is set to 0, so no double-counting happens).
+        # Count extra items (expired batches + pending conversions) for "all" view
+        extra_expired_count = 0
+        extra_pending_count = 0
         if not category:
             today = date.today()
-            expired_batches = self.db.query(PointsBatch).filter(
+            extra_expired_count = self.db.query(PointsBatch).filter(
                 PointsBatch.user_id == user_id,
                 PointsBatch.expiry_date <= today,
                 PointsBatch.remaining_points > 0,
-            ).all()
-            for b in expired_batches:
-                total_ledger += 1
-                items.append({
-                    "id": f"batch-{b.id}",
-                    "date": b.expiry_date.strftime("%d/%m/%Y"),
-                    "created_at_full": b.expiry_date.isoformat() if b.expiry_date else "",
-                    "description": f"Points Expired - {b.source_type}",
-                    "type": "Expired",
-                    "points": f"-{int(b.remaining_points)}",
-                    "direction": "Debit",
-                    "reference_type": "EXPIRY",
-                })
+            ).count()
+            extra_pending_count = self.db.query(PointsConversion).filter(
+                PointsConversion.user_id == user_id,
+                PointsConversion.status == "PENDING",
+            ).count()
 
-        # Merge Pending Conversions
-        if include_pending and (not category or category.lower() == "pending"):
-            pending_q = self.db.query(PointsConversion).filter(
-                PointsConversion.status == "PENDING"
-            )
-            # Find conversions belonging to this user
-            user_pending = [p for p in pending_q.all() if p.user_id == user_id]
-            
-            # Update total count
-            total_ledger += len(user_pending)
-            
-            # Only add to results if we are on the first page
-            if page == 1:
-                # Add in reverse chronological order (assuming list is chronological)
-                for p in reversed(user_pending):
-                    req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
-                    req_full = p.requested_at.isoformat() if p.requested_at else ""
-                    items.insert(0, {
-                        "id": f"conv-{p.id}",
-                        "date": req_date,
-                        "created_at_full": req_full,
-                        "description": f"Conversion Request: {p.conversion_type}\nAwaiting HR Approval",
-                        "type": "Pending",
-                        "points": f"-{int(p.points_converted)}",
-                        "direction": "Debit",
-                        "reference_type": "CONVERSION",
-                    })
+        grand_total = ledger_total + extra_expired_count + extra_pending_count
 
-        return total_ledger, items
+        # For "all" view, pending + expired are prepended conceptually.
+        # We put them on page 1, then ledger rows fill the remaining space.
+        items: list = []
+        if not category:
+            # Extra items live in virtual positions 0..(extra_count-1)
+            extra_count = extra_pending_count + extra_expired_count
+            if skip < extra_count:
+                # We need some extra items on this page
+                extra_needed = min(per_page, extra_count - skip)
+                # Collect pending first, then expired
+                all_extras = []
+                if extra_pending_count > 0:
+                    pending_rows = self.db.query(PointsConversion).filter(
+                        PointsConversion.user_id == user_id,
+                        PointsConversion.status == "PENDING",
+                    ).order_by(desc(PointsConversion.requested_at)).all()
+                    for p in pending_rows:
+                        req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
+                        req_full = p.requested_at.isoformat() if p.requested_at else ""
+                        all_extras.append({
+                            "id": f"conv-{p.id}",
+                            "date": req_date,
+                            "created_at_full": req_full,
+                            "description": f"Conversion Request: {p.conversion_type}\nAwaiting HR Approval",
+                            "type": "Pending",
+                            "points": f"-{int(p.points_converted)}",
+                            "direction": "Debit",
+                            "reference_type": "CONVERSION",
+                        })
+                if extra_expired_count > 0:
+                    today = date.today()
+                    expired_batches = self.db.query(PointsBatch).filter(
+                        PointsBatch.user_id == user_id,
+                        PointsBatch.expiry_date <= today,
+                        PointsBatch.remaining_points > 0,
+                    ).order_by(desc(PointsBatch.expiry_date)).all()
+                    for b in expired_batches:
+                        all_extras.append({
+                            "id": f"batch-{b.id}",
+                            "date": b.expiry_date.strftime("%d/%m/%Y"),
+                            "created_at_full": b.expiry_date.isoformat() if b.expiry_date else "",
+                            "description": f"Points Expired - {b.source_type}",
+                            "type": "Expired",
+                            "points": f"-{int(b.remaining_points)}",
+                            "direction": "Debit",
+                            "reference_type": "EXPIRY",
+                        })
+                items = all_extras[skip:skip + extra_needed]
+                # How many ledger rows still fit on this page?
+                ledger_slots = per_page - len(items)
+                if ledger_slots > 0:
+                    ledger_rows = q.order_by(desc(PointsLedger.created_at)).limit(ledger_slots).all()
+                    items.extend([self._map_ledger_row(r, wallet.id) for r in ledger_rows])
+            else:
+                # Past the extras - pure ledger rows
+                ledger_skip = skip - extra_count
+                ledger_rows = q.order_by(desc(PointsLedger.created_at)).offset(ledger_skip).limit(per_page).all()
+                items = [self._map_ledger_row(r, wallet.id) for r in ledger_rows]
+        else:
+            rows = q.order_by(desc(PointsLedger.created_at)).offset(skip).limit(per_page).all()
+            items = [self._map_ledger_row(r, wallet.id) for r in rows]
+
+        return grand_total, items
 
     def _map_ledger_row(self, row: PointsLedger, wallet_id: int) -> Dict[str, Any]:
         is_credit = row.target_wallet_id == wallet_id

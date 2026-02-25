@@ -27,7 +27,7 @@ class RecognitionsRepositoryImpl implements RecognitionsRepository {
   @override
   Future<Either<Failure, List<RecognitionEntity>>> getRecognitionFeed() async {
     try {
-      final feed = await remoteDataSource.getRecognitionFeed();
+      final (_, feed) = await remoteDataSource.getRecognitionFeed(perPage: 100);
       return Right(feed);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

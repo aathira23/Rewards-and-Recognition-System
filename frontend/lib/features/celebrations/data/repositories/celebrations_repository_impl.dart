@@ -27,8 +27,8 @@ class CelebrationsRepositoryImpl implements CelebrationsRepository {
   @override
   Future<Either<Failure, List<CelebrationEntity>>> getHistory() async {
     try {
-      final result = await remoteDataSource.getHistory();
-      return Right(result);
+      final (_, items) = await remoteDataSource.getHistory(perPage: 100);
+      return Right(items);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {

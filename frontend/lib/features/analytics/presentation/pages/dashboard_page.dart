@@ -14,7 +14,7 @@ import 'package:rr_frontend/features/reports/presentation/pages/reports_page.dar
 import 'package:rr_frontend/features/hr/presentation/pages/hr_config_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_approvals_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   final String userName;
   final String userRole;
 
@@ -25,13 +25,24 @@ class DashboardPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final destinations = _buildDestinations(userRole);
+  State<DashboardPage> createState() => _DashboardPageState();
+}
 
+class _DashboardPageState extends State<DashboardPage> {
+  late final List<NavDestination> _destinations;
+
+  @override
+  void initState() {
+    super.initState();
+    _destinations = _buildDestinations(widget.userRole);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MainLayout(
-      userName: userName,
-      userRole: _displayRole(userRole),
-      destinations: destinations,
+      userName: widget.userName,
+      userRole: _displayRole(widget.userRole),
+      destinations: _destinations,
       onLogout: () {
         context.read<AuthBloc>().add(AuthLogoutRequested());
       },

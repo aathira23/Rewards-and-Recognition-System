@@ -9,33 +9,39 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, get_current_user
 from app.schemas.notifications import NotificationResponse
 
-from app.utils.response import success
+from app.utils.response import success, client_error, paginated_success
+from app.utils.constants import DEFAULT_PAGE_SIZE
 
 from app.services.notification_service import NotificationService
-from app.utils.response import success, client_error
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[NotificationResponse])
+@router.get("/")
 def get_notifications(
-    skip: int = 0,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = DEFAULT_PAGE_SIZE,
     unread_only: bool = False,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Get list of user notifications."""
     service = NotificationService(db)
-    notifications = service.get_user_notifications(
+    total, notifications = service.get_user_notifications(
         user_id=current_user_id,
         unread_only=unread_only,
-        skip=skip,
-        limit=limit
+        page=page,
+        per_page=per_page
     )
     
     data = [NotificationResponse.model_validate(n) for n in notifications]
-    return success(data=data, message="Notifications retrieved")
+    return paginated_success(
+        items=data,
+        total=total,
+        page=page,
+        per_page=per_page,
+        message="Notifications retrieved",
+    )
 
 
 @router.get("/unread-count")

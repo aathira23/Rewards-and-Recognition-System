@@ -3,7 +3,8 @@ import '../../../../core/constants/api_constants.dart';
 import '../models/notification_model.dart';
 
 abstract class NotificationsRemoteDataSource {
-  Future<List<NotificationModel>> getNotifications();
+  Future<(int, List<NotificationModel>)> getNotifications(
+      {int page = 1, int perPage = 20});
   Future<int> getUnreadCount();
   Future<void> markAsRead({int? notificationId});
 }
@@ -14,11 +15,19 @@ class NotificationsRemoteDataSourceImpl
   NotificationsRemoteDataSourceImpl({required this.client});
 
   @override
-  Future<List<NotificationModel>> getNotifications() async {
-    final response = await client.get(ApiConstants.notifications);
+  Future<(int, List<NotificationModel>)> getNotifications(
+      {int page = 1, int perPage = 20}) async {
+    final response = await client.get(
+      ApiConstants.notifications,
+      queryParameters: {'page': page, 'per_page': perPage},
+    );
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
-      return data.map((json) => NotificationModel.fromJson(json)).toList();
+      final Map<String, dynamic> wrapper = response.data['data'];
+      final List data = wrapper['items'] ?? [];
+      final int total = (wrapper['total'] as num?)?.toInt() ?? data.length;
+      final items =
+          data.map((json) => NotificationModel.fromJson(json)).toList();
+      return (total, items);
     }
     throw Exception('Failed to fetch notifications');
   }

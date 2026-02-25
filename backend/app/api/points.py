@@ -20,6 +20,7 @@ from app.services.points_service import PointsService
 from app.services.store_service import StoreService
 from app.utils.response import success, created, client_error
 from app.utils.response import forbidden
+from app.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
 router = APIRouter()
 
@@ -41,7 +42,7 @@ def get_points_history(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     page: int = 1,
-    per_page: int = 20,
+    per_page: int = DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):

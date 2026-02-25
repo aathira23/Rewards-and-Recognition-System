@@ -435,7 +435,7 @@ class _MainLayoutState extends State<MainLayout> {
           // ── Desktop Compact Sidebar ────────────────────────────────
           if (showSidebar)
             Container(
-              width: 72,
+              width: 75,
               color: AppTheme.brandSecondary,
               child: Column(
                 children: [

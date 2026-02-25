@@ -5,7 +5,8 @@ import '../models/redemption_model.dart';
 import '../models/points_conversion_model.dart';
 
 abstract class CatalogRemoteDataSource {
-  Future<List<RewardModel>> getCatalogItems();
+  Future<(int, List<RewardModel>)> getCatalogItems(
+      {int page = 1, int perPage = 20});
   Future<bool> redeemItem(int rewardId);
   Future<Map<String, List>> getHistory();
   Future<bool> submitConversionRequest(int points, String type);
@@ -18,11 +19,18 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
   CatalogRemoteDataSourceImpl({required this.client});
 
   @override
-  Future<List<RewardModel>> getCatalogItems() async {
-    final response = await client.get(ApiConstants.catalogItems);
+  Future<(int, List<RewardModel>)> getCatalogItems(
+      {int page = 1, int perPage = 20}) async {
+    final response = await client.get(
+      ApiConstants.catalogItems,
+      queryParameters: {'page': page, 'per_page': perPage},
+    );
     if (response.statusCode == 200) {
-      final List dataList = response.data['data'];
-      return dataList.map((json) => RewardModel.fromJson(json)).toList();
+      final Map<String, dynamic> wrapper = response.data['data'];
+      final List dataList = wrapper['items'] ?? [];
+      final int total = (wrapper['total'] as num?)?.toInt() ?? dataList.length;
+      final items = dataList.map((json) => RewardModel.fromJson(json)).toList();
+      return (total, items);
     } else {
       throw Exception('Failed to load catalog');
     }

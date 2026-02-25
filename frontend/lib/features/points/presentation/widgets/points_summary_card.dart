@@ -254,7 +254,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                         Icons.timer_outlined,
                         sub: s.expiringToday > 0
                             ? '${s.expiringToday} exp today'
-                            : 'rest of month'),
+                            : 'This month'),
                   ];
                   if (Responsive.isMobile(context)) {
                     return Wrap(
@@ -343,7 +343,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                         ),
                       ),
                       Text(
-                        'pts available to reward',
+                        'points available to reward',
                         style: AppTextStyles.body(color: Colors.white70),
                       ),
                     ],
@@ -428,51 +428,50 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                   const Text('Loading users...',
                       style: TextStyle(fontSize: 12, color: Colors.grey))
                 else
-                    DropdownMenu<int>(
-                      initialSelection: selectedEmployeeId,
-                      expandedInsets: EdgeInsets.zero,
-                      inputDecorationTheme: const InputDecorationTheme(
-                        filled: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      label: const Text('Select Employee'),
-                      hintText: 'Search or select employee',
-                      dropdownMenuEntries: users.where((u) {
-                        final role = currentUser.role.toUpperCase();
-                        if (role == 'HR' || role == 'ADMIN') return true;
-                        if (role == 'DEPT_HEAD') {
-                          return u.departmentId == currentUser.departmentId &&
-                              u.id != currentUser.id;
-                        }
-                        return u.managerId == currentUser.id;
-                      }).map((user) {
-                        return DropdownMenuEntry<int>(
-                          value: user.id,
-                          label: user.name,
-                        );
-                      }).toList(),
-                      onSelected: (val) {
-                        setDialogState(() => selectedEmployeeId = val);
-                      },
+                  DropdownMenu<int>(
+                    initialSelection: selectedEmployeeId,
+                    expandedInsets: EdgeInsets.zero,
+                    inputDecorationTheme: const InputDecorationTheme(
+                      filled: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: pointsCtl,
-                    decoration: const InputDecoration(labelText: 'Points'),
-                    keyboardType: TextInputType.number,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Required' : null,
+                    label: const Text('Select Employee'),
+                    hintText: 'Search or select employee',
+                    dropdownMenuEntries: users.where((u) {
+                      final role = currentUser.role.toUpperCase();
+                      if (role == 'HR' || role == 'ADMIN') return true;
+                      if (role == 'DEPT_HEAD') {
+                        return u.departmentId == currentUser.departmentId &&
+                            u.id != currentUser.id;
+                      }
+                      return u.managerId == currentUser.id;
+                    }).map((user) {
+                      return DropdownMenuEntry<int>(
+                        value: user.id,
+                        label: user.name,
+                      );
+                    }).toList(),
+                    onSelected: (val) {
+                      setDialogState(() => selectedEmployeeId = val);
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: reasonCtl,
-                    decoration: const InputDecoration(labelText: 'Reason'),
-                    maxLines: 2,
-                  ),
-                ],
-              ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: pointsCtl,
+                  decoration: const InputDecoration(labelText: 'Points'),
+                  keyboardType: TextInputType.number,
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: reasonCtl,
+                  decoration: const InputDecoration(labelText: 'Reason'),
+                  maxLines: 2,
+                ),
+              ],
             ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),

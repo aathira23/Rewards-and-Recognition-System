@@ -12,7 +12,8 @@ from app.schemas.recognition_feed import RecognitionFeedResponse
 from app.schemas.badges import BadgeCreate, BadgeUpdate, BadgeResponse
 from app.schemas.leaderboard import LeaderboardEntry
 from app.services.recognition_service import RecognitionService
-from app.utils.response import success, created, client_error, conflict, server_error
+from app.utils.response import success, created, client_error, conflict, server_error, paginated_success
+from app.utils.constants import DEFAULT_PAGE_SIZE
 
 router = APIRouter()
 
@@ -45,14 +46,14 @@ def send_recognition(
 
 @router.get("/feed")
 def get_recognition_feed(
-    skip: int = 0,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Get company-wide recognition feed."""
     service = RecognitionService(db)
-    items = service.get_recognition_feed(skip=skip, limit=limit)
+    total, items = service.get_recognition_feed(page=page, per_page=per_page)
     data = []
     for item in items:
         feed_item = RecognitionFeedResponse.model_validate(item)
@@ -62,7 +63,13 @@ def get_recognition_feed(
         if feed_item.receiver and item.receiver:
             feed_item.receiver.department_name = item.receiver.department.name if item.receiver.department else None
         data.append(feed_item.model_dump())
-    return success(data=data, message="Feed retrieved")
+    return paginated_success(
+        items=data,
+        total=total,
+        page=page,
+        per_page=per_page,
+        message="Feed retrieved",
+    )
 
 
 @router.get("/me/overview")

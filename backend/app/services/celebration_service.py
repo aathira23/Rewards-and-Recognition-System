@@ -69,9 +69,14 @@ class CelebrationService:
                     
         return upcoming
 
-    def get_celebration_history(self, skip: int = 0, limit: int = 20) -> List[Celebration]:
-        """Get list of past celebration awards."""
-        return self.db.query(Celebration).order_by(Celebration.created_at.desc()).offset(skip).limit(limit).all()
+    def get_celebration_history(self, page: int = 1, per_page: int = 20):
+        """Get list of past celebration awards. Returns (total, items)."""
+        from app.utils.constants import clamp_pagination
+        page, per_page, skip = clamp_pagination(page, per_page)
+        query = self.db.query(Celebration).order_by(Celebration.created_at.desc())
+        total = query.count()
+        items = query.offset(skip).limit(per_page).all()
+        return total, items
 
     def _get_points_from_policy(self, event_key: str, default: int) -> int:
         """Get points value from PointsPolicy or return default."""

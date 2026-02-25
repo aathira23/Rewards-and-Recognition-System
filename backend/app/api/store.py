@@ -12,20 +12,31 @@ from app.schemas.rewards import RewardResponse, RewardCreate, RewardUpdate
 from app.schemas.redemptions import RedemptionCreate, RedemptionResponse
 from app.schemas.points_conversion import PointsConversionCreate, PointsConversionResponse
 import logging
-from app.utils.response import success, created, client_error
+from app.utils.response import success, created, client_error, paginated_success
 from app.utils.enums import UserRole
+from app.utils.constants import DEFAULT_PAGE_SIZE
 
 router = APIRouter()
 
 
-@router.get("/items", response_model=List[RewardResponse])
-def get_catalog_items(db: Session = Depends(get_db)):
+@router.get("/items")
+def get_catalog_items(
+    page: int = 1,
+    per_page: int = DEFAULT_PAGE_SIZE,
+    db: Session = Depends(get_db),
+):
     """Browse all active rewards in the catalog."""
     service = StoreService(db)
-    items = service.get_catalog()
+    total, items = service.get_catalog(page=page, per_page=per_page)
     # Convert models to schemas
     data = [RewardResponse.model_validate(i) for i in items]
-    return success(data=data, message="Catalog retrieved successfully")
+    return paginated_success(
+        items=data,
+        total=total,
+        page=page,
+        per_page=per_page,
+        message="Catalog retrieved successfully",
+    )
 
 
 @router.post("/items", response_model=RewardResponse)

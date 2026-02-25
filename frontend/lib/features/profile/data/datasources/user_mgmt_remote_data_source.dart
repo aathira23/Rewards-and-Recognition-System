@@ -13,12 +13,25 @@ class UserMgmtRemoteDataSourceImpl implements UserMgmtRemoteDataSource {
 
   @override
   Future<List<Map<String, dynamic>>> fetchUsers() async {
-    final response = await client.get(ApiConstants.users);
-    if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
-      return data.cast<Map<String, dynamic>>();
+    // Auto-paginate to fetch all users for management views.
+    List<Map<String, dynamic>> allUsers = [];
+    int page = 1;
+    while (true) {
+      final response = await client.get(
+        ApiConstants.users,
+        queryParameters: {'page': page, 'per_page': 100},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch users');
+      }
+      final Map<String, dynamic> wrapper = response.data['data'];
+      final List data = wrapper['items'] ?? [];
+      final int total = (wrapper['total'] as num?)?.toInt() ?? data.length;
+      allUsers.addAll(data.cast<Map<String, dynamic>>());
+      if (allUsers.length >= total) break;
+      page++;
     }
-    throw Exception('Failed to fetch users');
+    return allUsers;
   }
 
   @override

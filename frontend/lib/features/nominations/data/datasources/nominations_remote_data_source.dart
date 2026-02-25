@@ -5,7 +5,8 @@ import '../models/nomination_model.dart';
 
 abstract class NominationsRemoteDataSource {
   Future<List<AwardTypeModel>> getAwardTypes();
-  Future<List<NominationModel>> getNominations();
+  Future<(int, List<NominationModel>)> getNominations(
+      {int page = 1, int perPage = 20});
   Future<NominationModel> createNomination({
     required int nomineeId,
     required int awardTypeId,
@@ -33,11 +34,18 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
   }
 
   @override
-  Future<List<NominationModel>> getNominations() async {
-    final response = await client.get('${ApiConstants.nominations}?limit=200');
+  Future<(int, List<NominationModel>)> getNominations(
+      {int page = 1, int perPage = 20}) async {
+    final response = await client.get(
+      ApiConstants.nominations,
+      queryParameters: {'page': page, 'per_page': perPage},
+    );
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
-      return data.map((json) => NominationModel.fromJson(json)).toList();
+      final Map<String, dynamic> wrapper = response.data['data'];
+      final List data = wrapper['items'] ?? [];
+      final int total = (wrapper['total'] as num?)?.toInt() ?? data.length;
+      final items = data.map((json) => NominationModel.fromJson(json)).toList();
+      return (total, items);
     }
     throw Exception('Failed to fetch nominations');
   }

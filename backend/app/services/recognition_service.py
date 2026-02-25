@@ -130,12 +130,17 @@ class RecognitionService:
 
         return ecard
 
-    def get_recognition_feed(self, skip: int = 0, limit: int = 20) -> List[RecognitionFeed]:
-        """Get company-wide recognition feed."""
-        return self.db.query(RecognitionFeed).options(
+    def get_recognition_feed(self, page: int = 1, per_page: int = 20):
+        """Get company-wide recognition feed. Returns (total, items)."""
+        from app.utils.constants import clamp_pagination
+        page, per_page, skip = clamp_pagination(page, per_page)
+        query = self.db.query(RecognitionFeed).options(
             joinedload(RecognitionFeed.actor),
             joinedload(RecognitionFeed.receiver)
-        ).order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(limit).all()
+        )
+        total = query.count()
+        items = query.order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(per_page).all()
+        return total, items
 
     def get_appreciation_overview(self, user_id: int) -> Dict[str, Any]:
         """Get recognitions received and sent by a user."""

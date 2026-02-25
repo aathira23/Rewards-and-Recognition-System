@@ -12,7 +12,8 @@ from app.schemas.awards import AwardNominationCreate, AwardResponse, AwardAction
 from app.schemas.award_types import AwardTypeCreate, AwardTypeUpdate, AwardTypeResponse
 from app.services.awards_service import AwardsService
 from app.utils.enums import UserRole, ApprovalLevel
-from app.utils.response import success, client_error, created, conflict, server_error
+from app.utils.response import success, client_error, created, conflict, server_error, paginated_success
+from app.utils.constants import DEFAULT_PAGE_SIZE
 
 router = APIRouter()
 
@@ -47,22 +48,28 @@ def nominate_for_award(
 
 @router.get("/nominations")
 def get_nominations(
-    skip: int = 0,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = DEFAULT_PAGE_SIZE,
     status_filter: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get award nominations (filtered by role)."""
     service = AwardsService(db)
-    nominations = service.get_nominations(
+    total, nominations = service.get_nominations(
         user_id=current_user.id,
         role=current_user.role,
         status_filter=status_filter,
-        skip=skip,
-        limit=limit
+        page=page,
+        per_page=per_page
     )
-    return success(data=[AwardResponse.model_validate(n) for n in nominations], message="Nominations fetched")
+    return paginated_success(
+        items=[AwardResponse.model_validate(n) for n in nominations],
+        total=total,
+        page=page,
+        per_page=per_page,
+        message="Nominations fetched",
+    )
 
 
 # Award types (renamed path to /awards) - MOVED BEFORE {nomination_id} to avoid routing conflict

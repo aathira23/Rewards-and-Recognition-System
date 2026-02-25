@@ -15,8 +15,13 @@ def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
 
 
-def list_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
-    return db.query(User).offset(skip).limit(limit).all()
+def list_users(db: Session, page: int = 1, per_page: int = 20):
+    """Return (total, users) for the requested page."""
+    from app.utils.constants import clamp_pagination
+    page, per_page, skip = clamp_pagination(page, per_page)
+    total = db.query(User).count()
+    users = db.query(User).offset(skip).limit(per_page).all()
+    return total, users
 
 
 def get_user_count(db: Session) -> int:

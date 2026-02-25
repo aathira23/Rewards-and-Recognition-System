@@ -6,7 +6,8 @@ import '../models/appreciation_stats_model.dart';
 
 abstract class RecognitionsRemoteDataSource {
   Future<List<BadgeModel>> getBadges();
-  Future<List<RecognitionModel>> getRecognitionFeed();
+  Future<(int, List<RecognitionModel>)> getRecognitionFeed(
+      {int page = 1, int perPage = 20});
   Future<RecognitionModel> sendRecognition({
     required int receiverId,
     required int badgeId,
@@ -28,10 +29,17 @@ class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
   }
 
   @override
-  Future<List<RecognitionModel>> getRecognitionFeed() async {
-    final response = await client.get(ApiConstants.recognitionFeed);
-    final List data = response.data['data'];
-    return data.map((json) => RecognitionModel.fromJson(json)).toList();
+  Future<(int, List<RecognitionModel>)> getRecognitionFeed(
+      {int page = 1, int perPage = 20}) async {
+    final response = await client.get(
+      ApiConstants.recognitionFeed,
+      queryParameters: {'page': page, 'per_page': perPage},
+    );
+    final Map<String, dynamic> wrapper = response.data['data'];
+    final List data = wrapper['items'] ?? [];
+    final int total = (wrapper['total'] as num?)?.toInt() ?? data.length;
+    final items = data.map((json) => RecognitionModel.fromJson(json)).toList();
+    return (total, items);
   }
 
   @override

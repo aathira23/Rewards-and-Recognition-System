@@ -32,6 +32,12 @@ class HrApprovalsRemoteDataSourceImpl implements HrApprovalsRemoteDataSource {
 
   List<Map<String, dynamic>> _extractList(dynamic body) {
     final data = body is Map ? (body['data'] ?? []) : body;
+    // Handle paginated response format: { items: [...], total: N }
+    if (data is Map && data.containsKey('items')) {
+      final items = data['items'];
+      if (items is List) return items.cast<Map<String, dynamic>>();
+      return <Map<String, dynamic>>[];
+    }
     if (data is List) return data.cast<Map<String, dynamic>>();
     return <Map<String, dynamic>>[];
   }
@@ -94,11 +100,23 @@ class HrApprovalsRemoteDataSourceImpl implements HrApprovalsRemoteDataSource {
   @override
   Future<List<Map<String, dynamic>>> fetchManagers() async {
     try {
-      final res = await client.get(ApiConstants.users);
-      final data = res.data['data'] ?? res.data ?? [];
-      final all = (data is List)
-          ? data.cast<Map<String, dynamic>>()
-          : <Map<String, dynamic>>[];
+      final res = await client.get(
+        ApiConstants.users,
+        queryParameters: {'per_page': 100},
+      );
+      final raw = res.data['data'] ?? res.data ?? [];
+      // Handle paginated response: { items: [...], total: N }
+      List<Map<String, dynamic>> all;
+      if (raw is Map && raw.containsKey('items')) {
+        final items = raw['items'];
+        all = (items is List)
+            ? items.cast<Map<String, dynamic>>()
+            : <Map<String, dynamic>>[];
+      } else if (raw is List) {
+        all = raw.cast<Map<String, dynamic>>();
+      } else {
+        all = <Map<String, dynamic>>[];
+      }
       return all
           .where((u) =>
               (u['role']?.toString().toUpperCase() == 'MANAGER') ||

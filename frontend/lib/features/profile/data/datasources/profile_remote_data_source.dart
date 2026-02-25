@@ -7,7 +7,7 @@ abstract class ProfileRemoteDataSource {
   Future<UserModel> getMe();
 
   /// Calls the backend /users/ endpoint.
-  Future<List<UserModel>> getUsers();
+  Future<(int, List<UserModel>)> getUsers({int page = 1, int perPage = 20});
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -31,14 +31,19 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   }
 
   @override
-  Future<List<UserModel>> getUsers() async {
+  Future<(int, List<UserModel>)> getUsers(
+      {int page = 1, int perPage = 20}) async {
     final response = await client.get(
-      '${ApiConstants.users}?limit=500',
+      ApiConstants.users,
+      queryParameters: {'page': page, 'per_page': perPage},
     );
 
     if (response.statusCode == 200) {
-      final List data = response.data['data'];
-      return data.map((json) => UserModel.fromJson(json)).toList();
+      final Map<String, dynamic> wrapper = response.data['data'];
+      final List data = wrapper['items'] ?? [];
+      final int total = (wrapper['total'] as num?)?.toInt() ?? data.length;
+      final items = data.map((json) => UserModel.fromJson(json)).toList();
+      return (total, items);
     } else {
       throw Exception('Failed to fetch users: ${response.statusCode}');
     }

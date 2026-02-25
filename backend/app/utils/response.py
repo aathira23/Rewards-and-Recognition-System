@@ -42,6 +42,27 @@ def success(data: Any = None, message: str | None = "OK", status_code: int = htt
     return JSONResponse(status_code=status_code, content=body)
 
 
+def paginated_success(
+    *,
+    items: Any,
+    total: int,
+    page: int,
+    per_page: int,
+    message: str | None = "OK",
+) -> JSONResponse:
+    """Standard paginated response with metadata."""
+    import math
+    total_pages = math.ceil(total / per_page) if per_page > 0 else 0
+    payload = {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+    }
+    return success(data=payload, message=message)
+
+
 def created(data: Any = None, message: str | None = "Created") -> JSONResponse:
     return success(data=data, message=message, status_code=http_status.HTTP_201_CREATED)
 

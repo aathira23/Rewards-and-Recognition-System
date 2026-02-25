@@ -8,10 +8,11 @@ from typing import List
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_optional_current_user
 from app.schemas.users import UserCreate, UserResponse, UserUpdate
-from app.utils.response import success, client_error, created, forbidden
+from app.utils.response import success, client_error, created, forbidden, paginated_success
 from app.utils.enums import UserRole
 from app.services import users_service
 from app.services.users_service import get_user_count
+from app.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
 router = APIRouter()
 
@@ -26,18 +27,21 @@ def get_current_user_route(
 
 @router.get("/")
 def list_users(
-    skip: int = 0,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """List all users. HR users see full details; others see public profiles."""
     is_hr = getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value)
     
-    users = users_service.list_users(db, skip=skip, limit=limit)
-    return success(
-        data=[users_service.serialize_user(u, include_sensitive=is_hr) for u in users], 
-        message="User list fetched"
+    total, users = users_service.list_users(db, page=page, per_page=per_page)
+    return paginated_success(
+        items=[users_service.serialize_user(u, include_sensitive=is_hr) for u in users],
+        total=total,
+        page=page,
+        per_page=per_page,
+        message="User list fetched",
     )
 
 
