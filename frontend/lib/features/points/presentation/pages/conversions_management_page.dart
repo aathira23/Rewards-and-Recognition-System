@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_page_header.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../bloc/conversions_mgmt_bloc.dart';
 import '../bloc/conversions_mgmt_event.dart';
 import '../bloc/conversions_mgmt_state.dart';
@@ -157,19 +158,7 @@ class _ConversionsManagementView extends StatelessWidget {
                   .add(ActionConversionRequested(id: id, action: 'APPROVED')),
             ),
           ] else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: status == 'APPROVED'
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(status,
-                  style: AppTextStyles.captionBold(
-                    color: status == 'APPROVED' ? Colors.green : Colors.red,
-                  )),
-            ),
+            StatusBadge(status: status),
         ],
       ),
     );

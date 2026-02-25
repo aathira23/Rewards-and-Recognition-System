@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/utils/user_role_utils.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../../../../injection_container.dart';
 import '../bloc/budget_bloc.dart';
@@ -33,9 +34,7 @@ class _BudgetsView extends StatefulWidget {
 }
 
 class _BudgetsViewState extends State<_BudgetsView> {
-  bool get isHR =>
-      widget.userRole.toUpperCase() == 'HR' ||
-      widget.userRole.toUpperCase() == 'ADMIN';
+  bool get isHR => UserRoleUtils.isHR(widget.userRole);
 
   // State for Allocation
   final _managerIdController = TextEditingController();
@@ -226,8 +225,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
     }
 
     final employees = state.users.where((u) {
-      final role = state.currentUser!.role.toUpperCase();
-      if (role == 'HR' || role == 'ADMIN') return true;
+      if (UserRoleUtils.isHR(state.currentUser!.role)) return true;
       // Manager and Dept Head only see their department
       return u.departmentId == state.currentUser!.departmentId;
     }).toList();

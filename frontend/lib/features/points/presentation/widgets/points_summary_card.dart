@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/utils/user_role_utils.dart';
 import '../../../budgets/presentation/bloc/budget_bloc.dart';
 import '../../../budgets/presentation/bloc/budget_event.dart';
 import '../../../budgets/presentation/bloc/budget_state.dart';
@@ -28,8 +29,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   bool _showManagerWallet = false;
 
   bool get _canToggle {
-    final r = widget.userRole.toUpperCase();
-    return r == 'MANAGER' || r == 'DEPT_HEAD' || r == 'HR' || r == 'ADMIN';
+    return UserRoleUtils.isManagerLike(widget.userRole);
   }
 
   void _toggle(bool toManager) {

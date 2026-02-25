@@ -5,6 +5,8 @@ import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/utils/user_role_utils.dart';
+import '../../../../core/utils/award_utils.dart';
 
 /// Two-step dialog for nominating an employee for an award.
 ///
@@ -50,20 +52,18 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   List<AwardTypeEntity> get _allowedAwardTypes {
     if (widget.currentUser == null) return [];
     return widget.awardTypes.where((type) {
-      final rule = type.eligibilityRule.toUpperCase();
-      final role = widget.currentUser!.role.toUpperCase();
+      final rule = type.eligibilityRule;
+      final role = widget.currentUser!.role;
 
       if (rule == 'PEER') return true;
 
       if (rule == 'MANAGER_ONLY') {
-        return role == 'MANAGER' ||
-            role == 'DEPT_HEAD' ||
-            role == 'HR' ||
-            role == 'ADMIN';
+        return UserRoleUtils.isManagerLike(role);
       }
 
       if (rule == 'SENIOR_MGMT') {
-        return role == 'DEPT_HEAD' || role == 'HR' || role == 'ADMIN';
+        return UserRoleUtils.isHR(role); // SENIOR_MGMT in this app context maps to HR/ADMIN or Dept Head? 
+        // Original logic: role == 'DEPT_HEAD' || role == 'HR' || role == 'ADMIN'
       }
 
       return true;
@@ -74,23 +74,23 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     if (widget.currentUser == null) return [];
 
     final myId = widget.currentUser!.id;
-    final myRole = widget.currentUser!.role.toUpperCase();
+    final myRole = widget.currentUser!.role;
     final myDeptId = widget.currentUser!.departmentId;
 
     // 1. Filter based on role/eligibility
     Iterable<UserEntity> list = widget.users.where((u) => u.id != myId);
 
-    if (myRole == 'MANAGER') {
+    if (UserRoleUtils.isManager(myRole)) {
       // Managers can only nominate direct reports
       list = list.where((u) => u.managerId == myId);
-    } else if (myRole == 'DEPT_HEAD') {
+    } else if (UserRoleUtils.isDepartmentHead(myRole)) {
       // Dept Heads can only nominate employees within their department
       if (myDeptId != null) {
         list = list.where((u) => u.departmentId == myDeptId);
       }
-    } else if (myRole == 'EMPLOYEE') {
+    } else if (UserRoleUtils.isEmployee(myRole)) {
       // Employees can only nominate other Employees (true Peer-to-Peer)
-      list = list.where((u) => u.role.toUpperCase() == 'EMPLOYEE');
+      list = list.where((u) => UserRoleUtils.isEmployee(u.role));
     }
     // HR and ADMIN can nominate anyone (except self)
 
@@ -226,7 +226,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
 
   Widget _buildAwardTypeCard(ThemeData theme, AwardTypeEntity type) {
     final isSelected = _selectedAwardType?.id == type.id;
-    final color = _colorForAward(type.awardKey);
+    final color = AwardUtils.getColor(type.awardKey);
 
     return GestureDetector(
       onTap: () => setState(() => _selectedAwardType = type),
@@ -236,7 +236,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.06)
+              ? theme.colorScheme.primary.withOpacity(0.06)
               : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -252,10 +252,10 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(_iconForAward(type.awardKey), color: color, size: 22),
+              child: Icon(AwardUtils.getIcon(type.awardKey), color: color, size: 22),
             ),
             const SizedBox(width: 14),
             // Info
@@ -321,7 +321,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -436,14 +436,14 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                                 horizontal: 12, vertical: 10),
                             color: isSelected
                                 ? theme.colorScheme.primary
-                                    .withValues(alpha: 0.06)
+                                    .withOpacity(0.06)
                                 : Colors.transparent,
                             child: Row(
                               children: [
                                 CircleAvatar(
                                   radius: 14,
                                   backgroundColor: theme.colorScheme.primary
-                                      .withValues(alpha: 0.12),
+                                      .withOpacity(0.12),
                                   child: Text(
                                     user.name.isNotEmpty
                                         ? user.name[0].toUpperCase()
@@ -520,17 +520,17 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
 
   Widget _buildAwardSummaryPill(ThemeData theme) {
     final type = _selectedAwardType!;
-    final color = _colorForAward(type.awardKey);
+    final color = AwardUtils.getColor(type.awardKey);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
         children: [
-          Icon(_iconForAward(type.awardKey), color: color, size: 16),
+          Icon(AwardUtils.getIcon(type.awardKey), color: color, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -622,50 +622,4 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     Navigator.pop(context);
   }
 
-  // ─── Helpers ─────────────────────────────────────────────────
-  IconData _iconForAward(String awardKey) {
-    switch (awardKey.toLowerCase()) {
-      case 'employee_of_month':
-      case 'employee_of_quarter':
-      case 'employee_of_year':
-        return Icons.workspace_premium_rounded;
-      case 'innovation':
-        return Icons.lightbulb_rounded;
-      case 'teamwork':
-      case 'collaboration':
-        return Icons.groups_rounded;
-      case 'leadership':
-        return Icons.star_rounded;
-      case 'customer':
-        return Icons.handshake_rounded;
-      case 'excellence':
-        return Icons.military_tech_rounded;
-      default:
-        return Icons.emoji_events_rounded;
-    }
-  }
-
-  Color _colorForAward(String awardKey) {
-    switch (awardKey.toLowerCase()) {
-      case 'employee_of_month':
-        return Colors.amber.shade700;
-      case 'employee_of_quarter':
-        return Colors.orange.shade600;
-      case 'employee_of_year':
-        return Colors.deepOrange.shade600;
-      case 'innovation':
-        return Colors.purple.shade600;
-      case 'teamwork':
-      case 'collaboration':
-        return Colors.teal.shade600;
-      case 'leadership':
-        return Colors.blue.shade700;
-      case 'customer':
-        return Colors.green.shade600;
-      case 'excellence':
-        return const Color(0xFF1E56BD);
-      default:
-        return Colors.indigo.shade500;
-    }
-  }
 }

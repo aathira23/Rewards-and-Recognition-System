@@ -58,7 +58,15 @@ class StatusBadge extends StatelessWidget {
         return const Color(0xFFF59E0B); // Orange
       case 'INFO':
       case 'PAUSED':
+      case 'DEPT_HEAD':
         return const Color(0xFF2563EB); // Blue
+      case 'ADMIN':
+      case 'HR':
+        return Colors.purple;
+      case 'MANAGER':
+        return Colors.teal;
+      case 'EMPLOYEE':
+        return Colors.blueGrey;
       default:
         return Colors.grey.shade600;
     }
