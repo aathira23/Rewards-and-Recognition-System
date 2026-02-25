@@ -31,7 +31,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveToken(authModel.token);
 
       return Right(authModel);
-    } on UnauthorizedException catch (e) {
+    } on UnauthorizedException {
       return Left(ServerFailure(
         'Incorrect email or password. Please try again.',
       ));

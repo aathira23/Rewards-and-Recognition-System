@@ -55,7 +55,9 @@ class HrConfigRemoteDataSourceImpl implements HrConfigRemoteDataSource {
 
   // ─── helpers ─────────────────────────────────────────────────────
   List<Map<String, dynamic>> _extractList(dynamic body) {
-    final data = body is Map ? (body['data'] ?? []) : body;
+    dynamic data = body is Map ? (body['data'] ?? []) : body;
+    // Handle paginated responses: { items: [...], total: ..., page: ... }
+    if (data is Map) data = data['items'] ?? [];
     if (data is List) return data.cast<Map<String, dynamic>>();
     return <Map<String, dynamic>>[];
   }
@@ -67,7 +69,8 @@ class HrConfigRemoteDataSourceImpl implements HrConfigRemoteDataSource {
       final results = await Future.wait([
         client.get(ApiConstants.awardTypes),
         client.get(ApiConstants.badges),
-        client.get(ApiConstants.catalogItems),
+        client.get(
+            '${ApiConstants.catalogItems}?include_inactive=true&per_page=200'),
         client.get(ApiConstants.pointsRules),
         client.get(ApiConstants.systemConfig),
       ]);

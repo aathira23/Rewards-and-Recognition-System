@@ -23,11 +23,12 @@ router = APIRouter()
 def get_catalog_items(
     page: int = 1,
     per_page: int = DEFAULT_PAGE_SIZE,
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
 ):
-    """Browse all active rewards in the catalog."""
+    """Browse rewards in the catalog. Pass include_inactive=true to see all (HR/admin use)."""
     service = StoreService(db)
-    total, items = service.get_catalog(page=page, per_page=per_page)
+    total, items = service.get_catalog(page=page, per_page=per_page, include_inactive=include_inactive)
     # Convert models to schemas
     data = [RewardResponse.model_validate(i) for i in items]
     return paginated_success(

@@ -21,11 +21,13 @@ class StoreService:
         self.points_service = PointsService(db)
         self.notification_service = NotificationService(db)
 
-    def get_catalog(self, page: int = 1, per_page: int = 20):
-        """Get active rewards from the catalog, paginated. Returns (total, items)."""
+    def get_catalog(self, page: int = 1, per_page: int = 20, include_inactive: bool = False):
+        """Get rewards from the catalog, paginated. Returns (total, items)."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
-        query = self.db.query(Reward).filter(Reward.is_active == True)
+        query = self.db.query(Reward)
+        if not include_inactive:
+            query = query.filter(Reward.is_active == True)
         total = query.count()
         items = query.offset(skip).limit(per_page).all()
         return total, items
