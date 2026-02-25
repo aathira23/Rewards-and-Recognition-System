@@ -3,6 +3,7 @@ Store service - Business logic for reward catalog and redemptions.
 """
 from typing import Any, List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from datetime import datetime
 
 from app.models.rewards import Reward
@@ -22,12 +23,21 @@ class StoreService:
         self.notification_service = NotificationService(db)
 
     def get_catalog(self, page: int = 1, per_page: int = 20, include_inactive: bool = False):
-        """Get rewards from the catalog, paginated. Returns (total, items)."""
+        """Get rewards from the catalog, paginated. Returns (total, items).
+
+        For the employee-facing catalog (include_inactive=False) rewards with
+        stock_quantity == 0 are excluded as well as inactive ones.
+        When include_inactive=True (HR config view) every reward is returned.
+        """
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
         query = self.db.query(Reward)
         if not include_inactive:
-            query = query.filter(Reward.is_active == True)
+            query = query.filter(
+                Reward.is_active == True,
+                # hide rewards that are fully out of stock from employees
+                or_(Reward.stock_quantity == None, Reward.stock_quantity > 0),
+            )
         total = query.count()
         items = query.offset(skip).limit(per_page).all()
         return total, items
@@ -51,21 +61,13 @@ class StoreService:
             raise ValueError("Reward not found.")
         
         update_data = reward_data.model_dump(exclude_unset=True)
-        
-        # Check if stock_quantity is being updated
-        stock_updated = 'stock_quantity' in update_data
-        
+
         for key, value in update_data.items():
             setattr(reward, key, value)
-        
-        # Auto-manage is_active based on stock (only if is_active wasn't explicitly set in this update)
-        if stock_updated and 'is_active' not in update_data:
-            if reward.stock_quantity is not None:
-                if reward.stock_quantity <= 0:
-                    reward.is_active = False
-                elif reward.stock_quantity > 0:
-                    reward.is_active = True
-        
+
+        # HR controls is_active manually — stock hitting 0 does NOT auto-deactivate.
+        # 0-stock rewards are simply hidden from the employee catalog by the query filter.
+
         self.db.commit()
         self.db.refresh(reward)
         return reward
