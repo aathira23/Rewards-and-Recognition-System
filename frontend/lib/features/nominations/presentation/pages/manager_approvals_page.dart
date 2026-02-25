@@ -180,90 +180,125 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                           ? <NominationEntity>[]
                           : all.where((n) => n.nominatorId == myId).toList();
 
-                      // History – resolved nominations
-                      // final history =
-                      //     all.where((n) => n.status != 'PENDING').toList();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Stats Strip ───────────────────────────────
+                          BlocBuilder<NominationsBloc, NominationsState>(
+                            builder: (context, hState) {
+                              final approved = hState.approvalHistory
+                                  .where((h) =>
+                                      h['my_action']?.toString() == 'APPROVED')
+                                  .length;
+                              final rejected = hState.approvalHistory
+                                  .where((h) =>
+                                      h['my_action']?.toString() == 'REJECTED')
+                                  .length;
+                              return _buildStatsStrip(
+                                theme,
+                                pendingForMe.length,
+                                mySubmissions.length,
+                                approved,
+                                rejected,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            TabBar(
-                              controller: _tabController,
-                              isScrollable: Responsive.isMobile(context),
-                              tabAlignment: Responsive.isMobile(context)
-                                  ? TabAlignment.start
-                                  : TabAlignment.fill,
-                              labelColor: theme.colorScheme.primary,
-                              unselectedLabelColor: Colors.grey,
-                              indicatorColor: theme.colorScheme.primary,
-                              labelStyle: AppTextStyles.bodyBold(),
-                              tabs: [
-                                Tab(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text('Pending'),
-                                      if (pendingForMe.isNotEmpty) ...[
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 7, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.shade100,
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                          child: Text(
-                                            '${pendingForMe.length}',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.orange.shade700),
-                                          ),
-                                        ),
-                                      ],
+                          // ── Tabs Container ────────────────────────────
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16)),
+                                    border: Border(
+                                      bottom: BorderSide(
+                                          color: Colors.grey.shade100,
+                                          width: 1),
+                                    ),
+                                  ),
+                                  child: TabBar(
+                                    controller: _tabController,
+                                    isScrollable: Responsive.isMobile(context),
+                                    tabAlignment: Responsive.isMobile(context)
+                                        ? TabAlignment.start
+                                        : TabAlignment.fill,
+                                    labelColor: theme.colorScheme.primary,
+                                    unselectedLabelColor: Colors.grey.shade500,
+                                    indicator: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border(
+                                        bottom: BorderSide(
+                                            color: theme.colorScheme.primary,
+                                            width: 2),
+                                      ),
+                                    ),
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    dividerColor: Colors.transparent,
+                                    labelStyle: AppTextStyles.bodyBold(),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 8),
+                                    tabs: [
+                                      _buildTab('Pending', pendingForMe.length,
+                                          Icons.hourglass_top_rounded),
+                                      _buildTab(
+                                          'My Nominations',
+                                          mySubmissions.length,
+                                          Icons.send_rounded),
+                                      _buildTab(
+                                          'History', 0, Icons.history_rounded),
                                     ],
                                   ),
                                 ),
-                                const Tab(text: 'My Nominations'),
-                                const Tab(text: 'History'),
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.6,
+                                  child: TabBarView(
+                                    controller: _tabController,
+                                    children: [
+                                      // Pending – with approve/reject
+                                      _buildList(
+                                        pendingForMe,
+                                        state.users,
+                                        'No pending nominations at the moment',
+                                        Icons.check_circle_outline,
+                                        showActions: true,
+                                        userRole: userRole,
+                                      ),
+
+                                      // My Nominations (submitted by me)
+                                      _buildList(
+                                        mySubmissions,
+                                        state.users,
+                                        'You haven\'t nominated anyone yet',
+                                        Icons.outbox_rounded,
+                                      ),
+
+                                      // History — nominations I personally acted on
+                                      _buildHistoryTab(),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  // Pending – with approve/reject
-                                  _buildList(
-                                    pendingForMe,
-                                    state.users,
-                                    'No pending nominations at the moment',
-                                    Icons.check_circle_outline,
-                                    showActions: true,
-                                    userRole: userRole,
-                                  ),
-
-                                  // My Nominations (submitted by me)
-                                  _buildList(
-                                    mySubmissions,
-                                    state.users,
-                                    'You haven\'t nominated anyone yet',
-                                    Icons.outbox_rounded,
-                                  ),
-
-                                  // History — nominations I personally acted on
-                                  _buildHistoryTab(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       );
                     },
                   );
@@ -273,6 +308,98 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           ),
         ),
       ),
+    );
+  }
+
+  Tab _buildTab(String label, int count, IconData icon) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15),
+          const SizedBox(width: 6),
+          Text(label),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style:
+                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsStrip(
+    ThemeData theme,
+    int pending,
+    int submitted,
+    int approved,
+    int rejected,
+  ) {
+    final tiles = [
+      _ManagerStatTile(
+        label: 'Awaiting Review',
+        value: '$pending',
+        icon: Icons.hourglass_top_rounded,
+        color: const Color(0xFFF59E0B),
+        theme: theme,
+      ),
+      _ManagerStatTile(
+        label: 'My Submissions',
+        value: '$submitted',
+        icon: Icons.send_rounded,
+        color: const Color(0xFF6366F1),
+        theme: theme,
+      ),
+      _ManagerStatTile(
+        label: 'Approved',
+        value: '$approved',
+        icon: Icons.check_circle_outline_rounded,
+        color: const Color(0xFF10B981),
+        theme: theme,
+      ),
+      _ManagerStatTile(
+        label: 'Rejected',
+        value: '$rejected',
+        icon: Icons.cancel_outlined,
+        color: const Color(0xFFEF4444),
+        theme: theme,
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 500;
+        if (isNarrow) {
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: tiles
+                .map((t) =>
+                    SizedBox(width: (constraints.maxWidth - 10) / 2, child: t))
+                .toList(),
+          );
+        }
+        return Row(
+          children: tiles
+              .map((t) => Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: t == tiles.last ? 0 : 12),
+                      child: t,
+                    ),
+                  ))
+              .toList(),
+        );
+      },
     );
   }
 
@@ -329,160 +456,164 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: statusColor.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Accent bar coloured by overall status
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.6),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius:
+                    const BorderRadius.horizontal(left: Radius.circular(12)),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Award + overall status
-                Row(
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.emoji_events_rounded,
-                          color: Colors.amber.shade700, size: 17),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(awardName, style: AppTextStyles.cardTitle()),
-                    ),
-                    StatusBadge(
-                      status: nomStatus,
-                      label: statusLabel,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Divider(height: 1, color: Colors.grey.shade100),
-                const SizedBox(height: 10),
-                // Nominee / Nominator
-                Row(
-                  children: [
-                    Expanded(
-                        child: _infoCell(Icons.person_outline_rounded,
-                            'Nominee', nomineeName)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: _infoCell(Icons.how_to_reg_outlined,
-                            'Nominated by', nominatorName)),
-                  ],
-                ),
-                if (justification.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(justification,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          height: 1.4)),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.schedule_rounded,
-                        size: 12, color: Colors.grey.shade400),
-                    const SizedBox(width: 4),
-                    Text(AppDateFormatter.format(actionAt),
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade400)),
-                    if (nomStatus == 'APPROVED' && pts != null) ...[
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF16A34A).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
+                    // Award + overall status
+                    Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.emoji_events_rounded,
+                              color: Colors.amber.shade700, size: 17),
                         ),
-                        child: Text('+$pts pts',
-                            style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF16A34A))),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Divider(height: 1, color: Colors.grey.shade100),
-                const SizedBox(height: 8),
-                // "Your action" pill
-                Row(
-                  children: [
-                    Icon(
-                      isApproved
-                          ? Icons.check_circle_outline_rounded
-                          : Icons.cancel_outlined,
-                      size: 14,
-                      color: isApproved ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isApproved ? 'You approved' : 'You rejected',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isApproved ? Colors.green : Colors.red),
-                    ),
-                    if (myComments.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text('· $myComments',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey.shade500)),
-                      ),
-                    ],
-                    if (nomStatus == 'PENDING') ...[
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child:
+                              Text(awardName, style: AppTextStyles.cardTitle()),
                         ),
-                        child: Text('Awaiting next level',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.orange.shade700)),
-                      ),
+                        StatusBadge(
+                          status: nomStatus,
+                          label: statusLabel,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Divider(height: 1, color: Colors.grey.shade100),
+                    const SizedBox(height: 10),
+                    // Nominee / Nominator
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _infoCell(Icons.person_outline_rounded,
+                                'Nominee', nomineeName)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _infoCell(Icons.how_to_reg_outlined,
+                                'Nominated by', nominatorName)),
+                      ],
+                    ),
+                    if (justification.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(justification,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.4)),
                     ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule_rounded,
+                            size: 12, color: Colors.grey.shade400),
+                        const SizedBox(width: 4),
+                        Text(AppDateFormatter.format(actionAt),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade400)),
+                        if (nomStatus == 'APPROVED' && pts != null) ...[
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF16A34A)
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text('+$pts pts',
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF16A34A))),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: Colors.grey.shade100),
+                    const SizedBox(height: 8),
+                    // "Your action" pill
+                    Row(
+                      children: [
+                        Icon(
+                          isApproved
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.cancel_outlined,
+                          size: 14,
+                          color: isApproved ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isApproved ? 'You approved' : 'You rejected',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isApproved ? Colors.green : Colors.red),
+                        ),
+                        if (myComments.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text('· $myComments',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey.shade500)),
+                          ),
+                        ],
+                        if (nomStatus == 'PENDING') ...[
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text('Awaiting next level',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange.shade700)),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -528,148 +659,151 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         n.nextRequiredLevel != null &&
         n.nextRequiredLevel!.toUpperCase() == userRole.toUpperCase();
 
+    final cardColor = n.status == 'APPROVED'
+        ? const Color(0xFF16A34A)
+        : n.status == 'REJECTED'
+            ? const Color(0xFFDC2626)
+            : const Color(0xFFF59E0B);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: showActions && isPending
-                ? Colors.orange.shade100
-                : Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: cardColor.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Accent bar
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: (n.status == 'APPROVED'
-                      ? const Color(0xFF16A34A)
-                      : n.status == 'REJECTED'
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFFF59E0B))
-                  .withValues(alpha: 0.6),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius:
+                    const BorderRadius.horizontal(left: Radius.circular(12)),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Award type + status
-                Row(
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.emoji_events_rounded,
-                          color: Colors.amber.shade700, size: 17),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        n.awardTypeName.isEmpty ? 'Award' : n.awardTypeName,
-                        style: AppTextStyles.cardTitle(),
-                      ),
-                    ),
-                    StatusBadge(
-                      status: n.status,
-                      label: _statusLabel(n),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Divider(height: 1, color: Colors.grey.shade100),
-                const SizedBox(height: 10),
-                // Nominee / Nominator
-                Row(
-                  children: [
-                    Expanded(
-                        child: _infoCell(
-                            Icons.person_outline_rounded, 'Nominee', nominee)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: _infoCell(Icons.how_to_reg_outlined,
-                            'Nominated by', nominator)),
-                  ],
-                ),
-                if (n.justification.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(n.justification,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          height: 1.4)),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.schedule_rounded,
-                        size: 12, color: Colors.grey.shade400),
-                    const SizedBox(width: 4),
-                    Text(AppDateFormatter.format(n.createdAt),
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade400)),
-                    if (n.status == 'APPROVED' && n.pointsAwarded != null) ...[
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF16A34A).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
+                    // Award type + status
+                    Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.emoji_events_rounded,
+                              color: Colors.amber.shade700, size: 17),
                         ),
-                        child: Text(
-                          '+${n.pointsAwarded} pts',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF16A34A)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            n.awardTypeName.isEmpty ? 'Award' : n.awardTypeName,
+                            style: AppTextStyles.cardTitle(),
+                          ),
                         ),
-                      ),
+                        StatusBadge(
+                          status: n.status,
+                          label: _statusLabel(n),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Divider(height: 1, color: Colors.grey.shade100),
+                    const SizedBox(height: 10),
+                    // Nominee / Nominator
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _infoCell(Icons.person_outline_rounded,
+                                'Nominee', nominee)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _infoCell(Icons.how_to_reg_outlined,
+                                'Nominated by', nominator)),
+                      ],
+                    ),
+                    if (n.justification.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(n.justification,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.4)),
                     ],
-                  ],
-                ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule_rounded,
+                            size: 12, color: Colors.grey.shade400),
+                        const SizedBox(width: 4),
+                        Text(AppDateFormatter.format(n.createdAt),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade400)),
+                        if (n.status == 'APPROVED' &&
+                            n.pointsAwarded != null) ...[
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF16A34A)
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '+${n.pointsAwarded} pts',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF16A34A)),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
 
-                // Approve / Reject — only in Pending tab and only if for my role
-                if (showActions && isForMe) ...[
-                  const SizedBox(height: 12),
-                  Divider(height: 1, color: Colors.grey.shade100),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      RejectButton(
-                        onPressed: () =>
-                            _showActionDialog(context, n.id, false),
-                      ),
-                      const SizedBox(width: 10),
-                      ApproveButton(
-                        onPressed: () => _showActionDialog(context, n.id, true),
+                    // Approve / Reject — only in Pending tab and only if for my role
+                    if (showActions && isForMe) ...[
+                      const SizedBox(height: 12),
+                      Divider(height: 1, color: Colors.grey.shade100),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          RejectButton(
+                            onPressed: () =>
+                                _showActionDialog(context, n.id, false),
+                          ),
+                          const SizedBox(width: 10),
+                          ApproveButton(
+                            onPressed: () =>
+                                _showActionDialog(context, n.id, true),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -773,6 +907,52 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           ],
         );
       },
+    );
+  }
+}
+
+class _ManagerStatTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final ThemeData theme;
+
+  const _ManagerStatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(height: 10),
+          Text(value, style: AppTextStyles.headline2()),
+          const SizedBox(height: 3),
+          Text(label,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        ],
+      ),
     );
   }
 }
