@@ -297,7 +297,7 @@ class _PayrollViewState extends State<_PayrollView> {
             flex: 2,
             child: StatusBadge(
               status: status,
-              label: isApproved ? 'Processed' : status,
+              label: isApproved ? 'Processed' : null,
             ),
           ),
           Expanded(

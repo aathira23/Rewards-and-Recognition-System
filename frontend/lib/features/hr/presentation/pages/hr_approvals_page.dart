@@ -795,16 +795,8 @@ class _NomStatusBadge extends StatelessWidget {
     final nextLevel =
         nom['next_required_level']?.toString().toUpperCase() ?? '';
 
-    String label;
-    if (status == 'APPROVED') {
-      label = 'Approved';
-    } else if (status == 'REJECTED') {
-      label = 'Rejected';
-    } else if (isPending && nextLevel == 'HR') {
-      label = 'Pending HR';
-    } else {
-      label = 'Pending $nextLevel';
-    }
+    final level = nextLevel.isEmpty ? 'Action' : nextLevel;
+    final label = isPending ? 'Pending $level' : null;
 
     return StatusBadge(
       status: status,

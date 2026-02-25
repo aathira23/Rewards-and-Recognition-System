@@ -72,20 +72,12 @@ class _ApprovalsViewState extends State<_ApprovalsView>
         'Unknown';
   }
 
-  String _statusLabel(NominationEntity n) {
+  String? _statusLabel(NominationEntity n) {
     if (n.status.toUpperCase() != 'PENDING' || n.nextRequiredLevel == null) {
-      return n.status;
+      return null;
     }
-    switch (n.nextRequiredLevel!.toUpperCase()) {
-      case 'MANAGER':
-        return 'Awaiting Manager';
-      case 'DEPT_HEAD':
-        return 'Awaiting Dept Head';
-      case 'HR':
-        return 'Awaiting HR';
-      default:
-        return 'Pending';
-    }
+    final level = n.nextRequiredLevel!.toUpperCase();
+    return 'Pending $level';
   }
 
   // ── build ────────────────────────────────────────────────────────

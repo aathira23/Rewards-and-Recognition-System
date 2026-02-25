@@ -16,7 +16,7 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _getStatusColor(status);
-    final displayLabel = label ?? status;
+    final displayLabel = _formatLabel(label ?? status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -35,6 +35,16 @@ class StatusBadge extends StatelessWidget {
     );
   }
 
+  String _formatLabel(String s) {
+    if (s.isEmpty) return s;
+    // 1. Replace underscores with spaces
+    final spaced = s.replaceAll('_', ' ');
+    // 2. Normalize to lowercase first
+    final lowered = spaced.toLowerCase();
+    // 3. Capitalize first letter (Sentence Case)
+    return lowered[0].toUpperCase() + lowered.substring(1);
+  }
+
   Color _getStatusColor(String s) {
     switch (s.toUpperCase()) {
       case 'APPROVED':
@@ -43,6 +53,9 @@ class StatusBadge extends StatelessWidget {
       case 'EARNED':
       case 'RECEIVED':
       case 'COMPLETED':
+      case 'FULFILLED':
+      case 'PROCESSED':
+      case 'PAID':
         return const Color(0xFF16A34A); // Green
       case 'REJECTED':
       case 'CANCELLED':
@@ -55,6 +68,7 @@ class StatusBadge extends StatelessWidget {
       case 'WAITING':
       case 'REDEEMED':
       case 'SPENT':
+      case 'REQUESTED':
         return const Color(0xFFF59E0B); // Orange
       case 'INFO':
       case 'PAUSED':

@@ -638,15 +638,13 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
     );
   }
 
-  String _statusLabel(NominationEntity nom) {
-    final status = nom.status.toUpperCase();
-    if (status == 'PENDING' && nom.nextRequiredLevel != null) {
-      final level = nom.nextRequiredLevel!.toUpperCase();
-      if (level == 'MANAGER') return 'Pending Mgr';
-      if (level == 'DEPT_HEAD') return 'Pending Head';
-      if (level == 'HR') return 'Pending HR';
+  String? _statusLabel(NominationEntity nom) {
+    if (nom.status.toUpperCase() != 'PENDING' ||
+        nom.nextRequiredLevel == null) {
+      return null;
     }
-    return status;
+    final level = nom.nextRequiredLevel!.toUpperCase();
+    return 'Pending $level';
   }
 
   Color _statusColor(String status) {

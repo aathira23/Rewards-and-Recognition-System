@@ -4,6 +4,7 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/utils/file_download_helper.dart';
 import '../../../../injection_container.dart';
 import '../bloc/reports_bloc.dart';
@@ -1267,36 +1268,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = status.toUpperCase();
-    final Color bg;
-    final Color fg;
-    if (s == 'APPROVED' ||
-        s == 'FULFILLED' ||
-        s == 'PROCESSED' ||
-        s == 'PAID') {
-      bg = Colors.green.shade50;
-      fg = Colors.green.shade700;
-    } else if (s == 'PENDING' || s == 'REQUESTED') {
-      bg = Colors.amber.shade50;
-      fg = Colors.amber.shade700;
-    } else if (s == 'REJECTED' || s == 'CANCELLED') {
-      bg = Colors.red.shade50;
-      fg = Colors.red.shade700;
-    } else {
-      bg = Colors.grey.shade100;
-      fg = Colors.grey.shade600;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(s,
-          style:
-              TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
-    );
+    return StatusBadge(status: status);
   }
 }
 
@@ -1309,7 +1281,7 @@ class _SourceTypeBadge extends StatelessWidget {
     final Color bg;
     final Color fg;
     final IconData icon;
-    final label = type.replaceAll('_', ' ');
+    final label = _formatLabel(type);
 
     switch (type) {
       case 'ECARD':
@@ -1354,5 +1326,12 @@ class _SourceTypeBadge extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatLabel(String s) {
+    if (s.isEmpty) return s;
+    final spaced = s.replaceAll('_', ' ');
+    final lowered = spaced.toLowerCase();
+    return lowered[0].toUpperCase() + lowered.substring(1);
   }
 }

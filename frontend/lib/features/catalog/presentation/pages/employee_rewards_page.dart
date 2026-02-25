@@ -258,20 +258,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         final cashValue = pts * currentRate;
         final isPayroll = _selectedConversionType == 'PAYROLL';
 
-        // Status helpers for recent requests
-        Color _statusColor(String s) {
-          if (s == 'APPROVED' || s == 'COMPLETED') return Colors.green;
-          if (s == 'REJECTED' || s == 'CANCELLED') return Colors.red;
-          return Colors.orange;
-        }
-
-        IconData _statusIcon(String s) {
-          if (s == 'APPROVED' || s == 'COMPLETED')
-            return Icons.check_circle_rounded;
-          if (s == 'REJECTED' || s == 'CANCELLED') return Icons.cancel_rounded;
-          return Icons.schedule_rounded;
-        }
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -709,8 +695,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                     itemCount: state.conversions.length,
                     itemBuilder: (context, index) {
                       final req = state.conversions[index];
-                      final sc = _statusColor(req.status);
-                      final si = _statusIcon(req.status);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.symmetric(
@@ -732,10 +716,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             Container(
                               padding: const EdgeInsets.all(9),
                               decoration: BoxDecoration(
-                                color: sc.withValues(alpha: 0.1),
+                                color: const Color(0xFF4B79CA).withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(si, color: sc, size: 18),
+                              child: const Icon(Icons.sync_alt_rounded, color: Color(0xFF4B79CA), size: 18),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -772,23 +756,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 3),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: sc.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    req.status,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: sc,
-                                      letterSpacing: 0.4,
-                                    ),
-                                  ),
-                                ),
+                                StatusBadge(status: req.status),
                               ],
                             ),
                           ],

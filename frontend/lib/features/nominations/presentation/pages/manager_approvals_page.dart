@@ -72,20 +72,12 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         'Unknown';
   }
 
-  String _statusLabel(NominationEntity n) {
+  String? _statusLabel(NominationEntity n) {
     if (n.status.toUpperCase() != 'PENDING' || n.nextRequiredLevel == null) {
-      return n.status;
+      return null;
     }
-    switch (n.nextRequiredLevel!.toUpperCase()) {
-      case 'MANAGER':
-        return 'Pending Mgr';
-      case 'DEPT_HEAD':
-        return 'Pending Head';
-      case 'HR':
-        return 'Pending HR';
-      default:
-        return 'Pending';
-    }
+    final level = n.nextRequiredLevel!.toUpperCase();
+    return 'Pending $level';
   }
 
   // ── build ────────────────────────────────────────────────────────
@@ -440,16 +432,12 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
 
     // Overall status colour
     Color statusColor;
-    String statusLabel;
     if (nomStatus == 'APPROVED') {
       statusColor = Colors.green;
-      statusLabel = 'Approved';
     } else if (nomStatus == 'REJECTED') {
       statusColor = Colors.red;
-      statusLabel = 'Rejected';
     } else {
       statusColor = Colors.orange;
-      statusLabel = 'In Progress';
     }
 
     return Container(
@@ -502,7 +490,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         ),
                         StatusBadge(
                           status: nomStatus,
-                          label: statusLabel,
                         ),
                       ],
                     ),
