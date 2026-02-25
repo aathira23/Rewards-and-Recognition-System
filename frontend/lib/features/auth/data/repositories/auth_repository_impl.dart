@@ -32,16 +32,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(authModel);
     } on UnauthorizedException catch (e) {
-      // 401 from backend — wrong email or password
-      final raw = e.message.toLowerCase();
-      final friendly = raw.contains('password')
-          ? 'Incorrect password. Please try again.'
-          : raw.contains('user') ||
-                  raw.contains('email') ||
-                  raw.contains('not found')
-              ? 'No account found with that email.'
-              : 'Incorrect email or password. Please try again.';
-      return Left(ServerFailure(friendly));
+      return Left(ServerFailure(
+        'Incorrect email or password. Please try again.',
+      ));
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {
