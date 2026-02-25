@@ -45,7 +45,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   // ─── Colours per wallet ───
 
   static const _personalGrad = [Color(0xFF1E56BD), Color(0xFF3B7BF2)];
-  static const _managerGrad = [Color(0xFF0F7B5F), Color(0xFF2ABB8B)];
+  static const _managerGrad = [Color(0xFF3B7BF2), Color(0xFF1E56BD)];
 
   @override
   Widget build(BuildContext context) {
@@ -123,24 +123,16 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
               ),
               const SizedBox(height: 18),
 
-              // ─── Animated switcher between wallet contents ───
-              AnimatedSwitcher(
+              // ─── Animated cross-fade between wallet contents ───
+              AnimatedCrossFade(
                 duration: const Duration(milliseconds: 320),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.04, 0),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
-                  ),
-                ),
-                child: isManager
-                    ? _managerContent(key: const ValueKey('mgr'))
-                    : _personalContent(key: const ValueKey('personal')),
+                firstChild: _personalContent(key: const ValueKey('personal')),
+                secondChild: _managerContent(key: const ValueKey('mgr')),
+                crossFadeState: isManager
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                alignment: Alignment.topLeft,
+                sizeCurve: Curves.easeInOut,
               ),
             ],
           ),
