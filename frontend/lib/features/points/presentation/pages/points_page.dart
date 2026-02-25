@@ -189,6 +189,7 @@ class _PointsPageState extends State<PointsPage> {
     final filters = Wrap(
       spacing: 8,
       runSpacing: 8,
+      alignment: WrapAlignment.end,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         // From date
@@ -271,8 +272,8 @@ class _PointsPageState extends State<PointsPage> {
           : Row(
               children: [
                 Text('Points History', style: AppTextStyles.sectionTitle()),
-                const Spacer(),
-                filters,
+                const SizedBox(width: 16),
+                Expanded(child: filters),
               ],
             ),
     );
@@ -311,6 +312,8 @@ class _PointsPageState extends State<PointsPage> {
         style: AppTextStyles.captionStrong(
           color: Colors.grey.shade500,
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
 
   Widget _buildRow(PointTransactionEntity tx, bool isLast) {
@@ -329,9 +332,13 @@ class _PointsPageState extends State<PointsPage> {
         children: [
           Expanded(
             flex: 2,
-            child: Text(
-              AppDateFormatter.format(tx.date),
-              style: AppTextStyles.smallMedium(),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                AppDateFormatter.format(tx.date),
+                style: AppTextStyles.smallMedium(),
+              ),
             ),
           ),
           Expanded(
@@ -384,16 +391,21 @@ class _PointsPageState extends State<PointsPage> {
       ),
       child: Row(
         children: [
-          if (total > 0)
-            Text(
-              'Showing $start\u2013$end of $total records',
-              style: AppTextStyles.caption(color: Colors.grey.shade500),
-            )
-          else
-            Text(
-              '$showing record${showing == 1 ? '' : 's'}',
-              style: AppTextStyles.caption(color: Colors.grey.shade500),
-            ),
+          Expanded(
+            child: total > 0
+                ? Text(
+                    'Showing $start\u2013$end of $total records',
+                    style: AppTextStyles.caption(color: Colors.grey.shade500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : Text(
+                    '$showing record${showing == 1 ? '' : 's'}',
+                    style: AppTextStyles.caption(color: Colors.grey.shade500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+          ),
           const Spacer(),
           if (total > _perPage) ...[
             _PageBtn(

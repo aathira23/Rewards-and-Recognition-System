@@ -99,24 +99,30 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isManager
-                            ? Icons.savings_rounded
-                            : Icons.account_balance_wallet_outlined,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        isManager ? 'Manager Wallet' : 'Points Wallet',
-                        style: AppTextStyles.label(
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isManager
+                              ? Icons.savings_rounded
+                              : Icons.account_balance_wallet_outlined,
                           color: Colors.white,
+                          size: 26,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            isManager ? 'Manager Wallet' : 'Points Wallet',
+                            style: AppTextStyles.label(
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   if (_canToggle) _buildToggle(isManager),
                 ],
@@ -325,21 +331,30 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        balance.toString(),
-                        style: AppTextStyles.displayLarge(
-                          color: Colors.white,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            balance.toString(),
+                            style: AppTextStyles.displayLarge(
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        'points available to reward',
-                        style: AppTextStyles.body(color: Colors.white70),
-                      ),
-                    ],
+                        Text(
+                          'points available to reward',
+                          style: AppTextStyles.body(color: Colors.white70),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   _rewardButton(),
                 ],
               ),
