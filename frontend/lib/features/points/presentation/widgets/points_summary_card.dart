@@ -45,7 +45,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
   // ─── Colours per wallet ───
 
   static const _personalGrad = [Color(0xFF1E56BD), Color(0xFF3B7BF2)];
-  static const _managerGrad = [Color(0xFF3B7BF2), Color(0xFF1E56BD)];
+  static const _managerGrad = [Color(0xFF1A2E6B), Color(0xFF4B6CB7)];
 
   @override
   Widget build(BuildContext context) {

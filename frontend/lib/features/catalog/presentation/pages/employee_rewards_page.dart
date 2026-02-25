@@ -298,7 +298,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF1E56BD),
+                        color: Color(0xFF4B79CA),
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(20),
                           topRight: Radius.circular(20),
@@ -362,7 +362,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               filled: true,
                               fillColor: const Color(0xFFF7F8FD),
                               prefixIcon: const Icon(Icons.toll_rounded,
-                                  color: Color(0xFF1E56BD)),
+                                  color: Color(0xFF4B79CA)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide:
@@ -376,7 +376,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                    color: Color(0xFF1E56BD), width: 1.5),
+                                    color: Color(0xFF4B79CA), width: 1.5),
                               ),
                               suffixIcon: pts > 0
                                   ? IconButton(
@@ -404,12 +404,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isPayroll
-                                          ? const Color(0xFF1E56BD)
+                                          ? const Color(0xFF4B79CA)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isPayroll
-                                            ? const Color(0xFF1E56BD)
+                                            ? const Color(0xFF4B79CA)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -449,12 +449,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isPayroll
-                                          ? const Color(0xFF1E56BD)
+                                          ? const Color(0xFF4B79CA)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: !isPayroll
-                                            ? const Color(0xFF1E56BD)
+                                            ? const Color(0xFF4B79CA)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -543,7 +543,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             child: ElevatedButton(
                               onPressed: () => _handleSubmitConversion(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E56BD),
+                                backgroundColor: const Color(0xFF4B79CA),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
