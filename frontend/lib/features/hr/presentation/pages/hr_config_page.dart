@@ -236,8 +236,10 @@ class _HrConfigViewState extends State<_HrConfigView>
                         isActive: isActive,
                         onTap: () => _confirmAction(
                           context: context,
-                          title: isActive ? 'Deactivate Award' : 'Activate Award',
-                          message: 'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${a['name']}"?',
+                          title:
+                              isActive ? 'Deactivate Award' : 'Activate Award',
+                          message:
+                              'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${a['name']}"?',
                           onConfirm: () => context.read<HrConfigBloc>().add(
                                 ToggleItem(
                                   entityType: HrConfigEntityType.awardType,
@@ -405,12 +407,14 @@ class _HrConfigViewState extends State<_HrConfigView>
                         onTap: () => _showBadgeDialog(context, existing: b),
                       ),
                       const SizedBox(width: 4),
-                       _ToggleIconBtn(
+                      _ToggleIconBtn(
                         isActive: isActive,
                         onTap: () => _confirmAction(
                           context: context,
-                          title: isActive ? 'Deactivate Badge' : 'Activate Badge',
-                          message: 'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${b['name']}"?',
+                          title:
+                              isActive ? 'Deactivate Badge' : 'Activate Badge',
+                          message:
+                              'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${b['name']}"?',
                           onConfirm: () => context.read<HrConfigBloc>().add(
                                 ToggleItem(
                                   entityType: HrConfigEntityType.badge,
@@ -557,8 +561,11 @@ class _HrConfigViewState extends State<_HrConfigView>
                         isActive: isActive,
                         onTap: () => _confirmAction(
                           context: context,
-                          title: isActive ? 'Deactivate Reward' : 'Activate Reward',
-                          message: 'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${r['name']}"?',
+                          title: isActive
+                              ? 'Deactivate Reward'
+                              : 'Activate Reward',
+                          message:
+                              'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} "${r['name']}"?',
                           onConfirm: () => context.read<HrConfigBloc>().add(
                                 ToggleItem(
                                   entityType: HrConfigEntityType.reward,
@@ -732,47 +739,6 @@ class _HrConfigViewState extends State<_HrConfigView>
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
-          // ── "Coming Soon" disabled field ──────────────────────────
-          Widget comingSoon(String label) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Stack(
-                  alignment: Alignment.centerRight,
-                  children: [
-                    TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        labelText: label,
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Text(
-                          'Coming soon',
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.orange.shade700,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-
           // ── Type-specific fields ──────────────────────────────────
           List<Widget> typeFields = [];
           if (selectedType == 'ECARD') {
@@ -792,10 +758,12 @@ class _HrConfigViewState extends State<_HrConfigView>
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: DropdownMenu<String>(
-                    initialSelection: eventC.text.isNotEmpty ? eventC.text : null,
+                    initialSelection:
+                        eventC.text.isNotEmpty ? eventC.text : null,
                     expandedInsets: EdgeInsets.zero,
                     inputDecorationTheme: InputDecorationTheme(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -803,7 +771,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                     label: const Text('Event'),
                     dropdownMenuEntries: const [
                       DropdownMenuEntry(value: 'BIRTHDAY', label: 'BIRTHDAY'),
-                      DropdownMenuEntry(value: 'ANNIVERSARY', label: 'ANNIVERSARY'),
+                      DropdownMenuEntry(
+                          value: 'ANNIVERSARY', label: 'ANNIVERSARY'),
                     ],
                     onSelected: (v) {
                       if (v != null) {
@@ -842,7 +811,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                     initialSelection: selectedConvType,
                     expandedInsets: EdgeInsets.zero,
                     inputDecorationTheme: InputDecorationTheme(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -878,7 +848,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                       initialSelection: selectedType,
                       expandedInsets: EdgeInsets.zero,
                       inputDecorationTheme: InputDecorationTheme(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -886,8 +857,10 @@ class _HrConfigViewState extends State<_HrConfigView>
                       label: const Text('Recognition Type'),
                       dropdownMenuEntries: const [
                         DropdownMenuEntry(value: 'ECARD', label: 'ECARD'),
-                        DropdownMenuEntry(value: 'CELEBRATION', label: 'CELEBRATION'),
-                        DropdownMenuEntry(value: 'CONVERSION', label: 'CONVERSION'),
+                        DropdownMenuEntry(
+                            value: 'CELEBRATION', label: 'CELEBRATION'),
+                        DropdownMenuEntry(
+                            value: 'CONVERSION', label: 'CONVERSION'),
                       ],
                       onSelected: (v) {
                         if (v != null) {
@@ -903,8 +876,6 @@ class _HrConfigViewState extends State<_HrConfigView>
                     ),
                   ),
                 ...typeFields,
-                comingSoon('Monthly Limit'),
-                comingSoon('Cooldown Days'),
               ],
             ),
             actions: [
@@ -964,7 +935,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                   _confirmAction(
                     context: outerCtx,
                     title: 'Update Policy',
-                    message: 'Are you sure you want to save these policy changes?',
+                    message:
+                        'Are you sure you want to save these policy changes?',
                     onConfirm: saveData,
                   );
                 },
@@ -1159,7 +1131,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                                 : null,
                             expandedInsets: EdgeInsets.zero,
                             inputDecorationTheme: InputDecorationTheme(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
