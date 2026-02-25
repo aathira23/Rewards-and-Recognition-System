@@ -35,11 +35,15 @@ class AppreciationStats extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Appreciations Received',
-                  style: AppTextStyles.pageTitle(),
+                Flexible(
+                  child: Text(
+                    'Appreciations Received',
+                    style: AppTextStyles.pageTitle(),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                if (stats.receivedCount > 0)
+                if (stats.receivedCount > 0) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -57,6 +61,7 @@ class AppreciationStats extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 8),

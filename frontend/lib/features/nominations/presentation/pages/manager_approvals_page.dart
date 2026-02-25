@@ -77,7 +77,13 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
       return null;
     }
     final level = n.nextRequiredLevel!.toUpperCase();
-    return 'Pending $level';
+    const levelNames = {
+      'DEPT_HEAD': 'Dept Head',
+      'MANAGER': 'Manager',
+      'HR': 'HR',
+      'ADMIN': 'Admin'
+    };
+    return 'Pending ${levelNames[level] ?? level.replaceAll('_', ' ')}';
   }
 
   // ── build ────────────────────────────────────────────────────────
@@ -764,6 +770,89 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         ],
                       ],
                     ),
+
+                    // Reviewer attribution + comment banner
+                    if (n.reviewerLevel != null ||
+                        (n.reviewerComment != null &&
+                            n.reviewerComment!.isNotEmpty)) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: cardColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: cardColor.withValues(alpha: 0.18)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (n.reviewerLevel != null) ...[
+                              Row(
+                                children: [
+                                  Icon(Icons.person_outline_rounded,
+                                      size: 13, color: cardColor),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      (n.reviewerLevel!.toUpperCase() ==
+                                                  'DEPT_HEAD'
+                                              ? 'Dept Head'
+                                              : n.reviewerLevel!
+                                                          .toUpperCase() ==
+                                                      'MANAGER'
+                                                  ? 'Manager'
+                                                  : n.reviewerLevel!
+                                                              .toUpperCase() ==
+                                                          'HR'
+                                                      ? 'HR'
+                                                      : n.reviewerLevel!
+                                                          .replaceAll(
+                                                              '_', ' ')) +
+                                          (n.reviewerName != null &&
+                                                  n.reviewerName!.isNotEmpty
+                                              ? '  ·  ${n.reviewerName}'
+                                              : ''),
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: cardColor),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (n.reviewerComment != null &&
+                                  n.reviewerComment!.isNotEmpty)
+                                const SizedBox(height: 5),
+                            ],
+                            if (n.reviewerComment != null &&
+                                n.reviewerComment!.isNotEmpty)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.chat_bubble_outline_rounded,
+                                      size: 12,
+                                      color: cardColor.withValues(alpha: 0.7)),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      n.reviewerComment!,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade700,
+                                          height: 1.4),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // Approve / Reject — only in Pending tab and only if for my role
                     if (showActions && isForMe) ...[

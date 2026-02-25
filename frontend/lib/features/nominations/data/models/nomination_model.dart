@@ -14,6 +14,9 @@ class NominationModel extends NominationEntity {
     required super.justification,
     required super.createdAt,
     super.nextRequiredLevel,
+    super.reviewerComment,
+    super.reviewerName,
+    super.reviewerLevel,
   });
 
   factory NominationModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,9 @@ class NominationModel extends NominationEntity {
       justification: json['justification'] ?? '',
       createdAt: json['created_at'] ?? '',
       nextRequiredLevel: json['next_required_level'],
+      reviewerComment: json['reviewer_comment'],
+      reviewerName: json['reviewer_name'],
+      reviewerLevel: json['reviewer_level'],
     );
   }
 }

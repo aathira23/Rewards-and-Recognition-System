@@ -280,30 +280,19 @@ class _PointsPageState extends State<PointsPage> {
   }
 
   Widget _buildTableHeader() {
+    final mobile = Responsive.isMobile(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       color: Colors.grey.shade50,
-      child: _buildTableRowLayout(
+      child: Row(
         children: [
-          _hdr('DATE'),
-          _hdr('DESCRIPTION'),
-          _hdr('TYPE'),
-          _hdr('POINTS'),
+          Expanded(flex: mobile ? 3 : 2, child: _hdr('DATE')),
+          Expanded(flex: mobile ? 5 : 4, child: _hdr('DESCRIPTION')),
+          if (!mobile) Expanded(flex: 2, child: _hdr('TYPE')),
+          Expanded(flex: 2, child: _hdr('POINTS')),
+          const SizedBox(width: 44),
         ],
       ),
-    );
-  }
-
-  /// Shared flex-based row layout for table header & data rows.
-  Widget _buildTableRowLayout({required List<Widget> children}) {
-    return Row(
-      children: [
-        Expanded(flex: 2, child: children[0]),
-        Expanded(flex: 4, child: children[1]),
-        Expanded(flex: 2, child: children[2]),
-        Expanded(flex: 2, child: children[3]),
-        const SizedBox(width: 44),
-      ],
     );
   }
 
@@ -320,6 +309,7 @@ class _PointsPageState extends State<PointsPage> {
     final isCredit = tx.points.startsWith('+');
     final ptColor =
         isCredit ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final mobile = Responsive.isMobile(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -329,9 +319,10 @@ class _PointsPageState extends State<PointsPage> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            flex: 2,
+            flex: mobile ? 3 : 2,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -342,20 +333,35 @@ class _PointsPageState extends State<PointsPage> {
             ),
           ),
           Expanded(
-            flex: 4,
-            child: Text(
-              tx.description,
-              style: AppTextStyles.bodyBold(),
-              overflow: TextOverflow.ellipsis,
-            ),
+            flex: mobile ? 5 : 4,
+            child: mobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tx.description,
+                        style: AppTextStyles.bodyBold(),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      StatusBadge(status: tx.type),
+                    ],
+                  )
+                : Text(
+                    tx.description,
+                    style: AppTextStyles.bodyBold(),
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: StatusBadge(status: tx.type),
+          if (!mobile)
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: StatusBadge(status: tx.type),
+              ),
             ),
-          ),
           Expanded(
             flex: 2,
             child: Text(
@@ -473,7 +479,8 @@ class _PointsPageState extends State<PointsPage> {
             _detailRow('Status', tx.type, isBadge: true),
             _detailRow('Date', tx.date),
             if (tx.createdAtFull != null)
-              _detailRow('Time', AppDateFormatter.formatTime(tx.createdAtFull!)),
+              _detailRow(
+                  'Time', AppDateFormatter.formatTime(tx.createdAtFull!)),
             _detailRow('Reference', tx.referenceType ?? 'GENERAL'),
             _detailRow('Transaction ID', tx.id.toString()),
           ],

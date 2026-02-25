@@ -456,8 +456,11 @@ class _MainLayoutState extends State<MainLayout> {
                 // Top Bar
                 Container(
                   height: isMobile ? 60 : 64,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 16 : 24,
+                  padding: EdgeInsets.only(
+                    // Remove the left inset when the mobile drawer (no sidebar)
+                    // is used so the hamburger icon can sit at the extreme left.
+                    left: !showSidebar ? 0 : (isMobile ? 16 : 24),
+                    right: isMobile ? 16 : 24,
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.brandBlue,
@@ -473,6 +476,7 @@ class _MainLayoutState extends State<MainLayout> {
                     children: [
                       if (!showSidebar)
                         IconButton(
+                          padding: EdgeInsets.zero,
                           icon: const Icon(Icons.menu, color: Colors.white),
                           onPressed: () =>
                               _scaffoldKey.currentState?.openDrawer(),

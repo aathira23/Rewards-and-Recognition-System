@@ -51,6 +51,11 @@ class AwardResponse(AwardBase):
     nominator: Optional[_UserBrief] = None
     award_type: Optional[_AwardTypeBrief] = None
 
+    # Latest human reviewer info (set dynamically in service)
+    reviewer_comment: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_level: Optional[str] = None
+
     class Config:
         from_attributes = True
 

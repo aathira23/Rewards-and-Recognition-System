@@ -193,7 +193,8 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                 DropdownMenu<int>(
                   initialSelection: selectedReceiverId,
                   expandedInsets: EdgeInsets.zero,
-                  menuHeight: 250, // Constrain height to prevent it from opening upwards
+                  menuHeight:
+                      250, // Constrain height to prevent it from opening upwards
                   inputDecorationTheme: InputDecorationTheme(
                     hintStyle: AppTextStyles.body(color: Colors.grey.shade500),
                     filled: true,

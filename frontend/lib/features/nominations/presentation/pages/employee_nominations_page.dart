@@ -464,6 +464,89 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                         ],
                       ],
                     ),
+                    // Reviewer attribution + comment banner
+                    if (nom.reviewerLevel != null ||
+                        (nom.reviewerComment != null &&
+                            nom.reviewerComment!.isNotEmpty)) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: statusColor.withValues(alpha: 0.18)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (nom.reviewerLevel != null) ...[
+                              Row(
+                                children: [
+                                  Icon(Icons.person_outline_rounded,
+                                      size: 13, color: statusColor),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      (nom.reviewerLevel!.toUpperCase() ==
+                                                  'DEPT_HEAD'
+                                              ? 'Dept Head'
+                                              : nom.reviewerLevel!
+                                                          .toUpperCase() ==
+                                                      'MANAGER'
+                                                  ? 'Manager'
+                                                  : nom.reviewerLevel!
+                                                              .toUpperCase() ==
+                                                          'HR'
+                                                      ? 'HR'
+                                                      : nom.reviewerLevel!
+                                                          .replaceAll(
+                                                              '_', ' ')) +
+                                          (nom.reviewerName != null &&
+                                                  nom.reviewerName!.isNotEmpty
+                                              ? '  ·  ${nom.reviewerName}'
+                                              : ''),
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: statusColor),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (nom.reviewerComment != null &&
+                                  nom.reviewerComment!.isNotEmpty)
+                                const SizedBox(height: 5),
+                            ],
+                            if (nom.reviewerComment != null &&
+                                nom.reviewerComment!.isNotEmpty)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.chat_bubble_outline_rounded,
+                                      size: 12,
+                                      color:
+                                          statusColor.withValues(alpha: 0.7)),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      nom.reviewerComment!,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade700,
+                                          height: 1.4),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -644,7 +727,13 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
       return null;
     }
     final level = nom.nextRequiredLevel!.toUpperCase();
-    return 'Pending $level';
+    const levelNames = {
+      'DEPT_HEAD': 'Dept Head',
+      'MANAGER': 'Manager',
+      'HR': 'HR',
+      'ADMIN': 'Admin'
+    };
+    return 'Pending ${levelNames[level] ?? level.replaceAll('_', ' ')}';
   }
 
   Color _statusColor(String status) {

@@ -305,6 +305,93 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
             Text(justification,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
           ],
+          // Reviewer attribution + comment banner — shown when nomination is already actioned
+          if (!isPending)
+            Builder(builder: (context) {
+              final reviewerComment = nom['reviewer_comment']?.toString() ?? '';
+              final reviewerLevel = nom['reviewer_level']?.toString() ?? '';
+              final reviewerName = nom['reviewer_name']?.toString() ?? '';
+              if (reviewerLevel.isEmpty && reviewerComment.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              final statusColor = status == 'APPROVED'
+                  ? Colors.green
+                  : status == 'REJECTED'
+                      ? Colors.red
+                      : Colors.grey;
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: statusColor.withValues(alpha: 0.18)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (reviewerLevel.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(Icons.person_outline_rounded,
+                                size: 13, color: statusColor),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                (reviewerLevel.toUpperCase() == 'DEPT_HEAD'
+                                        ? 'Dept Head'
+                                        : reviewerLevel.toUpperCase() ==
+                                                'MANAGER'
+                                            ? 'Manager'
+                                            : reviewerLevel.toUpperCase() ==
+                                                    'HR'
+                                                ? 'HR'
+                                                : reviewerLevel.replaceAll(
+                                                    '_', ' ')) +
+                                    (reviewerName.isNotEmpty
+                                        ? '  ·  $reviewerName'
+                                        : ''),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (reviewerComment.isNotEmpty)
+                          const SizedBox(height: 5),
+                      ],
+                      if (reviewerComment.isNotEmpty)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.chat_bubble_outline_rounded,
+                                size: 12,
+                                color: statusColor.withValues(alpha: 0.7)),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                reviewerComment,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                    height: 1.4),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -541,7 +628,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                       initialSelection: selectedRole,
                       expandedInsets: EdgeInsets.zero,
                       inputDecorationTheme: InputDecorationTheme(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
@@ -552,7 +640,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                       label: const Text('Role filter (optional)'),
                       dropdownMenuEntries: const [
                         DropdownMenuEntry(value: 'MANAGER', label: 'Manager'),
-                        DropdownMenuEntry(value: 'DEPT_HEAD', label: 'Dept Head'),
+                        DropdownMenuEntry(
+                            value: 'DEPT_HEAD', label: 'Dept Head'),
                       ],
                       onSelected: (v) => setLocal(() => selectedRole = v),
                     );

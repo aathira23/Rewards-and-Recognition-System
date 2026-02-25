@@ -287,7 +287,7 @@ class AwardsService:
             approver_id=approver_id,
             approval_level=approval_level,
             status=ApprovalStatus.APPROVED.value,
-            comments=f"Approved by {approval_level}"
+            comments=comments if comments else f"Approved by {approval_level}"
         )
         self.db.add(approval)
         self.db.flush()
@@ -380,7 +380,7 @@ class AwardsService:
             approver_id=approver_id,
             approval_level=approval_level,
             status=ApprovalStatus.REJECTED.value,
-            comments=f"Rejected by {approval_level}"
+            comments=comments if comments else None
         )
         self.db.add(approval)
 
@@ -398,9 +398,10 @@ class AwardsService:
         # 4. Notify nominator (the person who submitted it)
         approver = self.db.query(User).filter(User.id == approver_id).first()
         approver_name = approver.name if approver else approval_level
+        level_label = {'MANAGER': 'Manager', 'DEPT_HEAD': 'Dept Head', 'HR': 'HR', 'ADMIN': 'Admin'}.get(approval_level.upper(), approval_level.replace('_', ' ').title())
         self.notification_service.create_notification(
             user_id=award.nominator_id,
-            message=f"Your nomination for {award.nominee.name} ({award.award_type.name}) was rejected by {approver_name} at the {approval_level} level. Reason: {comments}",
+            message=f"Your nomination for {award.nominee.name} ({award.award_type.name}) was rejected by your {level_label} {approver_name}. Reason: {comments}",
             source_type=ReferenceType.AWARD.value,
             source_id=award.id
         )
@@ -464,7 +465,43 @@ class AwardsService:
             required_levels = self._get_required_approval_levels(award.award_type)
             completed_levels = self._get_existing_approvals(award.id)
             award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
-            
+
+        # Attach latest human reviewer comment (single batched query, no N+1)
+        if awards:
+            award_ids = [a.id for a in awards]
+            all_aps = (
+                self.db.query(AwardApproval)
+                .filter(AwardApproval.award_id.in_(award_ids))
+                .order_by(AwardApproval.created_at.desc())
+                .all()
+            )
+            latest_map: Dict[int, AwardApproval] = {}
+            for ap in all_aps:
+                if ap.award_id not in latest_map:
+                    latest_map[ap.award_id] = ap
+            for award in awards:
+                ap = latest_map.get(award.id)
+                award.reviewer_comment = None
+                award.reviewer_name = None
+                award.reviewer_level = None
+                if not ap:
+                    continue
+                c = ap.comments or ''
+                cl = c.lower()
+                # Skip system-generated scaffolding comments
+                is_system = (
+                    cl.startswith('auto-approved by')
+                    or cl.startswith('approved by ')
+                    or cl.startswith('rejected by ')
+                )
+                if is_system:
+                    continue
+                # Human action — attach reviewer info
+                award.reviewer_name = ap.approver.name if ap.approver else None
+                award.reviewer_level = ap.approval_level
+                if c:
+                    award.reviewer_comment = c
+
         return total, awards
 
     def get_nomination(self, award_id: int) -> Optional[Award]:

@@ -13,6 +13,9 @@ class NominationEntity extends Equatable {
   final int? pointsAwarded;
   final String justification;
   final String createdAt;
+  final String? reviewerComment;
+  final String? reviewerName;
+  final String? reviewerLevel;
 
   const NominationEntity({
     required this.id,
@@ -27,6 +30,9 @@ class NominationEntity extends Equatable {
     required this.justification,
     required this.createdAt,
     this.nextRequiredLevel,
+    this.reviewerComment,
+    this.reviewerName,
+    this.reviewerLevel,
   });
 
   @override
@@ -43,5 +49,8 @@ class NominationEntity extends Equatable {
         justification,
         createdAt,
         nextRequiredLevel,
+        reviewerComment,
+        reviewerName,
+        reviewerLevel,
       ];
 }
