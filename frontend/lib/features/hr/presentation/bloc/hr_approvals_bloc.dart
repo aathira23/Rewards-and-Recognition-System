@@ -81,8 +81,11 @@ class HrApprovalsBloc extends Bloc<HrApprovalsEvent, HrApprovalsState> {
         await repository.allocateBudget(event.managerId, event.points);
     result.fold(
       (f) => emit(state.copyWith(error: f.message)),
-      (_) => emit(state.copyWith(
-          successMessage: 'Allocated ${event.points} points to manager')),
+      (_) {
+        emit(state.copyWith(
+            successMessage: 'Allocated ${event.points} points to manager'));
+        add(LoadManagers());
+      },
     );
   }
 
@@ -92,8 +95,10 @@ class HrApprovalsBloc extends Bloc<HrApprovalsEvent, HrApprovalsState> {
         event.points, event.departmentId, event.roleFilter);
     result.fold(
       (f) => emit(state.copyWith(error: f.message)),
-      (count) =>
-          emit(state.copyWith(successMessage: 'Allocated to $count wallets')),
+      (count) {
+        emit(state.copyWith(successMessage: 'Allocated to $count wallets'));
+        add(LoadManagers());
+      },
     );
   }
 }

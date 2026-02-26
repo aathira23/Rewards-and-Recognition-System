@@ -56,6 +56,31 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
     super.dispose();
   }
 
+  String _roleLabel(dynamic role) {
+    if (role == null) return '';
+    final r = role.toString().toUpperCase();
+    switch (r) {
+      case 'DEPT_HEAD':
+        return 'Department Head';
+      case 'MANAGER':
+        return 'Manager';
+      case 'HR':
+        return 'Human Resources';
+      case 'ADMIN':
+        return 'Administrator';
+      case 'EMPLOYEE':
+        return 'Employee';
+      default:
+        final s = role.toString().replaceAll('_', ' ');
+        return s
+            .split(' ')
+            .map((w) => w.isEmpty
+                ? w
+                : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+            .join(' ');
+    }
+  }
+
   // ─── Build ───────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -705,7 +730,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: AppTextStyles.bodyBold()),
-                Text('$email  ·  $role',
+                Text('$email  ·  ${_roleLabel(role)}',
                     style:
                         TextStyle(fontSize: 11, color: Colors.grey.shade500)),
               ],

@@ -62,7 +62,7 @@ class PointsService:
         # 1. Check System-Wide Monthly Budget Cap
         from app.services.config_service import ConfigService
         config_service = ConfigService(self.db)
-        cap_val = config_service.get_config("SYSTEM_MONTHLY_BUDGET_CAP")
+        cap_val = config_service.get_config("SYSTEM MONTHLY BUDGET CAP")
         
         if cap_val:
             try:

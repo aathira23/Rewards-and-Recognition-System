@@ -112,6 +112,7 @@ class AnalyticsService:
             ).scalar() or 0
 
             report_data.append({
+                "manager_id": m.id,
                 "manager_name": m.name,
                 "total_allocated": total_allocated,
                 "total_spent": total_allocated - wallet.balance,

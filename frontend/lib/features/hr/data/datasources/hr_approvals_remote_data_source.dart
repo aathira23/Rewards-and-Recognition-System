@@ -100,12 +100,12 @@ class HrApprovalsRemoteDataSourceImpl implements HrApprovalsRemoteDataSource {
   @override
   Future<List<Map<String, dynamic>>> fetchManagers() async {
     try {
+      // 1. Fetch all users and filter to MANAGER / DEPT_HEAD
       final res = await client.get(
         ApiConstants.users,
         queryParameters: {'per_page': 100},
       );
       final raw = res.data['data'] ?? res.data ?? [];
-      // Handle paginated response: { items: [...], total: N }
       List<Map<String, dynamic>> all;
       if (raw is Map && raw.containsKey('items')) {
         final items = raw['items'];
@@ -117,11 +117,49 @@ class HrApprovalsRemoteDataSourceImpl implements HrApprovalsRemoteDataSource {
       } else {
         all = <Map<String, dynamic>>[];
       }
-      return all
+      final managers = all
           .where((u) =>
               (u['role']?.toString().toUpperCase() == 'MANAGER') ||
               (u['role']?.toString().toUpperCase() == 'DEPT_HEAD'))
           .toList();
+
+      // 2. Fetch wallet utilization report to get actual wallet balances
+      try {
+        final walletRes = await client.get(
+          ApiConstants.reports,
+          queryParameters: {'report_type': 'WALLET_UTILIZATION'},
+        );
+        final reportData = walletRes.data['data']?['data'];
+        if (reportData is List) {
+          // Build a lookup map: manager_id -> remaining_balance
+          final balanceMap = <int, int>{};
+          for (final row in reportData) {
+            final id = row['manager_id'];
+            final balance = row['remaining_balance'];
+            if (id != null && balance != null) {
+              balanceMap[id as int] = (balance as num).toInt();
+            }
+          }
+          // Enrich manager entries with their wallet balance
+          for (var i = 0; i < managers.length; i++) {
+            final id = managers[i]['id'] as int?;
+            managers[i] = {
+              ...managers[i],
+              'wallet': {'balance': id != null ? (balanceMap[id] ?? 0) : 0},
+            };
+          }
+        }
+      } catch (_) {
+        // Wallet enrichment is best-effort; show 0 on failure
+        for (var i = 0; i < managers.length; i++) {
+          managers[i] = {
+            ...managers[i],
+            'wallet': {'balance': 0}
+          };
+        }
+      }
+
+      return managers;
     } on ServerException {
       rethrow;
     } catch (e) {

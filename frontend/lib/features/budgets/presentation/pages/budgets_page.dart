@@ -37,7 +37,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
   bool get isHR => UserRoleUtils.isHR(widget.userRole);
 
   // State for Allocation
-  final _managerIdController = TextEditingController();
+  int? _selectedManagerId;
   final _allocatePointsController = TextEditingController();
 
   // State for Reward
@@ -47,7 +47,6 @@ class _BudgetsViewState extends State<_BudgetsView> {
 
   @override
   void dispose() {
-    _managerIdController.dispose();
     _allocatePointsController.dispose();
     _rewardPointsController.dispose();
     _reasonController.dispose();
@@ -113,7 +112,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
                                 children: [
                                   Text(
                                     isHR
-                                        ? 'Manager Wallet Overview'
+                                        ? 'Your HR Budget Wallet'
                                         : 'My Budget Wallet',
                                     style: AppTextStyles.body(
                                         color: Colors.white70),
@@ -125,6 +124,15 @@ class _BudgetsViewState extends State<_BudgetsView> {
                                       color: Colors.white,
                                     ),
                                   ),
+                                  if (isHR)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        'Use the Allocate Budget tab to distribute points to managers and dept heads.',
+                                        style: AppTextStyles.small(
+                                            color: Colors.white60),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -175,39 +183,88 @@ class _BudgetsViewState extends State<_BudgetsView> {
   }
 
   Widget _buildAllocateTab(BuildContext context, BudgetState state) {
+    // Filter only MANAGER and DEPT_HEAD users as valid allocation targets
+    final managers = state.users.where((u) {
+      final r = u.role.toUpperCase();
+      return r == 'MANAGER' || r == 'DEPT_HEAD';
+    }).toList();
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Allocate Budget to Manager', style: AppTextStyles.label()),
+          Text('Allocate Budget to Manager / Dept Head',
+              style: AppTextStyles.label()),
           const SizedBox(height: 16),
-          TextField(
-            controller: _managerIdController,
-            decoration: const InputDecoration(
-              labelText: 'Manager User ID',
-              hintText: 'Enter manager user ID',
+
+          // Manager / Dept Head selector
+          if (managers.isEmpty && !state.isLoading)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      color: Colors.grey.shade500, size: 18),
+                  const SizedBox(width: 10),
+                  Text('No managers or dept heads found.',
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                ],
+              ),
+            )
+          else
+            _buildSearchableDropdown(
+              label: 'Select Manager / Dept Head',
+              items: managers,
+              selectedId: _selectedManagerId,
+              onChanged: (id) => setState(() => _selectedManagerId = id),
             ),
-            keyboardType: TextInputType.number,
-          ),
+
           const SizedBox(height: 24),
           TextField(
             controller: _allocatePointsController,
             decoration: const InputDecoration(
               labelText: 'Points to Allocate',
               hintText: 'Enter amount',
+              prefixIcon: Icon(Icons.toll_rounded),
             ),
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              context.read<BudgetBloc>().add(AllocateBudget(
-                    managerId: int.tryParse(_managerIdController.text) ?? 0,
-                    points: int.tryParse(_allocatePointsController.text) ?? 0,
-                  ));
-              _managerIdController.clear();
+              final managerId = _selectedManagerId;
+              final points =
+                  int.tryParse(_allocatePointsController.text.trim());
+
+              if (managerId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Please select a manager or dept head.'),
+                  backgroundColor: Colors.orange,
+                  behavior: SnackBarBehavior.floating,
+                ));
+                return;
+              }
+              if (points == null || points <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Please enter a valid points amount.'),
+                  backgroundColor: Colors.orange,
+                  behavior: SnackBarBehavior.floating,
+                ));
+                return;
+              }
+
+              context
+                  .read<BudgetBloc>()
+                  .add(AllocateBudget(managerId: managerId, points: points));
               _allocatePointsController.clear();
+              setState(() => _selectedManagerId = null);
             },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(200, 48),

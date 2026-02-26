@@ -32,6 +32,7 @@ class RedemptionReportRow(BaseModel):
 
 
 class WalletUtilizationRow(BaseModel):
+    manager_id: int
     manager_name: str
     total_allocated: int
     total_spent: int
