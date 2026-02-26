@@ -175,8 +175,16 @@ class _PointsPageState extends State<PointsPage> {
               padding: 48,
             )
           else
-            ...state.history.asMap().entries.map(
-                (e) => _buildRow(e.value, e.key == state.history.length - 1)),
+            // Filter out scheduled/future expiry rows so "Expired" appears
+            // only after the transaction date/time has passed and the
+            // points would have been reduced.
+            ...(() {
+              final visible = _visibleHistory(state.history);
+              return visible
+                  .asMap()
+                  .entries
+                  .map((e) => _buildRow(e.value, e.key == visible.length - 1));
+            })(),
           _buildFooter(state),
         ],
       ),
@@ -277,6 +285,23 @@ class _PointsPageState extends State<PointsPage> {
               ],
             ),
     );
+  }
+
+  // Return history entries visible to the user. Hide "Expired" entries
+  // scheduled for the future so the history only shows expiries after
+  // they've actually taken effect.
+  List<PointTransactionEntity> _visibleHistory(
+      List<PointTransactionEntity> history) {
+    final now = DateTime.now();
+    return history.where((tx) {
+      if (tx.type.toLowerCase() == 'expired') {
+        // Prefer a full ISO timestamp when available
+        final parsed = AppDateFormatter.parse(tx.createdAtFull ?? tx.date);
+        if (parsed == null) return true; // can't determine, keep it
+        return !parsed.isAfter(now);
+      }
+      return true;
+    }).toList();
   }
 
   Widget _buildTableHeader() {

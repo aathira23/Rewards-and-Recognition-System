@@ -264,7 +264,7 @@ class PointsService:
             today = date.today()
             batch_q = self.db.query(PointsBatch).filter(
                 PointsBatch.user_id == user_id,
-                PointsBatch.expiry_date <= today,
+                PointsBatch.expiry_date < today,
                 PointsBatch.remaining_points > 0
             )
             total = batch_q.count()
@@ -323,7 +323,7 @@ class PointsService:
             today = date.today()
             extra_expired_count = self.db.query(PointsBatch).filter(
                 PointsBatch.user_id == user_id,
-                PointsBatch.expiry_date <= today,
+                PointsBatch.expiry_date < today,
                 PointsBatch.remaining_points > 0,
             ).count()
             extra_pending_count = self.db.query(PointsConversion).filter(
@@ -366,7 +366,7 @@ class PointsService:
                     today = date.today()
                     expired_batches = self.db.query(PointsBatch).filter(
                         PointsBatch.user_id == user_id,
-                        PointsBatch.expiry_date <= today,
+                        PointsBatch.expiry_date < today,
                         PointsBatch.remaining_points > 0,
                     ).order_by(desc(PointsBatch.expiry_date)).all()
                     for b in expired_batches:
