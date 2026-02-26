@@ -23,9 +23,9 @@ def get_manager_wallet(
 ):
     """Get manager wallet balance and details."""
     service = WalletsService(db)
-    # Managers or HR/Admin may view manager wallet (HR/Admin see manager/system wallets)
-    if getattr(current_user, "role", None) not in (UserRole.MANAGER.value, UserRole.HR.value, UserRole.ADMIN.value):
-        return forbidden("Only managers or HR/Admin may view manager wallets")
+    # Managers, Dept Heads, or HR/Admin may view manager wallet
+    if getattr(current_user, "role", None) not in (UserRole.MANAGER.value, UserRole.DEPT_HEAD.value, UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden("Only managers, dept heads, or HR/Admin may view manager wallets")
 
     wallet = service.get_manager_wallet(current_user.id)
     if not wallet:
