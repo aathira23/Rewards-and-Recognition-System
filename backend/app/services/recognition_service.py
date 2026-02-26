@@ -245,15 +245,19 @@ class RecognitionService:
         from app.models.wallets import Wallet
         from app.models.ecards import ECard
 
-        # Determine start date
-        start_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Determine start date. For 'ALL_TIME' do not apply a date filter.
+        start_date: Optional[datetime] = datetime.now().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
         if period == "YEARLY":
             start_date = start_date.replace(month=1)
-        
+        elif period == "ALL_TIME":
+            start_date = None
+
         # Base Query
         if metric == "POINTS":
             # Rank by total points received (excluding budget allocations)
-            results = self.db.query(
+            query = self.db.query(
                 User,
                 func.sum(PointsLedger.points).label("total_score"),
                 func.count(PointsLedger.id).label("count")
@@ -262,17 +266,20 @@ class RecognitionService:
             ).filter(
                 PointsLedger.transaction_type == "CREDIT",
                 PointsLedger.reference_type != "BUDGET_ALLOCATION",  # Exclude HR budget allocations
-                PointsLedger.created_at >= start_date
-            ).group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+            )
+            if start_date is not None:
+                query = query.filter(PointsLedger.created_at >= start_date)
+            results = query.group_by(User.id).order_by(desc("total_score")).limit(limit).all()
         else:
             # Rank by number of recognitions (eCards) received
-            results = self.db.query(
+            query = self.db.query(
                 User,
                 func.count(ECard.id).label("total_score"),
                 func.sum(ECard.points_awarded).label("points")
-            ).join(ECard, User.id == ECard.receiver_id).filter(
-                ECard.created_at >= start_date
-            ).group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+            ).join(ECard, User.id == ECard.receiver_id)
+            if start_date is not None:
+                query = query.filter(ECard.created_at >= start_date)
+            results = query.group_by(User.id).order_by(desc("total_score")).limit(limit).all()
 
         leaderboard = []
         for rank, (user, score, secondary) in enumerate(results, start=1):
