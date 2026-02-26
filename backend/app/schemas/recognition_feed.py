@@ -22,9 +22,11 @@ class RecognitionFeedResponse(RecognitionFeedBase):
 
     actor: Optional["UserShortResponse"] = None
     receiver: Optional["UserShortResponse"] = None
+    badge: Optional["BadgeResponse"] = None
 
     class Config:
         from_attributes = True
 
 from app.schemas.ecards import UserShortResponse
+from app.schemas.badges import BadgeResponse
 RecognitionFeedResponse.model_rebuild()

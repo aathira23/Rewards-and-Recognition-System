@@ -140,6 +140,19 @@ class RecognitionService:
         )
         total = query.count()
         items = query.order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(per_page).all()
+        
+        # Inflate eCard details (specifically badges) for feed items
+        from app.models.badges import Badge
+        from app.models.ecards import ECard
+        
+        for item in items:
+            if item.source_type == "ECARD":
+                # Fetch badge info via eCard relation
+                badge = self.db.query(Badge).join(ECard).filter(ECard.id == item.source_id).first()
+                if badge:
+                    # Attach to object for Pydantic schema to pick up
+                    item.badge = badge
+                    
         return total, items
 
     def get_appreciation_overview(self, user_id: int) -> Dict[str, Any]:

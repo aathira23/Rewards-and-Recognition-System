@@ -6,6 +6,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
     required super.receivedCount,
     required super.sentCount,
     required super.badgeCounts,
+    required super.badgeIcons,
     super.sentRecognitions,
   });
 
@@ -18,6 +19,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
     final int sentCount = json['total_sent'] ?? json['sent_count'] ?? 0;
 
     final Map<String, int> badgeCounts = {};
+    final Map<String, String?> badgeIcons = {};
     final List receivedList = json['received'] as List? ?? [];
     for (final ecard in receivedList) {
       final badge = ecard['badge'];
@@ -25,6 +27,11 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
           ? badge['name'] as String
           : 'Badge #${ecard['badge_id']}';
       badgeCounts[badgeName] = (badgeCounts[badgeName] ?? 0) + 1;
+      
+      // Store icon URL if present
+      if (badge != null && badge['icon_url'] != null) {
+        badgeIcons[badgeName] = badge['icon_url'] as String;
+      }
     }
 
     final List sentList = json['sent'] as List? ?? [];
@@ -35,6 +42,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       receivedCount: receivedCount,
       sentCount: sentCount,
       badgeCounts: badgeCounts,
+      badgeIcons: badgeIcons,
       sentRecognitions: sentRecognitions,
     );
   }
@@ -46,6 +54,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       receivedCount: 0,
       sentCount: 0,
       badgeCounts: {},
+      badgeIcons: {},
       sentRecognitions: [],
     );
   }

@@ -114,9 +114,11 @@ class AppreciationStats extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final badgeName = stats.badgeCounts.keys.elementAt(index);
                   final count = stats.badgeCounts.values.elementAt(index);
+                  final iconUrl = stats.badgeIcons[badgeName];
                   return _ReceivedBadgeCard(
                     badgeName: badgeName,
                     count: count,
+                    iconUrl: iconUrl,
                   );
                 },
               ),
@@ -130,10 +132,12 @@ class AppreciationStats extends StatelessWidget {
 class _ReceivedBadgeCard extends StatefulWidget {
   final String badgeName;
   final int count;
+  final String? iconUrl;
 
   const _ReceivedBadgeCard({
     required this.badgeName,
     required this.count,
+    this.iconUrl,
   });
 
   @override
@@ -189,10 +193,24 @@ class _ReceivedBadgeCardState extends State<_ReceivedBadgeCard> {
                       shape: BoxShape.circle,
                     ),
                     child: Center(
-                      child: badgeInfo.hasEmoji
-                          ? Text(badgeInfo.emoji!, style: AppTextStyles.emoji())
-                          : Icon(badgeInfo.icon,
-                              color: badgeInfo.color, size: 28),
+                      child: widget.iconUrl != null
+                          ? Image.network(
+                              widget.iconUrl!,
+                              width: 32,
+                              height: 32,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  badgeInfo.hasEmoji
+                                      ? Text(badgeInfo.emoji!,
+                                          style: AppTextStyles.emoji())
+                                      : Icon(badgeInfo.icon,
+                                          color: badgeInfo.color, size: 28),
+                            )
+                          : badgeInfo.hasEmoji
+                              ? Text(badgeInfo.emoji!,
+                                  style: AppTextStyles.emoji())
+                              : Icon(badgeInfo.icon,
+                                  color: badgeInfo.color, size: 28),
                     ),
                   ),
                 ),
