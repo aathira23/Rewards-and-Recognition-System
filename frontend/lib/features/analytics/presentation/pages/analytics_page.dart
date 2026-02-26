@@ -163,7 +163,6 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
     );
   }
 
-
   // ── KPI metric cards ─────────────────────────────────────────────
   Widget _buildMetricCards(ThemeData theme, AnalyticsEntity? data) {
     final cards = [
@@ -350,7 +349,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Flexible(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -358,28 +357,32 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                         style: AppTextStyles.cardTitle()),
                     const SizedBox(height: 2),
                     Text('Daily recognition count over time',
-                        style: AppTextStyles.caption(
-                            color: Colors.grey.shade400)),
+                        style:
+                            AppTextStyles.caption(color: Colors.grey.shade400)),
                   ],
                 ),
               ),
-              const Spacer(),
-              if (trends.isNotEmpty) ...[
-                _TrendStat(
-                    label: 'Total',
-                    value: '$total',
-                    color: theme.colorScheme.primary),
-                const SizedBox(width: 10),
-                _TrendStat(
-                    label: 'Avg/day',
-                    value: avg.toStringAsFixed(1),
-                    color: const Color(0xFF0D9488)),
-                const SizedBox(width: 10),
-                _TrendStat(
-                    label: 'Peak',
-                    value: peakLabel ?? '',
-                    color: const Color(0xFFD97706)),
-              ],
+              const SizedBox(width: 8),
+              if (trends.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _TrendStat(
+                        label: 'Total',
+                        value: '$total',
+                        color: theme.colorScheme.primary),
+                    const SizedBox(width: 10),
+                    _TrendStat(
+                        label: 'Avg/day',
+                        value: avg.toStringAsFixed(1),
+                        color: const Color(0xFF0D9488)),
+                    const SizedBox(width: 10),
+                    _TrendStat(
+                        label: 'Peak',
+                        value: peakLabel ?? '',
+                        color: const Color(0xFFD97706)),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 20),
@@ -846,8 +849,8 @@ class _TrendChartState extends State<_TrendChart> {
 
   @override
   Widget build(BuildContext context) {
-    final display = widget.trends.length > 30
-        ? widget.trends.sublist(widget.trends.length - 30)
+    final display = widget.trends.length > 7
+        ? widget.trends.sublist(widget.trends.length - 7)
         : widget.trends;
 
     return MouseRegion(
@@ -943,34 +946,7 @@ class _TrendPainter extends CustomPainter {
       pts.add(Offset(x, y));
     }
 
-    // ── average reference line (dashed, amber) ────────────────────
-    if (avg > 0) {
-      final avgY = topPad + ch - (avg / maxVal) * ch;
-      final avgPaint = Paint()
-        ..color = const Color(0xFFD97706).withValues(alpha: 0.6)
-        ..strokeWidth = 1.5;
-      const dashLen = 8.0, dashGap = 5.0;
-      double dx = leftPad;
-      while (dx < size.width - rightPad) {
-        canvas.drawLine(
-            Offset(dx, avgY),
-            Offset(math.min(dx + dashLen, size.width - rightPad), avgY),
-            avgPaint);
-        dx += dashLen + dashGap;
-      }
-      // avg label
-      final tp = TextPainter(
-        text: TextSpan(
-            text: 'avg',
-            style: const TextStyle(
-                fontSize: 9,
-                color: Color(0xFFD97706),
-                fontWeight: FontWeight.w600)),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas,
-          Offset(size.width - rightPad - tp.width - 2, avgY - tp.height - 2));
-    }
+    // Average reference line removed per design request
 
     // ── filled gradient area ──────────────────────────────────────
     final areaPath = Path();
