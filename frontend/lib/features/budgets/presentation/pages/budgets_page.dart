@@ -224,6 +224,9 @@ class _BudgetsViewState extends State<_BudgetsView> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final walletBalance = state.wallet?.balance ?? 0;
+    final hasZeroBalance = walletBalance == 0;
+
     final employees = state.users.where((u) {
       if (UserRoleUtils.isHR(state.currentUser!.role)) return true;
       // Manager and Dept Head only see their department
@@ -237,15 +240,47 @@ class _BudgetsViewState extends State<_BudgetsView> {
         children: [
           Text('Reward Employee from Budget', style: AppTextStyles.label()),
           const SizedBox(height: 16),
+
+          // Zero-balance warning banner
+          if (hasZeroBalance)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                border: Border.all(color: Colors.orange.shade300),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined,
+                      color: Colors.orange.shade700, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Zero balance — you have no points available to award employees. '
+                      'Please contact HR to allocate budget to your wallet.',
+                      style: TextStyle(
+                          color: Colors.orange.shade800, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           _buildSearchableDropdown(
             label: 'Select Employee',
             items: employees,
             selectedId: _selectedEmployeeId,
-            onChanged: (id) => setState(() => _selectedEmployeeId = id),
+            onChanged: hasZeroBalance
+                ? null
+                : (id) => setState(() => _selectedEmployeeId = id),
           ),
           const SizedBox(height: 24),
           TextField(
             controller: _rewardPointsController,
+            enabled: !hasZeroBalance,
             decoration: const InputDecoration(
               labelText: 'Points',
               hintText: 'Enter points to reward',
@@ -255,6 +290,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
           const SizedBox(height: 24),
           TextField(
             controller: _reasonController,
+            enabled: !hasZeroBalance,
             decoration: const InputDecoration(
               labelText: 'Reason',
               hintText: 'Why are you rewarding?',
@@ -263,7 +299,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _selectedEmployeeId == null
+            onPressed: (hasZeroBalance || _selectedEmployeeId == null)
                 ? null
                 : () {
                     context.read<BudgetBloc>().add(RewardFromBudget(
@@ -290,7 +326,7 @@ class _BudgetsViewState extends State<_BudgetsView> {
     required String label,
     required List<UserEntity> items,
     required int? selectedId,
-    required Function(int?) onChanged,
+    required void Function(int?)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

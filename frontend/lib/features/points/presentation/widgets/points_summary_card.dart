@@ -355,7 +355,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  _rewardButton(),
+                  _rewardButton(balance),
                 ],
               ),
               Column(
@@ -378,11 +378,13 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
 
   // ─── Reward employee quick-action ───
 
-  Widget _rewardButton() {
+  Widget _rewardButton(int balance) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => _showRewardDialog(context),
+        onTap: () => balance == 0
+            ? _showZeroBalanceDialog(context)
+            : _showRewardDialog(context),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           decoration: BoxDecoration(
@@ -405,6 +407,52 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showZeroBalanceDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: 'Zero Balance',
+        maxWidth: 420,
+        showCloseButton: false,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.account_balance_wallet_outlined,
+                  size: 48, color: Colors.orange.shade700),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'You have no points available to award employees.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please contact HR to allocate budget to your manager wallet before rewarding team members.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ),
+        ],
       ),
     );
   }
