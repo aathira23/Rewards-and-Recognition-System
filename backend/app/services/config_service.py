@@ -29,7 +29,7 @@ class ConfigService:
         else:
             config = SystemConfig(key=key, value=value, description=description)
             self.db.add(config)
-        
+
         self.db.commit()
         return config
 

@@ -1,7 +1,7 @@
 """
 Configuration API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -23,7 +23,7 @@ def list_configs(
     """List all system configurations (Admin/HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied", status_code=403)
-        
+
     service = ConfigService(db)
     try:
         configs = service.get_all_configs()
@@ -42,7 +42,7 @@ def update_config(
     """Update a system configuration (Admin/HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied", status_code=403)
-        
+
     service = ConfigService(db)
     config = service.set_config(key, payload.value, payload.description)
     return success(data=SystemConfigResponse.model_validate(config), message=f"Config '{key}' updated")

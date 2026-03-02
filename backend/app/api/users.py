@@ -1,18 +1,17 @@
 """
 User management API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_optional_current_user
-from app.schemas.users import UserCreate, UserResponse, UserUpdate
+from app.schemas.users import UserCreate, UserUpdate
 from app.utils.response import success, client_error, created, forbidden, paginated_success
 from app.utils.enums import UserRole
 from app.services import users_service
 from app.services.users_service import get_user_count
-from app.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+from app.utils.constants import DEFAULT_PAGE_SIZE
 
 router = APIRouter()
 
@@ -34,7 +33,7 @@ def list_users(
 ):
     """List all users. HR users see full details; others see public profiles."""
     is_hr = getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value)
-    
+
     total, users = users_service.list_users(db, page=page, per_page=per_page)
     return paginated_success(
         items=[users_service.serialize_user(u, include_sensitive=is_hr) for u in users],

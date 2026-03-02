@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
 from sqlalchemy.orm import Session
 
@@ -86,10 +86,10 @@ def serialize_user(user: User, include_sensitive: bool = True) -> Dict[str, Any]
         "date_of_joining": user.date_of_joining.isoformat() if user.date_of_joining else None,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
-    
+
     # Include sensitive fields only when appropriate
     if include_sensitive:
         data["email"] = user.email
         data["birth_date"] = user.birth_date.isoformat() if user.birth_date else None
-    
+
     return data

@@ -1,7 +1,6 @@
 """
 Catalog & Rewards API - Catalog browsing, redemptions, and point conversions.
 """
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -10,7 +9,7 @@ from app.core.dependencies import get_current_user_id, get_current_user
 from app.services.store_service import StoreService
 from app.schemas.rewards import RewardResponse, RewardCreate, RewardUpdate
 from app.schemas.redemptions import RedemptionCreate, RedemptionResponse
-from app.schemas.points_conversion import PointsConversionCreate, PointsConversionResponse
+from app.schemas.points_conversion import PointsConversionResponse
 import logging
 from app.utils.response import success, created, client_error, paginated_success
 from app.utils.enums import UserRole
@@ -53,7 +52,7 @@ def create_store_item(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only HR can create store items"
         )
-    
+
     service = StoreService(db)
     try:
         reward = service.create_reward(reward_data)
@@ -79,7 +78,7 @@ def update_store_item(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only HR can update store items"
         )
-    
+
     service = StoreService(db)
     try:
         reward = service.update_reward(reward_id, reward_data)
@@ -121,7 +120,7 @@ def get_redemption_history(
 ):
     """Get history of all redemptions and conversion requests."""
     service = StoreService(db)
-    
+
     # 1. Standard Redemptions (Merch/Vouchers)
     redemptions = service.get_redemption_history(current_user_id)
     redemption_data = []
@@ -132,7 +131,7 @@ def get_redemption_history(
             item.reward_name = r.reward.name
             item.reward_category = r.reward.reward_type
         redemption_data.append(item)
-    
+
     # 2. Conversions (Payroll/CSR)
     conversions = service.get_conversion_history(current_user_id)
     conversion_data = []
@@ -151,7 +150,7 @@ def get_redemption_history(
             "approved_at": c.approved_at,
         }
         conversion_data.append(PointsConversionResponse.model_validate(conv_dict))
-    
+
     return success(
         data={
             "redemptions": redemption_data,

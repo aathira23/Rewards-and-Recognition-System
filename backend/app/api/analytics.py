@@ -1,12 +1,11 @@
 """
 Analytics API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import date
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
 
 from app.services.analytics_service import AnalyticsService
 from app.utils.response import success, client_error
@@ -42,7 +41,7 @@ def get_analytics(
     # Check permission for requested scope
     if scope == "ORG" and current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value]:
         return client_error(message="Access denied to Organization scope", status_code=403)
-    
+
     if scope == "DEPARTMENT" and current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value, UserRole.DEPT_HEAD.value]:
         return client_error(message="Access denied to Department scope", status_code=403)
 

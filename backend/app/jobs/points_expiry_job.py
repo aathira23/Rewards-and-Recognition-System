@@ -20,7 +20,7 @@ def expire_points():
     db = SessionLocal()
     try:
         print("⏰ Starting points expiry processing...")
-        
+
         # Use service method
         service = PointsService(db)
 
@@ -31,12 +31,12 @@ def expire_points():
         # 2. Expire actual batches past their expiry date
         result = service.expire_points_batches()
 
-        print(f"✅ Points expiry processing complete:")
+        print("✅ Points expiry processing complete:")
         print(f"   - Pre-expiry reminders: {reminder_result['batches_notified']}")
         print(f"   - Batches expired: {result['batches_expired']}")
         print(f"   - Total points expired: {result['total_points_expired']}")
         print(f"   - Date: {result['date']}")
-        
+
     except Exception as e:
         db.rollback()
         print(f"❌ Error expiring points: {e}")

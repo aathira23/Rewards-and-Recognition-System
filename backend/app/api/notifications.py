@@ -1,9 +1,8 @@
 """
 Notifications API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, get_current_user
@@ -33,7 +32,7 @@ def get_notifications(
         page=page,
         per_page=per_page
     )
-    
+
     data = [NotificationResponse.model_validate(n) for n in notifications]
     return paginated_success(
         items=data,
@@ -64,7 +63,7 @@ def mark_notifications_read(
 ):
     """Mark notification(s) as read. Provide notification_id for single, or mark_all=true for all."""
     service = NotificationService(db)
-    
+
     if mark_all:
         service.mark_all_as_read(current_user_id)
         return success(message="All notifications marked as read")

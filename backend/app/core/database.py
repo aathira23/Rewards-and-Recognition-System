@@ -20,26 +20,6 @@ Base = declarative_base()
 # are available when mappers are configured at runtime.
 def import_models():
     """Explicitly import all models to register with Base.metadata."""
-    from app.models import (
-        users,
-        departments,
-        wallets,
-        wallet_funding,
-        points_ledger,
-        points_batches,
-        points_conversion,
-        points_policy,
-        ecards,
-        awards,
-        award_approvals,
-        award_types,
-        badges,
-        celebrations,
-        recognition_feed,
-        redemptions,
-        rewards,
-        notifications,
-    )
 
 import_models()
 

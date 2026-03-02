@@ -1,4 +1,3 @@
-from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models.notifications import Notification
 
@@ -39,7 +38,7 @@ class NotificationService:
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
         query = self.db.query(Notification).filter(Notification.user_id == user_id)
-        
+
         if unread_only:
             query = query.filter(Notification.is_read == False)
 
@@ -60,10 +59,10 @@ class NotificationService:
             Notification.id == notification_id,
             Notification.user_id == user_id
         ).first()
-        
+
         if not notification:
             return False
-            
+
         notification.is_read = True
         self.db.commit()
         return True
@@ -87,7 +86,7 @@ class NotificationService:
         from datetime import date, timedelta
 
         expiry_target = date.today() + timedelta(days=days_before)
-        
+
         # 1. Find all batches expiring on the target date
         expiring_batches = self.db.query(
             PointsBatch.user_id,
@@ -100,7 +99,7 @@ class NotificationService:
         count = 0
         for batch in expiring_batches:
             msg = f"Friendly Reminder: {int(batch.total_expiring)} of your points will expire on {expiry_target.strftime('%d %b %Y')}. Don't forget to spend them!"
-            
+
             # 2. Avoid duplicate notifications for the same day
             existing = self.db.query(Notification).filter(
                 Notification.user_id == batch.user_id,
@@ -116,5 +115,5 @@ class NotificationService:
                     source_id=0
                 )
                 count += 1
-        
+
         return count

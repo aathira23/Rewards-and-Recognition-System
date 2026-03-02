@@ -1,9 +1,8 @@
 """
 Award nominations and official award types.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -93,7 +92,7 @@ def create_award_type(
     """Create a new award type (admin only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Only HR/Admin can create award types", status_code=403)
-        
+
     service = AwardsService(db)
     try:
         result = service.create_award_type(
@@ -128,7 +127,7 @@ def update_award_type(
     """Update an award type (admin only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Only HR/Admin can update award types", status_code=403)
-        
+
     service = AwardsService(db)
     updated = service.update_award_type(type_id, award_type.model_dump(exclude_unset=True))
     if not updated:
@@ -164,12 +163,12 @@ def get_nomination(
     nomination = service.get_nomination(nomination_id)
     if not nomination:
         return client_error(message="Nomination not found", status_code=404)
-    
+
     # Check if user has access (Admin, or participant)
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value) and \
        current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
         return client_error(message="Not authorized to view this nomination", status_code=403)
-        
+
     return success(data=AwardResponse.model_validate(nomination), message="Nomination details fetched")
 
 
@@ -184,7 +183,7 @@ def action_nomination(
     # Basic role check: Manager or above can approve
     if current_user.role == UserRole.EMPLOYEE.value:
         return client_error(message="Employees cannot approve nominations", status_code=403)
-        
+
     service = AwardsService(db)
     # Validate action value strictly
     action = (request.action or "").strip().upper()
@@ -223,16 +222,16 @@ def get_approval_status(
 ):
     """Get detailed approval status and workflow progress for a nomination."""
     service = AwardsService(db)
-    
+
     # Verify nomination exists and user has access
     nomination = service.get_nomination(nomination_id)
     if not nomination:
         return client_error(message="Nomination not found", status_code=404)
-    
+
     # Check access: HR, or participants in the nomination
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value) and \
        current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
         return client_error(message="Not authorized to view this nomination", status_code=403)
-    
+
     status = service.get_approval_status(nomination_id)
     return success(data=status, message="Approval status retrieved")

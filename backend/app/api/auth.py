@@ -11,10 +11,7 @@ from app.core.security import (
     verify_password,
     create_access_token,
 )
-from app.core.config import settings
 from app.models.users import User
-from app.schemas.users import Token, UserLogin
-from app.utils.response import success
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -41,7 +38,7 @@ def login(
 
     # Return standard OAuth2 response at the top level for Swagger compatibility
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
         "message": "Login successful"

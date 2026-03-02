@@ -1,16 +1,14 @@
 """
 Recognition API endpoints (eCards, feed, leaderboard, badges).
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, get_current_user
 from app.schemas.ecards import ECardCreate, ECardResponse
 from app.schemas.recognition_feed import RecognitionFeedResponse
 from app.schemas.badges import BadgeCreate, BadgeUpdate, BadgeResponse
-from app.schemas.leaderboard import LeaderboardEntry
 from app.services.recognition_service import RecognitionService
 from app.utils.response import success, created, client_error, conflict, server_error, paginated_success
 from app.utils.constants import DEFAULT_PAGE_SIZE
@@ -109,7 +107,7 @@ def create_badge(
     from app.utils.enums import UserRole
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Only HR/Admin can create badges", status_code=403)
-        
+
     service = RecognitionService(db)
     try:
         badge_obj = service.create_badge(
@@ -122,7 +120,7 @@ def create_badge(
     except ValueError as e:
         # Duplicate badge name
         return conflict(message=str(e), data={"field": "name", "value": badge.name})
-    except Exception as e:
+    except Exception:
         return server_error(message="Failed to create badge", data=None)
 
 
@@ -173,7 +171,7 @@ def get_recognition(
         joinedload(ECard.receiver),
         joinedload(ECard.badge)
     ).filter(ECard.id == recognition_id).first()
-    
+
     if not ecard:
         return client_error(message="ECard not found", status_code=status.HTTP_404_NOT_FOUND)
     data = ECardResponse.model_validate(ecard)
