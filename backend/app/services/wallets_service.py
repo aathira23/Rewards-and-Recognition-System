@@ -1,6 +1,5 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from datetime import datetime
 
 from app.models.wallets import Wallet
 from app.models.wallet_funding import WalletFunding
@@ -36,7 +35,7 @@ class WalletsService:
             self.db.add(wallet)
             self.db.commit()
             self.db.refresh(wallet)
-        
+
         return wallet
 
     def get_manager_wallet(self, user_id: int) -> Optional[Wallet]:
@@ -52,10 +51,10 @@ class WalletsService:
         target_user = self.db.query(User).filter(User.id == manager_id).first()
         if not target_user:
             raise ValueError(f"User with ID {manager_id} not found")
-        
+
         if target_user.role not in ["MANAGER", "DEPT_HEAD", "HR"]:
             raise ValueError(f"Cannot allocate manager budget to user with role {target_user.role}. Only MANAGER, DEPT_HEAD, or HR roles can receive budget allocations.")
-        
+
         # 2. Get or create manager wallet
         wallet = self.get_or_create_wallet(manager_id, WalletType.MANAGER)
 
@@ -79,10 +78,10 @@ class WalletsService:
             reference_id=0 # Funding id will be available after commit
         )
         self.db.add(ledger)
-        
+
         self.db.commit()
         self.db.refresh(funding)
-        
+
         # Update ledger with funding ID
         ledger.reference_id = funding.id
         self.db.commit()
@@ -104,10 +103,10 @@ class WalletsService:
         # 0. Validate permission/hierarchy
         manager = self.db.query(User).filter(User.id == manager_id).first()
         employee = self.db.query(User).filter(User.id == employee_id).first()
-        
+
         if not manager or not employee:
             raise ValueError("Manager or Employee not found.")
-            
+
         if manager.role == UserRole.MANAGER.value:
             if employee.manager_id != manager.id:
                 raise ValueError("Managers can only reward their direct reports.")
@@ -115,7 +114,7 @@ class WalletsService:
             if employee.department_id != manager.department_id:
                 raise ValueError("Department Heads can only reward employees within their department.")
         # HR/Admin can reward anyone
-        
+
         # 1. Get manager wallet
         manager_wallet = self.get_manager_wallet(manager_id)
         if not manager_wallet:
@@ -167,7 +166,7 @@ class WalletsService:
     ) -> int:
         """Bulk allocate budget to multiple managers."""
         query = self.db.query(User)
-        
+
         if user_ids:
             query = query.filter(User.id.in_(user_ids))
         elif department_id:
@@ -175,7 +174,7 @@ class WalletsService:
             # When filtering by department, we usually only want to fund managers
             if not role_filter:
                 query = query.filter(User.role.in_([UserRole.MANAGER.value, UserRole.DEPT_HEAD.value]))
-        
+
         if role_filter:
             query = query.filter(User.role == role_filter)
 
@@ -187,5 +186,5 @@ class WalletsService:
             # but slower. For bulk of ~100s it's fine.
             self.allocate_budget(manager.id, points, allocated_by)
             count += 1
-            
+
         return count

@@ -59,7 +59,7 @@ class StoreService:
         reward = self.get_reward_by_id(reward_id)
         if not reward:
             raise ValueError("Reward not found.")
-        
+
         update_data = reward_data.model_dump(exclude_unset=True)
 
         for key, value in update_data.items():
@@ -77,10 +77,10 @@ class StoreService:
         reward = self.get_reward_by_id(reward_id)
         if not reward:
             raise ValueError("Reward not found.")
-        
+
         if not reward.is_active:
             raise ValueError("This reward is no longer available.")
-        
+
         # Check stock availability
         if reward.stock_quantity is not None:
             if reward.stock_quantity <= 0:
@@ -127,14 +127,14 @@ class StoreService:
         return redemption
 
     def create_conversion_request(
-        self, 
-        user_id: int, 
-        points: int, 
+        self,
+        user_id: int,
+        points: int,
         conversion_type: str,
         cash_amount: float
     ) -> PointsConversion:
         """Create a conversion request for Payroll or CSR (requires approval)."""
-        
+
         # 1. Check balance first
         current_balance = self.points_service.get_user_balance(user_id)
         if current_balance < points:
@@ -152,9 +152,9 @@ class StoreService:
         self.db.commit()
         self.db.refresh(conversion)
 
-        # NOTE: We don't deduct points yet. 
+        # NOTE: We don't deduct points yet.
         # Points are usually deducted upon APPROVAL for payroll.
-        
+
         # 3. Notify HR/Admin (Optional, but let's notify the user that request is received)
         self.notification_service.create_notification(
             user_id=user_id,
@@ -162,7 +162,7 @@ class StoreService:
             source_type=ReferenceType.CONVERSION.value,
             source_id=conversion.id
         )
-        
+
         return conversion
 
     def get_redemption_history(self, user_id: int) -> List[Redemption]:
@@ -192,7 +192,7 @@ class StoreService:
         conversion = self.db.query(PointsConversion).filter(PointsConversion.id == conversion_id).first()
         if not conversion:
             raise ValueError("Conversion request not found.")
-        
+
         if conversion.status != ConversionStatus.PENDING.value:
             raise ValueError("Only pending requests can be approved.")
 
@@ -208,7 +208,7 @@ class StoreService:
         conversion.status = ConversionStatus.APPROVED.value # Or PAID if immediate
         conversion.approved_by = approver_id
         conversion.approved_at = datetime.now()
-        
+
         self.db.commit()
         self.db.refresh(conversion)
 
@@ -227,11 +227,11 @@ class StoreService:
         conversion = self.db.query(PointsConversion).filter(PointsConversion.id == conversion_id).first()
         if not conversion:
             raise ValueError("Conversion request not found.")
-        
+
         conversion.status = ConversionStatus.REJECTED.value
         conversion.approved_by = approver_id
         conversion.approved_at = datetime.now()
-        
+
         self.db.commit()
         self.db.refresh(conversion)
 
@@ -296,11 +296,11 @@ class StoreService:
         policy = self.db.query(PointsPolicy).filter(PointsPolicy.id == policy_id).first()
         if not policy:
             raise ValueError("Policy not found.")
-        
+
         update_data = policy_data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(policy, key, value)
-            
+
         self.db.commit()
         self.db.refresh(policy)
         return policy

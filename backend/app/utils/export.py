@@ -23,10 +23,10 @@ def generate_csv_response(data: List[Dict[str, Any]], filename: str) -> Streamin
     # Use the keys from the first dictionary as headers
     headers = data[0].keys()
     writer = csv.DictWriter(output, fieldnames=headers)
-    
+
     writer.writeheader()
     writer.writerows(data)
-    
+
     output.seek(0)
     return StreamingResponse(
         output,

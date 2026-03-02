@@ -1,11 +1,10 @@
 """
 Wallet management API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
 from app.schemas.wallets import WalletResponse, WalletAllocateRequest, WalletRewardRequest, BulkBudgetAllocationRequest
 
 from app.services.wallets_service import WalletsService
@@ -32,7 +31,7 @@ def get_manager_wallet(
         # Create one if it doesn't exist? Or just return 0 balance.
         from app.utils.enums import WalletType
         wallet = service.get_or_create_wallet(current_user.id, WalletType.MANAGER)
-    
+
     data = WalletResponse.model_validate(wallet)
     return success(data=data, message="Manager wallet retrieved")
 
@@ -47,7 +46,7 @@ def allocate_manager_budget(
     # HR/Admin only
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
         return forbidden("Only HR/Admin can allocate budget")
-    
+
     service = WalletsService(db)
     try:
         funding = service.allocate_budget(
@@ -55,7 +54,7 @@ def allocate_manager_budget(
             points=request.points,
             allocated_by=current_user.id
         )
-        
+
         # Return the updated manager wallet
         wallet = service.get_manager_wallet(request.manager_id)
         data = WalletResponse.model_validate(wallet)
@@ -104,7 +103,7 @@ def bulk_allocate_budget(
     """HR bulk allocates budget to multiple managers."""
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
         return forbidden("Only HR/Admin can bulk allocate budget")
-        
+
     service = WalletsService(db)
     count = service.bulk_allocate_budget(
         points=request.points,
@@ -113,5 +112,5 @@ def bulk_allocate_budget(
         user_ids=request.user_ids,
         role_filter=request.role_filter
     )
-    
+
     return success(data={"updated_wallets": count}, message=f"Successfully allocated points to {count} wallets")

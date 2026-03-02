@@ -30,7 +30,7 @@ class PointsService:
     def get_employee_wallet(self, user_id: int) -> Optional[Wallet]:
         """Get or create employee wallet."""
         wallet = self.db.query(Wallet).filter(
-            Wallet.user_id == user_id, 
+            Wallet.user_id == user_id,
             Wallet.wallet_type == WalletType.EMPLOYEE.value
         ).first()
         if not wallet:
@@ -63,7 +63,7 @@ class PointsService:
         from app.services.config_service import ConfigService
         config_service = ConfigService(self.db)
         cap_val = config_service.get_config("SYSTEM MONTHLY BUDGET CAP")
-        
+
         if cap_val:
             try:
                 cap = int(cap_val)
@@ -73,7 +73,7 @@ class PointsService:
                     PointsLedger.transaction_type == TransactionType.CREDIT.value,
                     PointsLedger.created_at >= first_day
                 ).scalar() or 0
-                
+
                 if month_total + points > cap:
                     available = max(0, cap - month_total)
                     raise ValueError(
@@ -117,10 +117,10 @@ class PointsService:
             expiry_date=expiry_date
         )
         self.db.add(batch)
-        
+
         wallet = self.get_employee_wallet(user_id)
         wallet.balance += points
-        
+
         ledger = PointsLedger(
             target_wallet_id=wallet.id,
             points=points,
@@ -129,7 +129,7 @@ class PointsService:
             reference_id=source_id
         )
         self.db.add(ledger)
-        
+
         self.db.commit()
         self.db.refresh(batch)
         return batch
@@ -138,7 +138,7 @@ class PointsService:
         """Deduct points from user using FIFO (oldest batches first)."""
         if points <= 0:
             return
-            
+
         wallet = self.get_employee_wallet(user_id)
         if wallet.balance < points:
             raise ValueError(f"Insufficient points. Available: {wallet.balance}, Requested: {points}")
@@ -176,12 +176,12 @@ class PointsService:
         """Compute dashboard metrics: balance, earned, redeemed, pending."""
         wallet = self.get_employee_wallet(user_id)
         balance = self.get_user_balance(user_id)
-        
+
         earned = self.db.query(func.sum(PointsLedger.points)).filter(
             PointsLedger.transaction_type == TransactionType.CREDIT.value,
             PointsLedger.target_wallet_id == wallet.id
         ).scalar() or 0
-        
+
         redeemed = self.db.query(func.sum(Redemption.points_used)).filter(
             Redemption.user_id == user_id
         ).scalar() or 0
@@ -195,7 +195,7 @@ class PointsService:
             PointsConversion.user_id == user_id,
             PointsConversion.status == "PENDING"
         ).scalar() or 0
-        
+
         # Calculate points expiring today
         today = date.today()
         expiring_today = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
@@ -208,7 +208,7 @@ class PointsService:
         import calendar
         _, last_day = calendar.monthrange(today.year, today.month)
         end_of_month = date(today.year, today.month, last_day)
-        
+
         expiring_this_month = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
             PointsBatch.user_id == user_id,
             PointsBatch.remaining_points > 0,
@@ -417,9 +417,9 @@ class PointsService:
         ref_type = row.reference_type
         ref_id = row.reference_id
         if not ref_type: return "General Transaction", "Other"
-        
+
         ref_upper = ref_type.upper()
-        
+
         # 1. Peer Appreciations (eCards)
         if ref_upper == ReferenceType.ECARD.value:
             ecard = self.db.query(ECard).filter(ECard.id == ref_id).first()
@@ -430,7 +430,7 @@ class PointsService:
                 sender_name = sender.name if sender else "a Peer"
                 return f"{badge_title} Appreciation\nFrom: {sender_name}", "Earned"
             return "Recognition Reward", "Earned"
-        
+
         # 2. Store Redemptions
         if ref_upper == ReferenceType.REDEMPTION.value:
             redemption = self.db.query(Redemption).filter(Redemption.id == ref_id).first()
@@ -440,12 +440,12 @@ class PointsService:
                 # Matches format like: Amazon Gift Voucher Redemption\nOrder ID: ALR-984421
                 return f"{reward_name} Redemption\nOrder ID: ALR-{redemption.id}", "Redeemed"
             return "Reward Redemption", "Redeemed"
-        
+
         # 3. Anniversary / Birthday (Celebrations)
         if ref_upper == ReferenceType.CELEBRATION.value:
             # Matches format like: Milestone Achievement - 5 Years\nService Anniversary Bonus
             return "Celebration Milestone\nAnniversary/Birthday Bonus", "Earned"
-            
+
         # 4. Official Awards
         if ref_upper == ReferenceType.AWARD.value:
             award = self.db.query(Award).filter(Award.id == ref_id).first()
@@ -548,9 +548,9 @@ class PointsService:
             Dictionary with expiry results (count, total_points_expired)
         """
         from app.models.notifications import Notification
-        
+
         today = date.today()
-        
+
         # Find expired batches with remaining points
         expired_batches = self.db.query(PointsBatch).filter(
             PointsBatch.expiry_date < today,
@@ -569,15 +569,15 @@ class PointsService:
 
         for batch in expired_batches:
             points_to_expire = batch.remaining_points
-            
+
             # 1. Get user's employee wallet
             wallet = self.get_employee_wallet(batch.user_id)
-            
+
             # 2. Deduct remaining_points from wallet balance
             wallet.balance -= points_to_expire
             if wallet.balance < 0:
                 wallet.balance = 0  # Safety net
-            
+
             # 3. Create ledger entry for expiry
             ledger = PointsLedger(
                 source_wallet_id=wallet.id,
@@ -599,12 +599,12 @@ class PointsService:
                 source_id=batch.id
             )
             self.db.add(notification)
-            
+
             total_points_expired += points_to_expire
             batches_expired += 1
 
         self.db.commit()
-        
+
         return {
             "date": str(today),
             "batches_expired": batches_expired,

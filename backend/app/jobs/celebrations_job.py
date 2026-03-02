@@ -20,16 +20,16 @@ def process_celebrations():
     db = SessionLocal()
     try:
         print("🎉 Starting celebration processing...")
-        
+
         # Use unified service method
         service = CelebrationService(db)
         result = service.process_today_celebrations()
-        
-        print(f"✅ Celebration processing complete:")
+
+        print("✅ Celebration processing complete:")
         print(f"   - Birthdays processed: {result['birthdays']}")
         print(f"   - Anniversaries processed: {result['anniversaries']}")
         print(f"   - Date: {result['date']}")
-        
+
     except Exception as e:
         db.rollback()
         print(f"❌ Error processing celebrations: {e}")

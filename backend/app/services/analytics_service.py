@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from typing import Optional, Dict, Any, List
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
@@ -40,7 +40,7 @@ class AnalyticsService:
             query = query.filter(User.department_id == department_id)
 
         results = query.order_by(RecognitionFeed.created_at.desc()).all()
-        
+
         report_data = []
         for r in results:
             # Try to find points from ledger by matching receiver's wallet
@@ -52,7 +52,7 @@ class AnalyticsService:
                 PointsLedger.transaction_type == "CREDIT",
                 Wallet.user_id == r.receiver_id
             ).first()
-            
+
             points = points_row[0] if points_row else 0
 
             report_data.append({
@@ -80,7 +80,7 @@ class AnalyticsService:
             query = query.filter(Redemption.created_at <= to_date)
 
         results = query.order_by(Redemption.created_at.desc()).all()
-        
+
         report_data = []
         for r in results:
             report_data.append({
@@ -96,14 +96,14 @@ class AnalyticsService:
     def get_wallet_utilization_report(self) -> List[Dict[str, Any]]:
         """Get manager wallet utilization report."""
         managers = self.db.query(User).filter(User.role.in_(["MANAGER", "DEPT_HEAD"])).all()
-        
+
         report_data = []
         for m in managers:
             wallet = self.db.query(Wallet).filter(
                 Wallet.user_id == m.id,
                 Wallet.wallet_type == WalletType.MANAGER.value
             ).first()
-            
+
             if not wallet: continue
 
             # Total allocated (from funding records)
@@ -124,7 +124,7 @@ class AnalyticsService:
         """Get monthly payroll report for approved conversions."""
         # month_str format: YYYY-MM
         year, month = map(int, month_str.split("-"))
-        
+
         query = self.db.query(PointsConversion).join(
             User, PointsConversion.user_id == User.id
         ).filter(
@@ -134,7 +134,7 @@ class AnalyticsService:
         )
 
         results = query.all()
-        
+
         report_data = []
         for r in results:
             report_data.append({
@@ -159,7 +159,7 @@ class AnalyticsService:
         """
         # 1. Determine the set of users to analyze based on scope and role
         user_ids = self._get_scope_user_ids(current_user, scope)
-        
+
         # 2. Key Statistics
         total_recognitions = self.db.query(func.count(RecognitionFeed.id)).filter(
             RecognitionFeed.receiver_id.in_(user_ids) if user_ids is not None else True,
@@ -215,14 +215,14 @@ class AnalyticsService:
             # Direct reports
             subordinates = self.db.query(User.id).filter(User.manager_id == user.id).all()
             return [s.id for s in subordinates]
-        
+
         elif scope == "DEPARTMENT":
             # Everyone in the dept
             dept_id = user.department_id
             if not dept_id: return []
             members = self.db.query(User.id).filter(User.department_id == dept_id).all()
             return [m.id for m in members]
-        
+
         # ORG scope or HR/Admin role - returns None to signify "no filter" (all users)
         return None
 
@@ -303,7 +303,7 @@ class AnalyticsService:
             ).all()
             # Group by manager (excluding the Department Head themselves)
             manager_ids = list({
-                u.manager_id for u in managers 
+                u.manager_id for u in managers
                 if u.manager_id and u.manager_id != user.id
             })
             result = []
@@ -348,15 +348,15 @@ class AnalyticsService:
             func.date(RecognitionFeed.created_at).label('date'),
             func.count(RecognitionFeed.id).label('count')
         )
-        
+
         if user_ids is not None:
             query = query.filter(RecognitionFeed.receiver_id.in_(user_ids))
-        
+
         if from_date:
             query = query.filter(RecognitionFeed.created_at >= from_date)
         if to_date:
             query = query.filter(RecognitionFeed.created_at <= to_date)
-            
+
         results = query.group_by(func.date(RecognitionFeed.created_at)).order_by('date').all()
         return [{"date": str(r.date), "count": r.count} for r in results]
 
@@ -366,10 +366,10 @@ class AnalyticsService:
             User.name,
             func.count(RecognitionFeed.id).label('count')
         ).join(RecognitionFeed, User.id == RecognitionFeed.actor_id)
-        
+
         if user_ids is not None:
             query = query.filter(User.id.in_(user_ids))
-            
+
         results = query.group_by(User.id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
         return [{"name": r.name, "count": r.count} for r in results]
 
@@ -379,10 +379,10 @@ class AnalyticsService:
             User.name,
             func.count(RecognitionFeed.id).label('count')
         ).join(RecognitionFeed, User.id == RecognitionFeed.receiver_id)
-        
+
         if user_ids is not None:
             query = query.filter(User.id.in_(user_ids))
-            
+
         results = query.group_by(User.id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
         return [{"name": r.name, "count": r.count} for r in results]
 
@@ -390,15 +390,15 @@ class AnalyticsService:
         """Percentage of users that have participated in recognition."""
         total_users = len(user_ids) if user_ids is not None else self.db.query(User).count()
         if total_users == 0: return 0.0
-        
+
         # Active users (gave or received)
         query_received = self.db.query(RecognitionFeed.receiver_id.label('uid'))
         query_sent = self.db.query(RecognitionFeed.actor_id.label('uid'))
-        
+
         if user_ids is not None:
             query_received = query_received.filter(RecognitionFeed.receiver_id.in_(user_ids))
             query_sent = query_sent.filter(RecognitionFeed.actor_id.in_(user_ids))
-            
+
         active_users_count = query_received.union(query_sent).distinct().count()
         return round((active_users_count / total_users) * 100, 2)
     def get_expiry_forecast(self, days: int = 30) -> List[Dict[str, Any]]:
@@ -419,7 +419,7 @@ class AnalyticsService:
         ).group_by(PointsBatch.expiry_date).order_by(PointsBatch.expiry_date)
 
         results = query.all()
-        
+
         forecast_data = []
         for r in results:
             forecast_data.append({

@@ -1,7 +1,7 @@
 """
 Reports API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 
@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user_id
 
 from app.services.analytics_service import AnalyticsService
-from app.utils.response import success, created, client_error
+from app.utils.response import success, client_error
 from app.schemas.reports import ReportResponse
 from app.utils.export import generate_csv_response
 from typing import Union, Any
@@ -32,7 +32,7 @@ def get_reports(
     Generate and export reports.
     """
     service = AnalyticsService(db)
-    
+
     if report_type == "AWARDS_GIVEN" or report_type == "RECOGNITIONS":
         data = service.get_recognition_report(from_date, to_date, department_id)
         msg = "Recognition report generated"

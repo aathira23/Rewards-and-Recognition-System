@@ -1,7 +1,7 @@
 """
 Departments API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -37,7 +37,7 @@ def create_department(
     """Create a new department (HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied. Only HR/Admin can create departments.", status_code=403)
-        
+
     service = DepartmentService(db)
     try:
         new_dept = service.create_department(dept)
@@ -56,7 +56,7 @@ def update_department(
     """Update a department (HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied. Only HR/Admin can update departments.", status_code=403)
-        
+
     service = DepartmentService(db)
     try:
         updated = service.update_department(dept_id, dept_in)
@@ -76,7 +76,7 @@ def delete_department(
     """Delete a department (HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Access denied. Only HR/Admin can delete departments.", status_code=403)
-        
+
     service = DepartmentService(db)
     # Note: In a real system, we'd check if users belong to this department before deleting.
     deleted = service.delete_department(dept_id)

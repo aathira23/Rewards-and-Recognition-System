@@ -140,11 +140,11 @@ class RecognitionService:
         )
         total = query.count()
         items = query.order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(per_page).all()
-        
+
         # Inflate eCard details (specifically badges) for feed items
         from app.models.badges import Badge
         from app.models.ecards import ECard
-        
+
         for item in items:
             if item.source_type == "ECARD":
                 # Fetch badge info via eCard relation
@@ -152,18 +152,18 @@ class RecognitionService:
                 if badge:
                     # Attach to object for Pydantic schema to pick up
                     item.badge = badge
-                    
+
         return total, items
 
     def get_appreciation_overview(self, user_id: int) -> Dict[str, Any]:
         """Get recognitions received and sent by a user."""
         from app.schemas.ecards import ECardResponse
-        
+
         received = self.db.query(ECard).options(
             joinedload(ECard.sender),
             joinedload(ECard.badge)
         ).filter(ECard.receiver_id == user_id).order_by(ECard.created_at.desc()).all()
-        
+
         sent = self.db.query(ECard).options(
             joinedload(ECard.receiver),
             joinedload(ECard.badge)
@@ -215,7 +215,7 @@ class RecognitionService:
         # 2. Award points
         # In a real system, we'd also create a record in 'celebrations' table
         # For simplicity and feed logic, we directly feed the recognition feed
-        
+
         # Find an admin user to act as the "system" sender
         admin = self.db.query(User).filter(User.role == "ADMIN").first()
         system_actor_id = admin.id if admin else 1 # fallback to 1 if no admin found
@@ -227,7 +227,7 @@ class RecognitionService:
             source_id=0, # System generated
             message=message
         )
-        
+
         # Award points via points service
         self.points_service.award_points(
             user_id=user_id,
@@ -236,7 +236,7 @@ class RecognitionService:
             source_id=entry.id
         )
         return entry
-    
+
     # --- Leaderboard ---
     def get_leaderboard(self, period: str = "MONTHLY", metric: str = "POINTS", limit: int = 10) -> List[Dict[str, Any]]:
         """Calculate leaderboard ranking."""
@@ -291,5 +291,5 @@ class RecognitionService:
                 "score": int(score or 0),
                 "recognitions_received": int(secondary or 0) if metric == "POINTS" else int(score or 0)
             })
-            
+
         return leaderboard

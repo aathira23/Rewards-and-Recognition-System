@@ -33,7 +33,7 @@ class ECardResponse(ECardBase):
     receiver_id: int
     points_awarded: int
     created_at: datetime
-    
+
     sender: Optional[UserShortResponse] = None
     receiver: Optional[UserShortResponse] = None
     badge: Optional["BadgeResponse"] = None

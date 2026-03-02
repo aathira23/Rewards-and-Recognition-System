@@ -13,24 +13,6 @@ from app.core.database import Base
 from app.core.config import settings
 
 # Import all models so Alembic can detect them
-from app.models.users import User
-from app.models.departments import Department
-from app.models.wallets import Wallet
-from app.models.wallet_funding import WalletFunding
-from app.models.points_ledger import PointsLedger
-from app.models.points_batches import PointsBatch
-from app.models.points_policy import PointsPolicy
-from app.models.badges import Badge
-from app.models.ecards import ECard
-from app.models.awards import Award
-from app.models.award_types import AwardType
-from app.models.award_approvals import AwardApproval
-from app.models.celebrations import Celebration
-from app.models.rewards import Reward
-from app.models.redemptions import Redemption
-from app.models.points_conversion import PointsConversion
-from app.models.recognition_feed import RecognitionFeed
-from app.models.notifications import Notification
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

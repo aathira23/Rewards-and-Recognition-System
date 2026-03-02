@@ -1,7 +1,7 @@
 """
 Points management API endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -9,7 +9,6 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_current_user_id
 from app.utils.enums import UserRole
 from app.utils.response import forbidden
-from app.schemas.points_ledger import PointsLedgerResponse
 from app.schemas.points_conversion import (
     PointsConversionCreate,
     PointsConversionResponse,
@@ -19,8 +18,7 @@ from app.schemas.points_policy import PointsPolicyCreate, PointsPolicyUpdate, Po
 from app.services.points_service import PointsService
 from app.services.store_service import StoreService
 from app.utils.response import success, created, client_error
-from app.utils.response import forbidden
-from app.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+from app.utils.constants import DEFAULT_PAGE_SIZE
 
 router = APIRouter()
 
@@ -52,7 +50,7 @@ def get_points_history(
     total, history = service.fetch_ledger_history(
         current_user.id, category, start_date, end_date, page, per_page
     )
-    
+
     payload = {
         "balance": aggregates["balance"],
         "total_earned": aggregates["total_earned"],
@@ -83,7 +81,7 @@ def convert_points_request(
             if p.recognition_type == "CONVERSION" and p.conversion_reward_type == request.conversion_type:
                 rate = float(p.conversion_rate or 0.1)
                 break
-                
+
         calculated_cash = float(request.points_converted) * rate
         conversion = service.create_conversion_request(
             user_id=current_user_id,

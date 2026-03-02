@@ -3,8 +3,7 @@ Role-based access control decorators and utilities.
 """
 from functools import wraps
 from typing import List
-from fastapi import HTTPException, status, Depends
-from app.core.dependencies import get_current_user
+from fastapi import HTTPException, status
 from app.utils.enums import UserRole
 
 
@@ -26,13 +25,13 @@ def require_roles(allowed_roles: List[str]):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Authentication required"
                 )
-            
+
             if current_user.role not in allowed_roles:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"Access denied. Required roles: {', '.join(allowed_roles)}"
                 )
-            
+
             return await func(*args, current_user=current_user, **kwargs)
         return wrapper
     return decorator

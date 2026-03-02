@@ -1,7 +1,7 @@
 """
 Celebrations API endpoints (birthdays, anniversaries).
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -43,7 +43,7 @@ def get_celebration_history(
         d = CelebrationResponse.model_validate(h)
         d.user_name = h.user.name if h.user else "Unknown"
         data.append(d)
-        
+
     return paginated_success(
         items=data,
         total=total,
@@ -61,13 +61,13 @@ def process_today_celebrations(
     """Process today's birthdays and anniversaries (HR only)."""
     from app.utils.enums import UserRole
     from app.utils.response import client_error
-    
+
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message="Only HR/Admin can trigger celebration processing", status_code=403)
-    
+
     service = CelebrationService(db)
     result = service.process_today_celebrations()
-    
+
     return success(
         data=result,
         message=f"Processed {result['birthdays']} birthdays and {result['anniversaries']} anniversaries"

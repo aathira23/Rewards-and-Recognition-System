@@ -7,8 +7,6 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from uuid import uuid4
-from typing import Tuple
-from datetime import date as _date
 
 from app.core.config import settings
 
