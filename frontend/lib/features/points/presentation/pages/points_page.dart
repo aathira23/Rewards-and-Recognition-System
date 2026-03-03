@@ -152,7 +152,7 @@ class _PointsPageState extends State<PointsPage> {
 
   // ─── History section ────────────────────────────────────────────
   Widget _buildHistorySection(PointsState state) {
-    final listHeight = Responsive.isMobile(context) ? 360.0 : 420.0;
+    final listHeight = Responsive.isMobile(context) ? 360.0 : 400.0;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

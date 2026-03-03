@@ -41,7 +41,7 @@ class CompactSendPanel extends StatelessWidget {
           name: r.badge!.name,
           iconUrl: r.badge!.iconUrl,
         ));
-        if (recentBadges.length == 4) break;
+        if (recentBadges.length == 5) break;
       }
     }
 

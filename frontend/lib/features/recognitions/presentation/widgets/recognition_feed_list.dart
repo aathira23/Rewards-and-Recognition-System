@@ -230,10 +230,14 @@ class _Tag extends StatelessWidget {
         children: [
           Icon(icon, size: 11, color: color),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w600, color: color),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: color),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ],
       ),
@@ -271,12 +275,16 @@ class _BadgePill extends StatelessWidget {
                 )
               : Icon(pillStyle.icon, size: 12, color: pillStyle.textColor),
           const SizedBox(width: 5),
-          Text(
-            badgeName.toUpperCase(),
-            style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: pillStyle.textColor),
+          Flexible(
+            child: Text(
+              badgeName.toUpperCase(),
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: pillStyle.textColor),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ],
       ),

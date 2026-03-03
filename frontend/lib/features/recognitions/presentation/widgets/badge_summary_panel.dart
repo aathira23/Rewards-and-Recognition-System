@@ -247,56 +247,59 @@ class _BadgeCountChipState extends State<_BadgeCountChip> {
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: widget.isSelected
-                ? info.color.withValues(alpha: 0.12)
-                : (_hovered
-                    ? info.color.withValues(alpha: 0.06)
-                    : Colors.grey.shade50),
-            border: Border.all(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 200),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
               color: widget.isSelected
-                  ? info.color.withValues(alpha: 0.5)
+                  ? info.color.withValues(alpha: 0.12)
                   : (_hovered
-                      ? info.color.withValues(alpha: 0.3)
-                      : Colors.grey.shade200),
-              width: widget.isSelected ? 1.5 : 1,
+                      ? info.color.withValues(alpha: 0.06)
+                      : Colors.grey.shade50),
+              border: Border.all(
+                color: widget.isSelected
+                    ? info.color.withValues(alpha: 0.5)
+                    : (_hovered
+                        ? info.color.withValues(alpha: 0.3)
+                        : Colors.grey.shade200),
+                width: widget.isSelected ? 1.5 : 1,
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Badge icon
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: info.color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Badge icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: info.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(child: _badgeIcon(info, widget.iconUrl, 20)),
                 ),
-                child: Center(child: _badgeIcon(info, widget.iconUrl, 20)),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.badgeName,
-                    style: AppTextStyles.smallMedium(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    '${widget.count}×',
-                    style: AppTextStyles.captionBold(color: info.color),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.badgeName,
+                      style: AppTextStyles.smallMedium(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${widget.count}×',
+                      style: AppTextStyles.captionBold(color: info.color),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -378,35 +381,42 @@ class _ReceivedItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Badge pill
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: pillStyle.backgroundColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    recognition.badge?.iconUrl != null
-                        ? Image.network(
-                            recognition.badge!.iconUrl!,
-                            width: 12,
-                            height: 12,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Icon(pillStyle.icon,
-                                size: 12, color: pillStyle.textColor),
-                          )
-                        : Icon(pillStyle.icon,
-                            size: 12, color: pillStyle.textColor),
-                    const SizedBox(width: 5),
-                    Text(
-                      badgeName.toUpperCase(),
-                      style:
-                          AppTextStyles.captionBold(color: pillStyle.textColor),
-                    ),
-                  ],
+              // Badge pill – constrained so it never overflows narrow screens
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: pillStyle.backgroundColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      recognition.badge?.iconUrl != null
+                          ? Image.network(
+                              recognition.badge!.iconUrl!,
+                              width: 12,
+                              height: 12,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(pillStyle.icon,
+                                  size: 12, color: pillStyle.textColor),
+                            )
+                          : Icon(pillStyle.icon,
+                              size: 12, color: pillStyle.textColor),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          badgeName.toUpperCase(),
+                          style: AppTextStyles.captionBold(
+                              color: pillStyle.textColor),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
