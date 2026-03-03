@@ -6,3 +6,4 @@
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+sonar-project.properties

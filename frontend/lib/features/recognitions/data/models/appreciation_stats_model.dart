@@ -8,6 +8,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
     required super.badgeCounts,
     required super.badgeIcons,
     super.sentRecognitions,
+    super.receivedRecognitions,
   });
 
   factory AppreciationStatsModel.fromJson(Map<String, dynamic> json) {
@@ -27,12 +28,16 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
           ? badge['name'] as String
           : 'Badge #${ecard['badge_id']}';
       badgeCounts[badgeName] = (badgeCounts[badgeName] ?? 0) + 1;
-      
+
       // Store icon URL if present
       if (badge != null && badge['icon_url'] != null) {
         badgeIcons[badgeName] = badge['icon_url'] as String;
       }
     }
+
+    final receivedRecognitions = receivedList
+        .map((e) => RecognitionModel.fromJson(e as Map<String, dynamic>))
+        .toList();
 
     final List sentList = json['sent'] as List? ?? [];
     final sentRecognitions =
@@ -44,6 +49,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       badgeCounts: badgeCounts,
       badgeIcons: badgeIcons,
       sentRecognitions: sentRecognitions,
+      receivedRecognitions: receivedRecognitions,
     );
   }
 
@@ -56,6 +62,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       badgeCounts: {},
       badgeIcons: {},
       sentRecognitions: [],
+      receivedRecognitions: [],
     );
   }
 }

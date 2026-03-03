@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
+import '../../domain/entities/recognition_entity.dart';
 
 class AppreciationStats extends StatelessWidget {
   final AppreciationStatsEntity stats;
@@ -101,26 +103,12 @@ class AppreciationStats extends StatelessWidget {
                 ),
               )
             else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 150,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.7,
-                ),
-                itemCount: stats.badgeCounts.length,
-                itemBuilder: (context, index) {
-                  final badgeName = stats.badgeCounts.keys.elementAt(index);
-                  final count = stats.badgeCounts.values.elementAt(index);
-                  final iconUrl = stats.badgeIcons[badgeName];
-                  return _ReceivedBadgeCard(
-                    badgeName: badgeName,
-                    count: count,
-                    iconUrl: iconUrl,
-                  );
-                },
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: (stats.receivedRecognitions ?? []).map((recognition) {
+                  return _ReceivedHoverCard(recognition: recognition);
+                }).toList(),
               ),
           ],
         ),
@@ -129,126 +117,250 @@ class AppreciationStats extends StatelessWidget {
   }
 }
 
-class _ReceivedBadgeCard extends StatefulWidget {
-  final String badgeName;
-  final int count;
-  final String? iconUrl;
+/// A compact badge card that expands on hover to reveal sender & message details.
+class _ReceivedHoverCard extends StatefulWidget {
+  final RecognitionEntity recognition;
 
-  const _ReceivedBadgeCard({
-    required this.badgeName,
-    required this.count,
-    this.iconUrl,
-  });
+  const _ReceivedHoverCard({required this.recognition});
 
   @override
-  State<_ReceivedBadgeCard> createState() => _ReceivedBadgeCardState();
+  State<_ReceivedHoverCard> createState() => _ReceivedHoverCardState();
 }
 
-class _ReceivedBadgeCardState extends State<_ReceivedBadgeCard> {
+class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
+
+  // Compact (collapsed) dimensions
+  static const double _compactWidth = 90;
+  static const double _compactHeight = 100;
+
+  // Expanded dimensions
+  static const double _expandedHeight = 160;
 
   @override
   Widget build(BuildContext context) {
-    final badgeInfo = BadgeUtils.getDisplayInfo(widget.badgeName);
+    final badgeName = widget.recognition.badge?.name ?? 'Badge';
+    final badgeInfo = BadgeUtils.getDisplayInfo(badgeName);
+    final senderName = widget.recognition.senderName ?? 'Someone';
+    final message = widget.recognition.message;
+    final date =
+        DateFormat('MMM dd, yyyy').format(widget.recognition.createdAt);
+    final iconUrl = widget.recognition.badge?.iconUrl;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedScale(
-        scale: _isHovered ? 1.05 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Clamp expanded width to available space
+        final maxExpandedWidth = constraints.maxWidth.clamp(0.0, 280.0);
+
+        return MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          cursor: SystemMouseCursors.click,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            clipBehavior: Clip.hardEdge,
+            width: _isHovered ? maxExpandedWidth : _compactWidth,
+            height: _isHovered ? _expandedHeight : _compactHeight,
+            padding: _isHovered ? EdgeInsets.zero : const EdgeInsets.all(12),
+            decoration: BoxDecoration(
               color: _isHovered
-                  ? badgeInfo.color.withValues(alpha: 0.5)
-                  : Colors.grey[200]!,
-              width: _isHovered ? 1.5 : 1,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              if (_isHovered)
-                BoxShadow(
-                  color: badgeInfo.color.withValues(alpha: 0.1),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Icon section
-              SizedBox(
-                height: 60,
-                child: Center(
-                  child: Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: badgeInfo.color.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: widget.iconUrl != null
-                          ? Image.network(
-                              widget.iconUrl!,
-                              width: 32,
-                              height: 32,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  badgeInfo.hasEmoji
-                                      ? Text(badgeInfo.emoji!,
-                                          style: AppTextStyles.emoji())
-                                      : Icon(badgeInfo.icon,
-                                          color: badgeInfo.color, size: 28),
-                            )
-                          : badgeInfo.hasEmoji
-                              ? Text(badgeInfo.emoji!,
-                                  style: AppTextStyles.emoji())
-                              : Icon(badgeInfo.icon,
-                                  color: badgeInfo.color, size: 28),
-                    ),
-                  ),
-                ),
+                  ? badgeInfo.color.withValues(alpha: 0.06)
+                  : Theme.of(context).colorScheme.surface,
+              border: Border.all(
+                color: _isHovered
+                    ? badgeInfo.color.withValues(alpha: 0.4)
+                    : Colors.grey[200]!,
+                width: _isHovered ? 1.5 : 1,
               ),
-              const SizedBox(height: 12),
-              // Name section
-              SizedBox(
-                height: 40,
-                child: Center(
-                  child: Text(
-                    widget.badgeName,
-                    style: AppTextStyles.cardTitle(),
-                    textAlign: TextAlign.center,
+              borderRadius: BorderRadius.circular(_isHovered ? 16 : 14),
+              boxShadow: [
+                if (_isHovered)
+                  BoxShadow(
+                    color: badgeInfo.color.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
+            child: _isHovered
+                ? OverflowBox(
+                    alignment: Alignment.topLeft,
+                    maxWidth: 280,
+                    maxHeight: _expandedHeight,
+                    child: SizedBox(
+                      width: 280,
+                      height: _expandedHeight,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _buildExpandedContent(
+                          badgeInfo,
+                          badgeName,
+                          senderName,
+                          message,
+                          date,
+                          iconUrl,
+                        ),
+                      ),
+                    ),
+                  )
+                : _buildCompactContent(badgeInfo, badgeName, iconUrl),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Collapsed state: just icon + badge name
+  Widget _buildCompactContent(
+      BadgeDisplayInfo badgeInfo, String badgeName, String? iconUrl) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: badgeInfo.color.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: _buildBadgeIcon(badgeInfo, iconUrl, 24),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          badgeName,
+          style: AppTextStyles.small(color: Colors.grey[700]),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  /// Expanded state: full details with sender, message, date
+  Widget _buildExpandedContent(BadgeDisplayInfo badgeInfo, String badgeName,
+      String senderName, String? message, String date, String? iconUrl) {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Badge icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: badgeInfo.color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: _buildBadgeIcon(badgeInfo, iconUrl, 24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  badgeName,
+                  style: AppTextStyles.cardTitle().copyWith(
+                    color: badgeInfo.color,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.person_outline,
+                        size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'From $senderName',
+                        style: AppTextStyles.small(color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (message != null && message.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '"$message"',
+                    style: AppTextStyles.small(
+                      color: Colors.grey[700],
+                    ).copyWith(fontStyle: FontStyle.italic),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                ],
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
+                    const SizedBox(width: 4),
+                    Text(
+                      date,
+                      style: AppTextStyles.small(color: Colors.grey[400]),
+                    ),
+                    if (widget.recognition.pointsAwarded > 0) ...[
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: badgeInfo.color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '+${widget.recognition.pointsAwarded} pts',
+                          style: AppTextStyles.small(
+                            color: badgeInfo.color,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-              const Spacer(),
-              // Count section
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeInfo.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${widget.count}x',
-                  style: AppTextStyles.bodyBold(
-                    color: badgeInfo.color,
-                  ).copyWith(fontSize: 14),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  Widget _buildBadgeIcon(
+      BadgeDisplayInfo badgeInfo, String? iconUrl, double size) {
+    if (iconUrl != null) {
+      return Image.network(
+        iconUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => badgeInfo.hasEmoji
+            ? Text(badgeInfo.emoji!, style: AppTextStyles.emoji())
+            : Icon(badgeInfo.icon, color: badgeInfo.color, size: size),
+      );
+    }
+    return badgeInfo.hasEmoji
+        ? Text(badgeInfo.emoji!, style: AppTextStyles.emoji())
+        : Icon(badgeInfo.icon, color: badgeInfo.color, size: size);
   }
 }

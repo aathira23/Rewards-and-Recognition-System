@@ -7,6 +7,7 @@ class AppreciationStatsEntity extends Equatable {
   final Map<String, int> badgeCounts;
   final Map<String, String?> badgeIcons;
   final List<RecognitionEntity>? sentRecognitions;
+  final List<RecognitionEntity>? receivedRecognitions;
 
   const AppreciationStatsEntity({
     required this.receivedCount,
@@ -14,9 +15,16 @@ class AppreciationStatsEntity extends Equatable {
     required this.badgeCounts,
     required this.badgeIcons,
     this.sentRecognitions = const [],
+    this.receivedRecognitions = const [],
   });
 
   @override
-  List<Object?> get props =>
-      [receivedCount, sentCount, badgeCounts, badgeIcons, sentRecognitions];
+  List<Object?> get props => [
+        receivedCount,
+        sentCount,
+        badgeCounts,
+        badgeIcons,
+        sentRecognitions,
+        receivedRecognitions
+      ];
 }

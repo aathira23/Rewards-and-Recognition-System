@@ -76,21 +76,17 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                       builder: (context, constraints) {
                         final isWide = constraints.maxWidth >= 768;
 
-                        final leftColumn = Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppreciationComposer(
-                              badges: state.badges,
-                              onBadgeSelected: (badge) {
-                                _showSendRecognitionDialog(
-                                    context, badge, state.users);
-                              },
-                            ),
-                            const SizedBox(height: 32),
-                            if (state.stats != null) ...[
-                              AppreciationStats(stats: state.stats!),
-                            ],
-                          ],
+                        // Received section — always full width on top
+                        final receivedSection = state.stats != null
+                            ? AppreciationStats(stats: state.stats!)
+                            : const SizedBox.shrink();
+
+                        final sendSection = AppreciationComposer(
+                          badges: state.badges,
+                          onBadgeSelected: (badge) {
+                            _showSendRecognitionDialog(
+                                context, badge, state.users);
+                          },
                         );
 
                         final feedPanel = Container(
@@ -139,8 +135,20 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(flex: 65, child: leftColumn),
+                              // Left column: Received + Send
+                              Expanded(
+                                flex: 65,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    receivedSection,
+                                    const SizedBox(height: 24),
+                                    sendSection,
+                                  ],
+                                ),
+                              ),
                               const SizedBox(width: 24),
+                              // Right column: Feed
                               Expanded(flex: 35, child: feedPanel),
                             ],
                           );
@@ -149,7 +157,9 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            leftColumn,
+                            receivedSection,
+                            const SizedBox(height: 24),
+                            sendSection,
                             const SizedBox(height: 24),
                             feedPanel,
                           ],
