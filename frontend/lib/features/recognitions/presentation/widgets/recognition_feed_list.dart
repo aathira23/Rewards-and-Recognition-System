@@ -24,145 +24,145 @@ class RecognitionFeedList extends StatelessWidget {
     return ListView.builder(
       itemCount: feed.length,
       itemBuilder: (context, index) {
-        final recognition = feed[index];
-        return _buildFeedItem(context, recognition);
+        final r = feed[index];
+        final type = (r.sourceType ?? 'ECARD').toUpperCase();
+        return _FeedItem(recognition: r, type: type);
       },
     );
   }
+}
 
-  Widget _buildFeedItem(BuildContext context, RecognitionEntity recognition) {
-    final senderName = recognition.senderName ?? 'User ${recognition.senderId}';
-    final receiverName =
-        recognition.receiverName ?? 'User ${recognition.receiverId}';
-    final badgeName = recognition.badge?.name ?? 'Appreciation';
-    final timeAgo = _getTimeAgo(recognition.createdAt);
+// ─────────────────────────────────────────────────────────────────────────────
+// Unified feed card — identical container, content differs per type
+// ─────────────────────────────────────────────────────────────────────────────
+class _FeedItem extends StatelessWidget {
+  final RecognitionEntity recognition;
+  final String type;
 
-    // Badge pill styling from shared utility
-    final pillStyle = BadgeUtils.getPillStyle(badgeName);
+  const _FeedItem({required this.recognition, required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final senderName = recognition.senderName ?? 'Someone';
+    final receiverName = recognition.receiverName ?? 'Someone';
+    final message = recognition.message ?? '';
+    final timeAgo = _timeAgo(recognition.createdAt);
+    final badgeName = recognition.badge?.name ?? '';
+
+    // Per-type config
+    final Color iconBg;
+    final Widget iconChild;
+    final Widget titleLine;
+    late Widget tagLine;
+
+    if (type == 'AWARD') {
+      const c = Color(0xFFD97706);
+      iconBg = const Color(0xFFFEF3C7);
+      iconChild = const Icon(Icons.emoji_events_rounded, color: c, size: 20);
+      titleLine = _nameText(receiverName, ' received a formal award');
+      tagLine = _Tag(
+        label: message.isNotEmpty ? message : 'Award',
+        color: c,
+        icon: Icons.emoji_events_rounded,
+      );
+    } else if (type == 'CELEBRATION') {
+      const c = Color(0xFF7C3AED);
+      final isBirthday = message.toLowerCase().contains('birthday');
+      iconBg = const Color(0xFFEDE9FE);
+      iconChild = Icon(
+        isBirthday ? Icons.cake_rounded : Icons.workspace_premium_rounded,
+        color: c,
+        size: 20,
+      );
+      titleLine = _nameText(receiverName, "'s special day");
+      tagLine = _Tag(
+        label: isBirthday ? 'Birthday 🎂' : 'Work Anniversary 🌟',
+        color: c,
+        icon: isBirthday ? Icons.cake_rounded : Icons.workspace_premium_rounded,
+      );
+    } else {
+      // ECARD
+      const c = Color(0xFF3B82F6);
+      iconBg = const Color(0xFFDBEAFE);
+      iconChild = Text(
+        senderName.isNotEmpty ? senderName[0].toUpperCase() : '?',
+        style: const TextStyle(
+            color: c, fontWeight: FontWeight.w700, fontSize: 15),
+      );
+      titleLine = _ecardTitle(senderName, receiverName, c);
+      if (badgeName.isNotEmpty) {
+        final ps = BadgeUtils.getPillStyle(badgeName);
+        tagLine = _BadgePill(
+            badgeName: badgeName, pillStyle: ps, badge: recognition.badge);
+      } else {
+        tagLine = const SizedBox.shrink();
+      }
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
+          // Icon tile
           Container(
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD), // Light Blue tint
-              shape: BoxShape.circle,
+              color: iconBg,
+              borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
-            child: Text(
-              senderName.substring(0, 1).toUpperCase(),
-              style: AppTextStyles.sectionHeader(
-                color: const Color(0xFF1565C0),
-              ),
-            ),
+            child: iconChild,
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
+
           // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Sender appreciated Receiver
-                RichText(
-                  text: TextSpan(
-                    style: AppTextStyles.label(
-                      color: Colors.black87,
+                // Name line + timestamp on same row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: titleLine),
+                    const SizedBox(width: 8),
+                    Text(
+                      timeAgo,
+                      style: AppTextStyles.small(color: Colors.grey[400]),
                     ),
-                    children: [
-                      TextSpan(
-                        text: senderName,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      TextSpan(
-                        text: ' appreciated ',
-                        style: TextStyle(color: Colors.grey[500]),
-                      ),
-                      TextSpan(
-                        text: receiverName,
-                        style: const TextStyle(
-                          color: Color(0xFF2962FF),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                // Badge Pill
-                if (recognition.badge != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: pillStyle.backgroundColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        recognition.badge?.iconUrl != null
-                            ? Image.network(
-                                recognition.badge!.iconUrl!,
-                                width: 14,
-                                height: 14,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => Icon(
-                                  pillStyle.icon,
-                                  size: 14,
-                                  color: pillStyle.textColor,
-                                ),
-                              )
-                            : Icon(
-                                pillStyle.icon,
-                                size: 14,
-                                color: pillStyle.textColor,
-                              ),
-                        const SizedBox(width: 6),
-                        Text(
-                          badgeName.toUpperCase(),
-                          style: AppTextStyles.captionBold(
-                            color: pillStyle.textColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                // Message
-                if (recognition.message != null &&
-                    recognition.message!.isNotEmpty)
+                const SizedBox(height: 7),
+
+                // Tag / badge pill
+                tagLine,
+
+                // Message (ECARD only)
+                if (type == 'ECARD' && message.isNotEmpty) ...[
+                  const SizedBox(height: 6),
                   Text(
-                    '"${recognition.message}"',
-                    style: AppTextStyles.bodyLarge(
-                      color: const Color(0xFF546E7A),
-                    ),
+                    '"$message"',
+                    style: AppTextStyles.small(color: Colors.grey[500])
+                        .copyWith(fontStyle: FontStyle.italic),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                const SizedBox(height: 12),
-                // Timestamp
-                Text(
-                  timeAgo,
-                  style: AppTextStyles.small(
-                    color: Colors.grey[400],
-                  ),
-                ),
+                ],
               ],
             ),
           ),
@@ -170,24 +170,127 @@ class RecognitionFeedList extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+// ─────────────────────────────────────────────────────────────────────────────
+// Small widget helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
-    if (difference.inDays > 1) {
-      if (difference.inDays < 7) {
-        return '${difference.inDays} days ago';
-      }
-      return DateFormat.yMMMd().format(date);
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inHours >= 1) {
-      return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
-    } else if (difference.inMinutes >= 1) {
-      return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
-    } else {
-      return 'Just now';
-    }
+Widget _nameText(String bold, String normal) => RichText(
+      text: TextSpan(
+        style:
+            const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+        children: [
+          TextSpan(
+              text: bold, style: const TextStyle(fontWeight: FontWeight.w700)),
+          TextSpan(
+              text: normal, style: const TextStyle(color: Color(0xFF6B7280))),
+        ],
+      ),
+    );
+
+Widget _ecardTitle(String sender, String receiver, Color accentColor) =>
+    RichText(
+      text: TextSpan(
+        style:
+            const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+        children: [
+          TextSpan(
+              text: sender,
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          const TextSpan(
+              text: ' appreciated ',
+              style: TextStyle(color: Color(0xFF6B7280))),
+          TextSpan(
+              text: receiver,
+              style:
+                  TextStyle(color: accentColor, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+
+class _Tag extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _Tag({required this.label, required this.color, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600, color: color),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+class _BadgePill extends StatelessWidget {
+  final String badgeName;
+  final BadgePillStyle pillStyle;
+  final dynamic badge;
+
+  const _BadgePill(
+      {required this.badgeName, required this.pillStyle, required this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: pillStyle.backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          badge?.iconUrl != null
+              ? Image.network(
+                  badge!.iconUrl!,
+                  width: 12,
+                  height: 12,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(pillStyle.icon,
+                      size: 12, color: pillStyle.textColor),
+                )
+              : Icon(pillStyle.icon, size: 12, color: pillStyle.textColor),
+          const SizedBox(width: 5),
+          Text(
+            badgeName.toUpperCase(),
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: pillStyle.textColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+String _timeAgo(DateTime date) {
+  final diff = DateTime.now().difference(date);
+  if (diff.inDays >= 7) return DateFormat.yMMMd().format(date);
+  if (diff.inDays >= 2) return '${diff.inDays} days ago';
+  if (diff.inDays == 1) return 'Yesterday';
+  if (diff.inHours >= 1) return '${diff.inHours}h ago';
+  if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
+  return 'Just now';
 }

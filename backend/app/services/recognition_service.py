@@ -137,7 +137,7 @@ class RecognitionService:
         query = self.db.query(RecognitionFeed).options(
             joinedload(RecognitionFeed.actor),
             joinedload(RecognitionFeed.receiver)
-        )
+        ).filter(RecognitionFeed.source_type != "MANAGER_REWARD")
         total = query.count()
         items = query.order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(per_page).all()
 

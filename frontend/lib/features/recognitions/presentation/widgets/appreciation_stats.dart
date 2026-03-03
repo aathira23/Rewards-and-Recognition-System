@@ -5,13 +5,52 @@ import '../../../../core/utils/badge_utils.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 import '../../domain/entities/recognition_entity.dart';
 
-class AppreciationStats extends StatelessWidget {
+class AppreciationStats extends StatefulWidget {
   final AppreciationStatsEntity stats;
 
   const AppreciationStats({super.key, required this.stats});
 
   @override
+  State<AppreciationStats> createState() => _AppreciationStatsState();
+}
+
+class _AppreciationStatsState extends State<AppreciationStats> {
+  late final ScrollController _controller;
+  bool _showLeft = false;
+  bool _showRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+    _controller.addListener(_updateArrows);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateArrows());
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_updateArrows);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _updateArrows() {
+    if (!_controller.hasClients) return;
+    final max = _controller.position.maxScrollExtent;
+    final offset = _controller.offset;
+    final showLeft = offset > 5.0;
+    final showRight = offset < (max - 5.0);
+    if (showLeft != _showLeft || showRight != _showRight) {
+      setState(() {
+        _showLeft = showLeft;
+        _showRight = showRight;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final stats = widget.stats;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -46,22 +85,61 @@ class AppreciationStats extends StatelessWidget {
                 ),
                 if (stats.receivedCount > 0) ...[
                   const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${stats.receivedCount} Total',
-                      style: AppTextStyles.bodyBold(
-                        color: Theme.of(context).colorScheme.primary,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${stats.receivedCount} Total',
+                          style: AppTextStyles.bodyBold(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
                       ),
-                    ),
+                      Builder(builder: (context) {
+                        final totalPoints = (stats.receivedRecognitions ?? [])
+                            .fold<int>(
+                                0, (sum, r) => sum + (r.pointsAwarded).toInt());
+                        if (totalPoints <= 0) return const SizedBox.shrink();
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star_rounded,
+                                      size: 14, color: Colors.amber),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '+$totalPoints pts',
+                                    style: AppTextStyles.bodyBold(
+                                      color: Colors.amber[700]!,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                    ],
                   ),
                 ],
               ],
@@ -103,12 +181,108 @@ class AppreciationStats extends StatelessWidget {
                 ),
               )
             else
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: (stats.receivedRecognitions ?? []).map((recognition) {
-                  return _ReceivedHoverCard(recognition: recognition);
-                }).toList(),
+              SizedBox(
+                height: 140,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ListView.separated(
+                      controller: _controller,
+                      // allow touch/drag scrolling in addition to arrow navigation
+                      physics: const BouncingScrollPhysics(),
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemBuilder: (context, index) {
+                        final recognition =
+                            (stats.receivedRecognitions ?? [])[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child: _ReceivedHoverCard(recognition: recognition),
+                        );
+                      },
+                      separatorBuilder: (_, __) => const SizedBox.shrink(),
+                      itemCount: (stats.receivedRecognitions ?? []).length,
+                    ),
+                    // Left arrow
+                    if (_showLeft)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerRight,
+                              end: Alignment.centerLeft,
+                              colors: [
+                                Theme.of(context)
+                                    .colorScheme
+                                    .surface
+                                    .withValues(alpha: 0.0),
+                                Theme.of(context).colorScheme.surface,
+                              ],
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: () {
+                              if (!_controller.hasClients) return;
+                              final next = (_controller.offset - 240).clamp(
+                                  0.0, _controller.position.maxScrollExtent);
+                              _controller.animateTo(
+                                next,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                    // Right arrow
+                    if (_showRight)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Theme.of(context)
+                                    .colorScheme
+                                    .surface
+                                    .withValues(alpha: 0.0),
+                                Theme.of(context).colorScheme.surface,
+                              ],
+                              stops: const [0.0, 1.0],
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: () {
+                              if (!_controller.hasClients) return;
+                              final maxScroll =
+                                  _controller.position.maxScrollExtent;
+                              final next = (_controller.offset + 240)
+                                  .clamp(0.0, maxScroll);
+                              _controller.animateTo(
+                                next,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -132,7 +306,7 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
   bool _isHovered = false;
 
   // Compact (collapsed) dimensions
-  static const double _compactWidth = 90;
+  static const double _compactWidth = 110;
   static const double _compactHeight = 100;
 
   // Expanded dimensions
@@ -148,74 +322,68 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
         DateFormat('MMM dd, yyyy').format(widget.recognition.createdAt);
     final iconUrl = widget.recognition.badge?.iconUrl;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Clamp expanded width to available space
-        final maxExpandedWidth = constraints.maxWidth.clamp(0.0, 280.0);
-
-        return MouseRegion(
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          cursor: SystemMouseCursors.click,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            clipBehavior: Clip.hardEdge,
-            width: _isHovered ? maxExpandedWidth : _compactWidth,
-            height: _isHovered ? _expandedHeight : _compactHeight,
-            padding: _isHovered ? EdgeInsets.zero : const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => setState(() => _isHovered = !_isHovered),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          clipBehavior: Clip.hardEdge,
+          width: _isHovered ? 280.0 : _compactWidth,
+          height: _isHovered ? _expandedHeight : _compactHeight,
+          padding: _isHovered ? EdgeInsets.zero : const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? badgeInfo.color.withValues(alpha: 0.06)
+                : Theme.of(context).colorScheme.surface,
+            border: Border.all(
               color: _isHovered
-                  ? badgeInfo.color.withValues(alpha: 0.06)
-                  : Theme.of(context).colorScheme.surface,
-              border: Border.all(
-                color: _isHovered
-                    ? badgeInfo.color.withValues(alpha: 0.4)
-                    : Colors.grey[200]!,
-                width: _isHovered ? 1.5 : 1,
-              ),
-              borderRadius: BorderRadius.circular(_isHovered ? 16 : 14),
-              boxShadow: [
-                if (_isHovered)
-                  BoxShadow(
-                    color: badgeInfo.color.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  )
-                else
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-              ],
+                  ? badgeInfo.color.withValues(alpha: 0.4)
+                  : Colors.grey[200]!,
+              width: _isHovered ? 1.5 : 1,
             ),
-            child: _isHovered
-                ? OverflowBox(
-                    alignment: Alignment.topLeft,
-                    maxWidth: 280,
-                    maxHeight: _expandedHeight,
-                    child: SizedBox(
-                      width: 280,
-                      height: _expandedHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: _buildExpandedContent(
-                          badgeInfo,
-                          badgeName,
-                          senderName,
-                          message,
-                          date,
-                          iconUrl,
-                        ),
+            borderRadius: BorderRadius.circular(_isHovered ? 16 : 14),
+            boxShadow: [
+              if (_isHovered)
+                BoxShadow(
+                  color: badgeInfo.color.withValues(alpha: 0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                )
+              else
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: _isHovered
+              ? OverflowBox(
+                  alignment: Alignment.topLeft,
+                  maxWidth: 280,
+                  maxHeight: _expandedHeight,
+                  child: SizedBox(
+                    width: 280,
+                    height: _expandedHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _buildExpandedContent(
+                        badgeInfo,
+                        badgeName,
+                        senderName,
+                        message,
+                        date,
+                        iconUrl,
                       ),
                     ),
-                  )
-                : _buildCompactContent(badgeInfo, badgeName, iconUrl),
-          ),
-        );
-      },
-    );
+                  ),
+                )
+              : _buildCompactContent(badgeInfo, badgeName, iconUrl),
+        ), // AnimatedContainer
+      ), // GestureDetector
+    ); // MouseRegion
   }
 
   /// Collapsed state: just icon + badge name

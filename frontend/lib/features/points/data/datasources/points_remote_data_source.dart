@@ -1,5 +1,5 @@
-import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/network/api_client.dart';
 import '../models/points_summary_model.dart';
 import '../models/point_transaction_model.dart';
 
@@ -7,6 +7,7 @@ abstract class PointsRemoteDataSource {
   Future<PointsSummaryModel> getPointsSummary();
   Future<(int, List<PointTransactionModel>)> getPointsHistory({
     int page = 1,
+    int perPage = kDefaultPageSize,
     String? category,
     String? startDate,
     String? endDate,
@@ -39,11 +40,12 @@ class PointsRemoteDataSourceImpl implements PointsRemoteDataSource {
   @override
   Future<(int, List<PointTransactionModel>)> getPointsHistory({
     int page = 1,
+    int perPage = kDefaultPageSize,
     String? category,
     String? startDate,
     String? endDate,
   }) async {
-    final qp = <String, dynamic>{'page': page};
+    final qp = <String, dynamic>{'page': page, 'per_page': perPage};
     if (category != null) qp['category'] = category;
     if (startDate != null) qp['start_date'] = startDate;
     if (endDate != null) qp['end_date'] = endDate;

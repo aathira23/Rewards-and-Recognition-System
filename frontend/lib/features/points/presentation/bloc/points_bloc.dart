@@ -56,6 +56,7 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
 
     final result = await getPointsHistoryUseCase(GetPointsHistoryParams(
       page: event.page,
+      perPage: event.perPage,
       category: event.category,
       startDate: event.startDate,
       endDate: event.endDate,
@@ -69,13 +70,10 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
       },
       (bundle) {
         final (total, newHistory) = bundle;
-        final mergedHistory = event.page == 1
-            ? newHistory
-            : (List.of(state.history)..addAll(newHistory));
 
         emit(state.copyWith(
           status: PointsStatus.success,
-          history: mergedHistory,
+          history: newHistory,
           historyTotal: total,
           currentPage: event.page,
           hasReachedMax: newHistory.isEmpty,

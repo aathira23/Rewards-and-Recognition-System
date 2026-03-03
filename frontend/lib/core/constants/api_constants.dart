@@ -1,3 +1,6 @@
+/// Default number of records per page — keep in sync with backend DEFAULT_PAGE_SIZE.
+const int kDefaultPageSize = 6;
+
 /// "Centralized storage for all backend endpoint URLs and networking constants."
 class ApiConstants {
   // Use http://localhost:8000/api/v1 for Chrome Web development

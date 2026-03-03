@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../datasources/points_remote_data_source.dart';
@@ -15,7 +16,7 @@ class PointsRepositoryImpl implements PointsRepository {
   @override
   Future<Either<Failure, PointsSummaryEntity>> getPointsSummary() async {
     try {
-      final summary = await remoteDataSource.getPointsSummary();  
+      final summary = await remoteDataSource.getPointsSummary();
       return Right(summary);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -30,6 +31,7 @@ class PointsRepositoryImpl implements PointsRepository {
   Future<Either<Failure, (int, List<PointTransactionEntity>)>>
       getPointsHistory({
     int page = 1,
+    int perPage = kDefaultPageSize,
     String? category,
     String? startDate,
     String? endDate,
@@ -37,6 +39,7 @@ class PointsRepositoryImpl implements PointsRepository {
     try {
       final (total, models) = await remoteDataSource.getPointsHistory(
         page: page,
+        perPage: perPage,
         category: category,
         startDate: startDate,
         endDate: endDate,

@@ -7,6 +7,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
 import '../../../budgets/presentation/bloc/budget_bloc.dart';
 import '../bloc/points_bloc.dart';
@@ -33,7 +34,7 @@ class _PointsPageState extends State<PointsPage> {
   DateTime? _endDate;
   String? _category; // null = all, 'received', 'spent', 'pending', 'expired'
   int _page = 1;
-  static const _perPage = 20;
+  static const _perPage = kDefaultPageSize;
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _PointsPageState extends State<PointsPage> {
     setState(() => _page = page);
     _bloc.add(GetPointsHistoryRequested(
       page: page,
+      perPage: kDefaultPageSize,
       category: _category,
       startDate: AppDateFormatter.api(_startDate),
       endDate: AppDateFormatter.api(_endDate),
@@ -150,6 +152,7 @@ class _PointsPageState extends State<PointsPage> {
 
   // ─── History section ────────────────────────────────────────────
   Widget _buildHistorySection(PointsState state) {
+    final listHeight = Responsive.isMobile(context) ? 360.0 : 420.0;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -163,28 +166,40 @@ class _PointsPageState extends State<PointsPage> {
           const Divider(height: 1),
           _buildTableHeader(),
           const Divider(height: 1),
-          if (state.status == PointsStatus.loading && state.history.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (state.history.isEmpty)
-            const EmptyStateView(
-              icon: Icons.history_rounded,
-              title: 'No transactions found',
-              padding: 48,
-            )
-          else
-            // Filter out scheduled/future expiry rows so "Expired" appears
-            // only after the transaction date/time has passed and the
-            // points would have been reduced.
-            ...(() {
+          // Fixed-height scrollable area for the history rows to avoid
+          // layout shifts when content changes.
+          SizedBox(
+            height: listHeight,
+            child: Builder(builder: (context) {
+              if (state.status == PointsStatus.loading &&
+                  state.history.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state.history.isEmpty) {
+                return const Center(
+                  child: EmptyStateView(
+                    icon: Icons.history_rounded,
+                    title: 'No transactions found',
+                    padding: 48,
+                  ),
+                );
+              }
+
+              // Render rows inside a ListView so the outer layout stays
+              // constant while the user scrolls through entries.
               final visible = _visibleHistory(state.history);
-              return visible
-                  .asMap()
-                  .entries
-                  .map((e) => _buildRow(e.value, e.key == visible.length - 1));
-            })(),
+              return ListView.separated(
+                padding: EdgeInsets.zero,
+                itemCount: visible.length,
+                separatorBuilder: (_, __) => const SizedBox.shrink(),
+                itemBuilder: (ctx, idx) {
+                  final isLast = idx == visible.length - 1;
+                  return _buildRow(visible[idx], isLast);
+                },
+              );
+            }),
+          ),
           _buildFooter(state),
         ],
       ),
