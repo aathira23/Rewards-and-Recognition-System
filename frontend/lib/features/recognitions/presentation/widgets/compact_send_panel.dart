@@ -523,10 +523,6 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: Colors.grey.shade200),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: info.color, width: 1.5),
-                ),
                 contentPadding: const EdgeInsets.all(16),
               ),
               maxLines: 4,
@@ -577,8 +573,6 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
                     label: const Text('Send Recognition'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: info.color,
-                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
