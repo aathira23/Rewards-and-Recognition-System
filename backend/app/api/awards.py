@@ -79,7 +79,12 @@ def get_award_types(
 ):
     """Get award types the current user is eligible to nominate for."""
     service = AwardsService(db)
-    types = service.get_award_types(user_role=current_user.role)
+    # HR and Admin should see all award types in the configuration/nomination lists
+    role_filter = current_user.role
+    if current_user.role in (UserRole.HR.value, UserRole.ADMIN.value):
+        role_filter = None
+    
+    types = service.get_award_types(user_role=role_filter)
     return success(data=[AwardTypeResponse.model_validate(t) for t in types], message="Award types fetched")
 
 

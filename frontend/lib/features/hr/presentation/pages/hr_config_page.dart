@@ -43,9 +43,10 @@ class _HrConfigViewState extends State<_HrConfigView>
     'MERCHANDISE': 'MERCH',
     // Award eligibility friendly labels
     'Any employee (peer)': 'PEER',
-    'Managers, Dept Heads & HR': 'MANAGER_ONLY',
+    'Managers, Dept Heads & HR (manager-only)': 'MANAGER_ONLY',
     'Dept Heads & HR (senior management)': 'SENIOR_MGMT',
     // Legacy/short labels (kept for backward compatibility)
+    'Managers, Dept Heads & HR': 'MANAGER_ONLY',
     'MANAGER ONLY': 'MANAGER_ONLY',
     'SENIOR MGMT': 'SENIOR_MGMT',
     'MANAGER->DEPT HEAD': 'MANAGER,DEPT_HEAD',

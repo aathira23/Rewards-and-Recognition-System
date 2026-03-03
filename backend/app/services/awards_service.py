@@ -556,6 +556,7 @@ class AwardsService:
         UserRole.MANAGER.value:   ['PEER', 'MANAGER_ONLY'],
         UserRole.DEPT_HEAD.value: ['PEER', 'MANAGER_ONLY', 'SENIOR_MGMT'],
         UserRole.HR.value:        ['PEER', 'MANAGER_ONLY', 'SENIOR_MGMT'],
+        UserRole.ADMIN.value:     ['PEER', 'MANAGER_ONLY', 'SENIOR_MGMT'],
     }
 
     def get_award_types(
@@ -564,16 +565,26 @@ class AwardsService:
         user_role: Optional[str] = None
     ) -> List[AwardType]:
         """Get award types visible to the requesting user's role."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         query = self.db.query(AwardType)
         if active_only:
             query = query.filter(AwardType.is_active == True)
+        
         if user_role:
             allowed_rules = self._ROLE_ELIGIBLE_RULES.get(
                 user_role.upper(),
                 ['PEER']          # safe fallback for unknown roles
             )
+            logger.debug(f"Filtering award types for role {user_role}: allowed_rules={allowed_rules}")
             query = query.filter(AwardType.eligibility_rule.in_(allowed_rules))
-        return query.all()
+        else:
+            logger.debug("Fetching all active award types (no role filter applied)")
+            
+        awards = query.all()
+        logger.debug(f"Found {len(awards)} award types")
+        return awards
 
     def create_award_type(
         self,
