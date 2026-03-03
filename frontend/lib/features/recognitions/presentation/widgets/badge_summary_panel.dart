@@ -110,24 +110,37 @@ class _BadgeSummaryPanelState extends State<BadgeSummaryPanel> {
                 ),
               )
             else
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: badgeCounts.entries.map((entry) {
-                  final name = entry.key;
-                  final count = entry.value;
-                  final iconUrl = badgeIcons[name];
-                  final selected = _filterBadge == name;
-                  return _BadgeCountChip(
-                    badgeName: name,
-                    count: count,
-                    iconUrl: iconUrl,
-                    isSelected: selected,
-                    onTap: () =>
-                        setState(() => _filterBadge = selected ? null : name),
-                  );
-                }).toList(),
-              ),
+              Builder(builder: (context) {
+                // 1. Convert to entries and sort by name for stability
+                final sortedEntries = badgeCounts.entries.toList()
+                  ..sort((a, b) => a.key.compareTo(b.key));
+
+                // 2. Interleave to avoid same-colored badges being adjacent
+                final displayItems =
+                    BadgeUtils.interleaveByColor<MapEntry<String, int>>(
+                  sortedEntries,
+                  (e) => e.key,
+                );
+
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: displayItems.map((entry) {
+                    final name = entry.key;
+                    final count = entry.value;
+                    final iconUrl = badgeIcons[name];
+                    final selected = _filterBadge == name;
+                    return _BadgeCountChip(
+                      badgeName: name,
+                      count: count,
+                      iconUrl: iconUrl,
+                      isSelected: selected,
+                      onTap: () =>
+                          setState(() => _filterBadge = selected ? null : name),
+                    );
+                  }).toList(),
+                );
+              }),
 
             const SizedBox(height: 20),
             Divider(color: Colors.grey.shade100),

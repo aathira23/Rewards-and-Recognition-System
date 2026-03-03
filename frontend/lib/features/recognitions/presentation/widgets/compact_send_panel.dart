@@ -31,19 +31,26 @@ class CompactSendPanel extends StatelessWidget {
     final sentCount = stats?.sentCount ?? 0;
     const brandBlue = Color(0xFF1A60FF);
 
-    // Collect up to 4 recent unique badges with their entities
-    final recentBadges = <_RecentBadge>[];
+    // Collect up to 5 recent unique badges with their entities
+    final rawRecent = <_RecentBadge>[];
     for (final r in stats?.sentRecognitions ?? []) {
       if (r.badge == null) continue;
-      final already = recentBadges.any((rb) => rb.name == r.badge!.name);
+      final already = rawRecent.any((rb) => rb.name == r.badge!.name);
       if (!already) {
-        recentBadges.add(_RecentBadge(
+        rawRecent.add(_RecentBadge(
           name: r.badge!.name,
           iconUrl: r.badge!.iconUrl,
         ));
-        if (recentBadges.length == 5) break;
+        if (rawRecent.length == 5) break;
       }
     }
+
+    // Sort alphabetically then interleave for visual diversity and consistency
+    // with the "Received" panel order.
+    final recentBadges = BadgeUtils.interleaveByColor<_RecentBadge>(
+      rawRecent..sort((a, b) => a.name.compareTo(b.name)),
+      (rb) => rb.name,
+    );
 
     return Card(
       elevation: 0,
@@ -320,6 +327,16 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
   }
 
   Widget _buildBadgeGrid() {
+    // 1. Sort by name for stability
+    final sortedBadges = List<BadgeEntity>.from(widget.badges)
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    // 2. Interleave for visual diversity
+    final displayBadges = BadgeUtils.interleaveByColor<BadgeEntity>(
+      sortedBadges,
+      (b) => b.name,
+    );
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -329,9 +346,9 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
         mainAxisSpacing: 14,
         childAspectRatio: 0.75,
       ),
-      itemCount: widget.badges.length,
+      itemCount: displayBadges.length,
       itemBuilder: (ctx, i) {
-        final badge = widget.badges[i];
+        final badge = displayBadges[i];
         return _PickerBadgeCard(
           badge: badge,
           onTap: () => setState(() => _selected = badge),

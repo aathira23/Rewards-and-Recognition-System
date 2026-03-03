@@ -94,6 +94,7 @@ class AppreciationComposer extends StatelessWidget {
                 final badge = badges[index];
                 return _BadgeCard(
                   badge: badge,
+                  paletteIndex: index,
                   onTap: () => onBadgeSelected(badge),
                 );
               },
@@ -127,10 +128,12 @@ class AppreciationComposer extends StatelessWidget {
 
 class _BadgeCard extends StatefulWidget {
   final BadgeEntity badge;
+  final int paletteIndex;
   final VoidCallback onTap;
 
   const _BadgeCard({
     required this.badge,
+    required this.paletteIndex,
     required this.onTap,
   });
 
@@ -143,7 +146,7 @@ class _BadgeCardState extends State<_BadgeCard> {
 
   @override
   Widget build(BuildContext context) {
-    final badgeInfo = BadgeUtils.getDisplayInfo(widget.badge.name);
+    final badgeInfo = BadgeUtils.getDisplayInfoByIndex(widget.paletteIndex);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
