@@ -26,29 +26,10 @@ def get_analytics(
     """
     Get analytics dashboard data based on user role and permitted scope.
     """
+    from app.core.scope_policy import resolve_effective_scope
+    
     # 1. Enforce Role-Based Scope
-    if not scope:
-        # Default scope based on role
-        if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
-            scope = "ORG"
-        elif current_user.role == UserRole.DEPT_HEAD.value:
-            scope = "DEPARTMENT"
-        elif current_user.role == UserRole.MANAGER.value:
-            scope = "TEAM"
-        else:
-            scope = "TEAM" # Employees can see team analytics if they are managers, otherwise it will be empty
-
-    # Check permission for requested scope
-    if scope == "ORG" and current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value]:
-        return client_error(message="Access denied to Organization scope", status_code=403)
-
-    if scope == "DEPARTMENT" and current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value, UserRole.DEPT_HEAD.value]:
-        return client_error(message="Access denied to Department scope", status_code=403)
-
-    if scope == "TEAM" and current_user.role not in [UserRole.HR.value, UserRole.DEPT_HEAD.value, UserRole.MANAGER.value]:
-        # For a standard employee who isn't a manager, we could either error or return empty
-        # Let's allow them to call it but it will likely return zeros if they have no direct reports
-        pass
+    scope = resolve_effective_scope(scope, current_user.role)
 
     service = AnalyticsService(db)
     metrics = service.get_dashboard_metrics(
