@@ -94,6 +94,9 @@ SUCCESS_FEATURE_FLAGS_RETRIEVED = "Feature flags retrieved"
 INFO_CONVERSION_FEATURE_DISABLED = "Conversion feature is disabled"
 
 # Error Messages
+
+ERROR_INCORRECT_LOGIN = "Incorrect email or password"
+
 ERROR_ONLY_HR_ADMIN_CREATE_USER = "Only HR/Admin users can create new users"
 ERROR_UNAUTHORIZED_USER_UPDATE = "You do not have permission to update this user"
 
@@ -139,7 +142,11 @@ ERROR_ONLY_HR_ADMIN_UPDATE_BADGE = "Only HR/Admin can update badges"
 ERROR_ECARD_NOT_FOUND = "ECard not found"
 
 ERROR_INVALID_REPORT_TYPE = "Invalid report type: {}"
-ERROR_INCORRECT_LOGIN = "Incorrect email or password"
+
+ERROR_ROLE_NOT_PERMITTED_ANALYTICS = "Access denied: role not permitted for analytics"
+ERROR_INVALID_SCOPE = "Invalid scope: {}"
+ERROR_SCOPE_NOT_PERMITTED = "Access denied: {} scope is not permitted for {} role"
+
 
 
 def clamp_pagination(page: int = 1, per_page: int = DEFAULT_PAGE_SIZE) -> tuple:
