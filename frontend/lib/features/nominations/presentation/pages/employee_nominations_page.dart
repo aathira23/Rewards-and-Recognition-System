@@ -419,10 +419,10 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                         ),
                       ],
                     ),
-                    if (nom.justification.isNotEmpty) ...[
+                    if (nom.citation.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       Text(
-                        nom.justification,
+                        nom.citation,
                         style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,

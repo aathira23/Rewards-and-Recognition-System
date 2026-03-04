@@ -999,8 +999,12 @@ class _HrConfigViewState extends State<_HrConfigView>
                                 .withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.tune_rounded,
-                              color: theme.colorScheme.primary, size: 18),
+                          child: Icon(
+                              _isFeatureFlag(c)
+                                  ? Icons.toggle_on_rounded
+                                  : Icons.tune_rounded,
+                              color: theme.colorScheme.primary,
+                              size: 18),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -1018,22 +1022,38 @@ class _HrConfigViewState extends State<_HrConfigView>
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
+                        if (_isFeatureFlag(c)) ...[
+                          Switch(
+                            value:
+                                c['value']?.toString().toLowerCase() == 'true',
+                            onChanged: (val) {
+                              context.read<HrConfigBloc>().add(
+                                    UpdateConfigSetting(
+                                      key: c['key'].toString(),
+                                      value: val.toString(),
+                                    ),
+                                  );
+                            },
+                            activeColor: theme.colorScheme.primary,
                           ),
-                          child: Text(c['value']?.toString() ?? '',
-                              style: AppTextStyles.bodyBold()),
-                        ),
-                        const SizedBox(width: 8),
-                        _IconBtn(
-                          icon: Icons.edit_outlined,
-                          color: theme.colorScheme.primary,
-                          onTap: () => _showEditConfigDialog(context, c),
-                        ),
+                        ] else ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(c['value']?.toString() ?? '',
+                                style: AppTextStyles.bodyBold()),
+                          ),
+                          const SizedBox(width: 8),
+                          _IconBtn(
+                            icon: Icons.edit_outlined,
+                            color: theme.colorScheme.primary,
+                            onTap: () => _showEditConfigDialog(context, c),
+                          ),
+                        ],
                       ],
                     ),
                   );
@@ -1043,6 +1063,12 @@ class _HrConfigViewState extends State<_HrConfigView>
         ],
       ),
     );
+  }
+
+  /// Returns true if the config entry is a feature flag (key starts with "feature.").
+  bool _isFeatureFlag(Map<String, dynamic> config) {
+    final key = config['key']?.toString() ?? '';
+    return key.startsWith('feature.');
   }
 
   void _showEditConfigDialog(

@@ -7,11 +7,11 @@ import '../repositories/nominations_repository.dart';
 class CreateNominationParams {
   final int nomineeId;
   final int awardTypeId;
-  final String justification;
+  final String citation;
   const CreateNominationParams({
     required this.nomineeId,
     required this.awardTypeId,
-    required this.justification,
+    required this.citation,
   });
 }
 
@@ -26,7 +26,7 @@ class CreateNominationUseCase
     return await repository.createNomination(
       nomineeId: params.nomineeId,
       awardTypeId: params.awardTypeId,
-      justification: params.justification,
+      citation: params.citation,
     );
   }
 }

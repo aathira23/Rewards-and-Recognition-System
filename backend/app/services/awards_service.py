@@ -29,7 +29,7 @@ class AwardsService:
         nominator_id: int,
         nominee_id: int,
         award_type_id: int,
-        justification: Optional[str] = None
+        citation: Optional[str] = None
     ) -> Award:
         """
         Create an award nomination.
@@ -82,7 +82,7 @@ class AwardsService:
             award_type_id=award_type_id,
             status=AwardStatus.PENDING.value,
             points_awarded=award_type.points,
-            justification=justification
+            citation=citation
         )
         self.db.add(award)
         self.db.flush() # Use flush to get award.id before commit
@@ -542,7 +542,7 @@ class AwardsService:
                 'nominator_id':       award.nominator_id,
                 'award_type_name':    award.award_type.name if award.award_type else '',
                 'points_awarded':     award.points_awarded,
-                'justification':      award.justification,
+                'citation':           award.citation,
                 'nomination_status':  award.status,
                 'nominee_name':       award.nominee.name if award.nominee else f'User #{award.nominee_id}',
                 'nominator_name':     award.nominator.name if award.nominator else f'User #{award.nominator_id}',

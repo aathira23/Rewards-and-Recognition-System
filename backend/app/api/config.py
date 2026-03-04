@@ -11,6 +11,7 @@ from app.utils.enums import UserRole
 from app.services.config_service import ConfigService
 from app.schemas.system_config import SystemConfigResponse, SystemConfigUpdate
 from app.utils.response import success, client_error
+from app.utils.feature_flags import get_all_feature_flags
 
 router = APIRouter()
 
@@ -46,3 +47,12 @@ def update_config(
     service = ConfigService(db)
     config = service.set_config(key, payload.value, payload.description)
     return success(data=SystemConfigResponse.model_validate(config), message=f"Config '{key}' updated")
+
+
+@router.get("/feature-flags")
+def get_feature_flags(
+    db: Session = Depends(get_db),
+):
+    """Public endpoint — returns current feature flag values (no auth required)."""
+    flags = get_all_feature_flags(db)
+    return success(data=flags, message="Feature flags retrieved")

@@ -42,13 +42,13 @@ class NominationsRepositoryImpl implements NominationsRepository {
   Future<Either<Failure, NominationEntity>> createNomination({
     required int nomineeId,
     required int awardTypeId,
-    required String justification,
+    required String citation,
   }) async {
     try {
       final result = await remoteDataSource.createNomination(
         nomineeId: nomineeId,
         awardTypeId: awardTypeId,
-        justification: justification,
+        citation: citation,
       );
       return Right(result);
     } on ServerException catch (e) {

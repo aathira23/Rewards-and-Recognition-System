@@ -19,8 +19,11 @@ from app.services.points_service import PointsService
 from app.services.store_service import StoreService
 from app.utils.response import success, created, client_error
 from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.feature_flags import is_feature_enabled
 
 router = APIRouter()
+
+_CONVERSION_DISABLED_MSG = "Points conversion is not enabled for this organisation."
 
 
 @router.get("/balance")
@@ -72,6 +75,8 @@ def convert_points_request(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Request points conversion to cash/payroll. (User Shortcut)"""
+    if not is_feature_enabled(db, 'conversion_enabled'):
+        return client_error(message=_CONVERSION_DISABLED_MSG, status_code=403)
     service = StoreService(db)
     try:
         # Get conversion rate from active policies
@@ -115,6 +120,8 @@ def get_conversions(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Get conversion requests: HR sees all requests; users see only their own."""
+    if not is_feature_enabled(db, 'conversion_enabled'):
+        return success(data=[], message="Conversion feature is disabled")
     service = StoreService(db)
     # HR/Admin can view all conversions
     if getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value):
@@ -148,6 +155,8 @@ def get_pending_conversions(
     current_user = Depends(get_current_user)
 ):
     """Get pending conversion requests (HR only)."""
+    if not is_feature_enabled(db, 'conversion_enabled'):
+        return success(data=[], message="Conversion feature is disabled")
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
         return forbidden("Only HR/Admin can view pending conversion requests")
 
@@ -182,6 +191,8 @@ def action_conversion(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Approve or reject a conversion request (Admin logic)."""
+    if not is_feature_enabled(db, 'conversion_enabled'):
+        return client_error(message=_CONVERSION_DISABLED_MSG, status_code=403)
     service = StoreService(db)
     try:
         # Only HR/Admin users can approve/reject conversions

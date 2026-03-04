@@ -11,7 +11,7 @@ import '../../../../core/utils/award_utils.dart';
 /// Two-step dialog for nominating an employee for an award.
 ///
 /// Step 1 — Pick an Award Type (card grid like badge selection).
-/// Step 2 — Search & select the nominee + write justification.
+/// Step 2 — Search & select the nominee + write citation.
 class NominateEmployeeDialog extends StatefulWidget {
   final List<AwardTypeEntity> awardTypes;
   final List<UserEntity> users;
@@ -31,13 +31,13 @@ class NominateEmployeeDialog extends StatefulWidget {
 }
 
 class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
-  int _step = 0; // 0 = award type, 1 = nominee + justification
+  int _step = 0; // 0 = award type, 1 = nominee + citation
 
   AwardTypeEntity? _selectedAwardType;
   UserEntity? _selectedUser;
 
   final _searchController = TextEditingController();
-  final _justificationController = TextEditingController();
+  final _citationController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   String _searchQuery = '';
@@ -45,7 +45,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   @override
   void dispose() {
     _searchController.dispose();
-    _justificationController.dispose();
+    _citationController.dispose();
     super.dispose();
   }
 
@@ -62,7 +62,8 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
       }
 
       if (rule == 'SENIOR_MGMT') {
-        return UserRoleUtils.isHR(role); // SENIOR_MGMT in this app context maps to HR/ADMIN or Dept Head? 
+        return UserRoleUtils.isHR(
+            role); // SENIOR_MGMT in this app context maps to HR/ADMIN or Dept Head?
         // Original logic: role == 'DEPT_HEAD' || role == 'HR' || role == 'ADMIN'
       }
 
@@ -255,7 +256,8 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(AwardUtils.getIcon(type.awardKey), color: color, size: 22),
+              child: Icon(AwardUtils.getIcon(type.awardKey),
+                  color: color, size: 22),
             ),
             const SizedBox(width: 14),
             // Info
@@ -337,7 +339,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     );
   }
 
-  // ─── Step 2: Employee search + justification ─────────────────
+  // ─── Step 2: Employee search + citation ─────────────────
   Widget _buildStep2(ThemeData theme) {
     return Form(
       key: _formKey,
@@ -346,171 +348,166 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 12),
-            // Selected award summary pill
-            if (_selectedAwardType != null) _buildAwardSummaryPill(theme),
-            const SizedBox(height: 16),
-            // Employee search
-            Text(
-              'Select nominee',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name or email…',
-                prefixIcon: const Icon(Icons.search, size: 18),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 16),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              onChanged: (v) => setState(() => _searchQuery = v),
-            ),
-            const SizedBox(height: 6),
-            // User list
-            Container(
-              constraints: const BoxConstraints(maxHeight: 180),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: _filteredUsers.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Center(
-                        child: Text(
-                          _searchQuery.isEmpty
-                              ? 'No employees found'
-                              : 'No results for "$_searchQuery"',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade400),
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _filteredUsers.length,
-                      separatorBuilder: (_, __) => Divider(
-                          height: 1,
-                          thickness: 0.5,
-                          color: Colors.grey.shade100),
-                      itemBuilder: (ctx, i) {
-                        final user = _filteredUsers[i];
-                        final isSelected = _selectedUser?.id == user.id;
-                        return InkWell(
-                          onTap: () => setState(() {
-                            _selectedUser = user;
-                            _searchController.text = user.name;
-                            _searchQuery = '';
-                          }),
-                          borderRadius: i == 0
-                              ? const BorderRadius.vertical(
-                                  top: Radius.circular(10))
-                              : i == _filteredUsers.length - 1
-                                  ? const BorderRadius.vertical(
-                                      bottom: Radius.circular(10))
-                                  : BorderRadius.zero,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                    .withOpacity(0.06)
-                                : Colors.transparent,
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: theme.colorScheme.primary
-                                      .withOpacity(0.12),
-                                  child: Text(
-                                    user.name.isNotEmpty
-                                        ? user.name[0].toUpperCase()
-                                        : '?',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.primary),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(user.name,
-                                          style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500)),
-                                      Text(user.email,
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey.shade500)),
-                                    ],
-                                  ),
-                                ),
-                                if (isSelected)
-                                  Icon(Icons.check_circle_rounded,
-                                      color: theme.colorScheme.primary,
-                                      size: 16),
-                              ],
-                            ),
-                          ),
-                        );
+          // Selected award summary pill
+          if (_selectedAwardType != null) _buildAwardSummaryPill(theme),
+          const SizedBox(height: 16),
+          // Employee search
+          Text(
+            'Select nominee',
+            style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by name or email…',
+              prefixIcon: const Icon(Icons.search, size: 18),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
                       },
-                    ),
-            ),
-            const SizedBox(height: 16),
-            // Justification
-            Text(
-              'Justification',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _justificationController,
-              decoration: InputDecoration(
-                hintText: 'Describe why this person deserves this award…',
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                contentPadding: const EdgeInsets.all(14),
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              maxLines: 4,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'Please provide a justification'
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v),
+          ),
+          const SizedBox(height: 6),
+          // User list
+          Container(
+            constraints: const BoxConstraints(maxHeight: 180),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: _filteredUsers.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: Text(
+                        _searchQuery.isEmpty
+                            ? 'No employees found'
+                            : 'No results for "$_searchQuery"',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade400),
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _filteredUsers.length,
+                    separatorBuilder: (_, __) => Divider(
+                        height: 1, thickness: 0.5, color: Colors.grey.shade100),
+                    itemBuilder: (ctx, i) {
+                      final user = _filteredUsers[i];
+                      final isSelected = _selectedUser?.id == user.id;
+                      return InkWell(
+                        onTap: () => setState(() {
+                          _selectedUser = user;
+                          _searchController.text = user.name;
+                          _searchQuery = '';
+                        }),
+                        borderRadius: i == 0
+                            ? const BorderRadius.vertical(
+                                top: Radius.circular(10))
+                            : i == _filteredUsers.length - 1
+                                ? const BorderRadius.vertical(
+                                    bottom: Radius.circular(10))
+                                : BorderRadius.zero,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          color: isSelected
+                              ? theme.colorScheme.primary.withOpacity(0.06)
+                              : Colors.transparent,
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor:
+                                    theme.colorScheme.primary.withOpacity(0.12),
+                                child: Text(
+                                  user.name.isNotEmpty
+                                      ? user.name[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(user.name,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500)),
+                                    Text(user.email,
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade500)),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_circle_rounded,
+                                    color: theme.colorScheme.primary, size: 16),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          const SizedBox(height: 16),
+          // Citation
+          Text(
+            'Citation',
+            style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _citationController,
+            decoration: InputDecoration(
+              hintText: 'Describe why this person deserves this award…',
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              contentPadding: const EdgeInsets.all(14),
+            ),
+            maxLines: 4,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Please provide a citation'
                 : null,
           ),
         ],
@@ -617,9 +614,8 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     widget.bloc.add(CreateNominationRequested(
       nomineeId: _selectedUser!.id,
       awardTypeId: _selectedAwardType!.id,
-      justification: _justificationController.text.trim(),
+      citation: _citationController.text.trim(),
     ));
     Navigator.pop(context);
   }
-
 }

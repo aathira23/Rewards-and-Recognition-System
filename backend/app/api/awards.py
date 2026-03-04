@@ -31,7 +31,7 @@ def nominate_for_award(
             nominator_id=current_user.id,
             nominee_id=nomination.nominee_id,
             award_type_id=nomination.award_type_id,
-            justification=nomination.justification
+            citation=nomination.citation
         )
         return created(data=AwardResponse.model_validate(result), message="Nomination successful")
     except HTTPException as e:

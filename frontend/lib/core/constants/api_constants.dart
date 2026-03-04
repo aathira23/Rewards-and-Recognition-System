@@ -66,6 +66,7 @@ class ApiConstants {
 
   // System Config (HR only)
   static const String systemConfig = 'config/';
+  static const String featureFlags = 'config/feature-flags';
 
   // Department Management
   static const String departments = 'departments/';

@@ -10,7 +10,7 @@ abstract class NominationsRemoteDataSource {
   Future<NominationModel> createNomination({
     required int nomineeId,
     required int awardTypeId,
-    required String justification,
+    required String citation,
   });
   Future<void> approveNomination(int nominationId, {String? comments});
   Future<void> rejectNomination(int nominationId, {String? comments});
@@ -54,14 +54,14 @@ class NominationsRemoteDataSourceImpl implements NominationsRemoteDataSource {
   Future<NominationModel> createNomination({
     required int nomineeId,
     required int awardTypeId,
-    required String justification,
+    required String citation,
   }) async {
     final response = await client.post(
       ApiConstants.nominations,
       data: {
         'nominee_id': nomineeId,
         'award_type_id': awardTypeId,
-        'justification': justification,
+        'citation': citation,
       },
     );
     if (response.statusCode == 200 || response.statusCode == 201) {

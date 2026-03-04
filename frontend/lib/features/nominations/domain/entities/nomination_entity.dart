@@ -11,7 +11,7 @@ class NominationEntity extends Equatable {
   final String? nextRequiredLevel;
   final String status;
   final int? pointsAwarded;
-  final String justification;
+  final String citation;
   final String createdAt;
   final String? reviewerComment;
   final String? reviewerName;
@@ -27,7 +27,7 @@ class NominationEntity extends Equatable {
     required this.awardTypeName,
     required this.status,
     this.pointsAwarded,
-    required this.justification,
+    required this.citation,
     required this.createdAt,
     this.nextRequiredLevel,
     this.reviewerComment,
@@ -46,7 +46,7 @@ class NominationEntity extends Equatable {
         awardTypeName,
         status,
         pointsAwarded,
-        justification,
+        citation,
         createdAt,
         nextRequiredLevel,
         reviewerComment,

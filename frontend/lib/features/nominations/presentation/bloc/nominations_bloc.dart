@@ -75,7 +75,7 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
     final result = await createNominationUseCase(CreateNominationParams(
       nomineeId: event.nomineeId,
       awardTypeId: event.awardTypeId,
-      justification: event.justification,
+      citation: event.citation,
     ));
     result.fold(
       (f) => emit(state.copyWith(

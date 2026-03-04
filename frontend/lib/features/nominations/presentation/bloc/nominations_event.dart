@@ -15,14 +15,14 @@ class GetNominationsRequested extends NominationsEvent {}
 class CreateNominationRequested extends NominationsEvent {
   final int nomineeId;
   final int awardTypeId;
-  final String justification;
+  final String citation;
   const CreateNominationRequested({
     required this.nomineeId,
     required this.awardTypeId,
-    required this.justification,
+    required this.citation,
   });
   @override
-  List<Object?> get props => [nomineeId, awardTypeId, justification];
+  List<Object?> get props => [nomineeId, awardTypeId, citation];
 }
 
 class ApproveNominationRequested extends NominationsEvent {

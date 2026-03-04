@@ -7,6 +7,7 @@ import 'core/network/web_token_provider.dart';
 
 import 'core/network/auth_interceptor.dart';
 import 'core/network/api_client.dart';
+import 'core/services/feature_flag_service.dart';
 
 import 'features/auth/data/datasources/auth_local_data_source.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
@@ -167,6 +168,7 @@ Future<void> init() async {
   sl.registerLazySingleton(
       () => AuthInterceptor(tokenProvider: sl<AuthLocalDataSource>()));
   sl.registerLazySingleton(() => ApiClient(dio: sl(), authInterceptor: sl()));
+  sl.registerLazySingleton(() => FeatureFlagService(client: sl<ApiClient>()));
 
   //! Features - Authentication
   // Bloc

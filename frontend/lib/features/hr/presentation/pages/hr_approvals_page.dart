@@ -9,6 +9,7 @@ import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
+import '../../../../core/services/feature_flag_service.dart';
 import '../bloc/hr_approvals_bloc.dart';
 import '../bloc/hr_approvals_event.dart';
 import '../bloc/hr_approvals_state.dart';
@@ -40,19 +41,37 @@ class _HrApprovalsView extends StatefulWidget {
 }
 
 class _HrApprovalsViewState extends State<_HrApprovalsView>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+    with TickerProviderStateMixin {
+  TabController? _tabController;
   String _nomFilter = 'ALL';
+  // null = still loading; true/false = flag resolved
+  bool? _conversionEnabled;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _loadFeatureFlags();
+  }
+
+  Future<void> _loadFeatureFlags() async {
+    final enabled =
+        await sl<FeatureFlagService>().isEnabled('conversion_enabled');
+    if (!mounted) return;
+    final oldController = _tabController;
+    final newController = TabController(length: enabled ? 3 : 2, vsync: this);
+    setState(() {
+      _conversionEnabled = enabled;
+      _tabController = newController;
+    });
+    if (oldController != null) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => oldController.dispose());
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -115,64 +134,73 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                 ),
               ),
 
-              // Tabs
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: Responsive.pagePadding(context),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
+              // Tabs — only render once the feature flag is resolved
+              if (_tabController == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.pagePadding(context),
                   ),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: Responsive.isMobile(context),
-                    tabAlignment: Responsive.isMobile(context)
-                        ? TabAlignment.start
-                        : TabAlignment.fill,
-                    labelColor: theme.colorScheme.primary,
-                    unselectedLabelColor: Colors.grey.shade500,
-                    indicatorColor: theme.colorScheme.primary,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelStyle: AppTextStyles.bodyBold(),
-                    unselectedLabelStyle: AppTextStyles.bodyMedium(),
-                    dividerHeight: 0,
-                    tabs: [
-                      _TabWithBadge(
-                          label: 'Award Approvals',
-                          count: state.nominations
-                              .where((n) =>
-                                  n['status'] == 'PENDING' &&
-                                  n['next_required_level']
-                                          ?.toString()
-                                          .toUpperCase() ==
-                                      'HR')
-                              .length),
-                      _TabWithBadge(
-                          label: 'Payroll Encashment',
-                          count: state.conversions
-                              .where((c) => c['status'] == 'PENDING')
-                              .length),
-                      const Tab(text: 'Budget Allocation'),
-                    ],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      isScrollable: Responsive.isMobile(context),
+                      tabAlignment: Responsive.isMobile(context)
+                          ? TabAlignment.start
+                          : TabAlignment.fill,
+                      labelColor: theme.colorScheme.primary,
+                      unselectedLabelColor: Colors.grey.shade500,
+                      indicatorColor: theme.colorScheme.primary,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelStyle: AppTextStyles.bodyBold(),
+                      unselectedLabelStyle: AppTextStyles.bodyMedium(),
+                      dividerHeight: 0,
+                      tabs: [
+                        _TabWithBadge(
+                            label: 'Award Approvals',
+                            count: state.nominations
+                                .where((n) =>
+                                    n['status'] == 'PENDING' &&
+                                    n['next_required_level']
+                                            ?.toString()
+                                            .toUpperCase() ==
+                                        'HR')
+                                .length),
+                        if (_conversionEnabled == true)
+                          _TabWithBadge(
+                              label: 'Payroll Encashment',
+                              count: state.conversions
+                                  .where((c) => c['status'] == 'PENDING')
+                                  .length),
+                        const Tab(text: 'Budget Allocation'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 16),
 
               // Content
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildAwardApprovalsTab(context, theme, state),
-                    _buildConversionsTab(context, theme, state),
-                    _buildBudgetAllocationTab(context, theme, state),
-                  ],
+              if (_tabController != null)
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildAwardApprovalsTab(context, theme, state),
+                      if (_conversionEnabled == true)
+                        _buildConversionsTab(context, theme, state),
+                      _buildBudgetAllocationTab(context, theme, state),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         );
@@ -262,7 +290,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
     final awardType = nom['award_type']?['name'] ??
         nom['award_type_name'] ??
         'Award #${nom['award_type_id']}';
-    final justification = nom['justification']?.toString() ?? '';
+    final citation = nom['citation']?.toString() ?? '';
     final points = nom['points_awarded'] ?? nom['award_type']?['points'] ?? 0;
     final createdAt = nom['created_at']?.toString() ?? '';
 
@@ -325,9 +353,9 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
               ),
             ],
           ),
-          if (justification.isNotEmpty) ...[
+          if (citation.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(justification,
+            Text(citation,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
           ],
           // Reviewer attribution + comment banner — shown when nomination is already actioned

@@ -432,7 +432,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     final nomineeName = item['nominee_name']?.toString() ?? '';
     final nominatorName = item['nominator_name']?.toString() ?? '';
     final pts = item['points_awarded'];
-    final justification = item['justification']?.toString() ?? '';
+    final citation = item['citation']?.toString() ?? '';
     final myComments = item['my_comments']?.toString() ?? '';
     final actionAt = item['my_action_at']?.toString() ?? '';
 
@@ -514,9 +514,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                 'Nominated by', nominatorName)),
                       ],
                     ),
-                    if (justification.isNotEmpty) ...[
+                    if (citation.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(justification,
+                      Text(citation,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -729,9 +729,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                 'Nominated by', nominator)),
                       ],
                     ),
-                    if (n.justification.isNotEmpty) ...[
+                    if (n.citation.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(n.justification,
+                      Text(n.citation,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

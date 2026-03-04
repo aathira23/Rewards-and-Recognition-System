@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
+import '../../../../core/services/feature_flag_service.dart';
 import '../../domain/entities/reward_entity.dart';
 import '../../../points/presentation/bloc/points_bloc.dart';
 import '../../../points/presentation/bloc/points_event.dart';
@@ -27,6 +28,8 @@ class EmployeeRewardsPage extends StatefulWidget {
 
 class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
   int _currentTabIndex = 0;
+  // null = still loading; true/false = flag resolved
+  bool? _conversionEnabled;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -35,6 +38,15 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     _searchController.addListener(() {
       setState(() {});
     });
+    _loadFeatureFlags();
+  }
+
+  Future<void> _loadFeatureFlags() async {
+    final enabled =
+        await sl<FeatureFlagService>().isEnabled('conversion_enabled');
+    if (mounted) {
+      setState(() => _conversionEnabled = enabled);
+    }
   }
 
   @override
@@ -113,13 +125,26 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // Tab Navigation
-                      CatalogTabNavigation(
-                        selectedIndex: _currentTabIndex,
-                        onTabSelected: (index) {
-                          setState(() => _currentTabIndex = index);
-                        },
-                      ),
+                      // Tab Navigation — only render once the feature flag is known
+                      if (_conversionEnabled == null)
+                        const SizedBox(
+                          height: 48,
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
+                      else
+                        CatalogTabNavigation(
+                          selectedIndex: _currentTabIndex,
+                          onTabSelected: (index) {
+                            setState(() => _currentTabIndex = index);
+                          },
+                          conversionEnabled: _conversionEnabled!,
+                        ),
                       const SizedBox(height: 32),
                     ]),
                   ),
@@ -716,10 +741,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             Container(
                               padding: const EdgeInsets.all(9),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4B79CA).withValues(alpha: 0.1),
+                                color: const Color(0xFF4B79CA)
+                                    .withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.sync_alt_rounded, color: Color(0xFF4B79CA), size: 18),
+                              child: const Icon(Icons.sync_alt_rounded,
+                                  color: Color(0xFF4B79CA), size: 18),
                             ),
                             const SizedBox(width: 12),
                             Expanded(

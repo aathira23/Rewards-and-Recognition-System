@@ -32,7 +32,7 @@ class AwardBase(BaseModel):
 class AwardNominationCreate(AwardBase):
     """Schema for creating an award nomination."""
     nominee_id: int
-    justification: Optional[str] = None
+    citation: Optional[str] = None
 
 
 class AwardResponse(AwardBase):
@@ -42,7 +42,7 @@ class AwardResponse(AwardBase):
     nominator_id: int
     status: str
     points_awarded: Optional[int]
-    justification: Optional[str] = None
+    citation: Optional[str] = None
     next_required_level: Optional[str] = None
     created_at: datetime
 
@@ -80,7 +80,7 @@ class ApprovalHistoryItem(BaseModel):
     nominator_id: int
     award_type_name: str
     points_awarded: Optional[int] = None
-    justification: Optional[str] = None
+    citation: Optional[str] = None
     nomination_status: str   # PENDING / APPROVED / REJECTED (final overall status)
     nominee_name: str
     nominator_name: str

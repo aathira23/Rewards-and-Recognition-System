@@ -4,11 +4,13 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 class CatalogTabNavigation extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
+  final bool conversionEnabled;
 
   const CatalogTabNavigation({
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
+    this.conversionEnabled = true,
   });
 
   @override
@@ -23,16 +25,20 @@ class CatalogTabNavigation extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _buildTabItem(context, 0, 'Catalog', Icons.grid_view_rounded),
+            child:
+                _buildTabItem(context, 0, 'Catalog', Icons.grid_view_rounded),
           ),
           const SizedBox(width: 6),
           Expanded(
             child: _buildTabItem(context, 1, 'History', Icons.history_rounded),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _buildTabItem(context, 2, 'Convert', Icons.swap_horiz_rounded),
-          ),
+          if (conversionEnabled) ...[
+            const SizedBox(width: 6),
+            Expanded(
+              child: _buildTabItem(
+                  context, 2, 'Convert', Icons.swap_horiz_rounded),
+            ),
+          ],
         ],
       ),
     );
@@ -49,7 +55,9 @@ class CatalogTabNavigation extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surface,
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: isSelected
               ? [

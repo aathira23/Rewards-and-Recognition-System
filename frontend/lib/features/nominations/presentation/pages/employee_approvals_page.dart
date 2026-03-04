@@ -341,9 +341,9 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                             'Nominated by', nominator)),
                   ],
                 ),
-                if (n.justification.isNotEmpty) ...[
+                if (n.citation.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(n.justification,
+                  Text(n.citation,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

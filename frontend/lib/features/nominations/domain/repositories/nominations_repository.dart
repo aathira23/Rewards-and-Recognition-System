@@ -9,7 +9,7 @@ abstract class NominationsRepository {
   Future<Either<Failure, NominationEntity>> createNomination({
     required int nomineeId,
     required int awardTypeId,
-    required String justification,
+    required String citation,
   });
   Future<Either<Failure, void>> approveNomination(int nominationId,
       {String? comments});

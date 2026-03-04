@@ -19,7 +19,7 @@ class Award(Base):
     award_type_id = Column(BigInteger, ForeignKey("award_types.id"), nullable=False)
     status = Column(String, nullable=False)  # PENDING, APPROVED, REJECTED
     points_awarded = Column(Integer, nullable=True)
-    justification = Column(Text, nullable=True)  # Reason for nomination
+    citation = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
