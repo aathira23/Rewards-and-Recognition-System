@@ -1,6 +1,9 @@
 from typing import List, Optional, Dict, Any, Set
 from fastapi import HTTPException, status
 from app.utils.enums import UserRole, Scope
+from app.utils.constants import (
+    ERROR_ROLE_NOT_PERMITTED_ANALYTICS, ERROR_INVALID_SCOPE, ERROR_SCOPE_NOT_PERMITTED
+)
 
 # Centralized Role-to-Scope Policy
 # Defines the default scope and allowable scopes for each user role.
@@ -47,7 +50,7 @@ def resolve_effective_scope(requested_scope: Optional[Scope | str], user_role: s
     if not policy:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: role not permitted for analytics"
+            detail=ERROR_ROLE_NOT_PERMITTED_ANALYTICS
         )
     
     # If string provided, convert to Enum
@@ -58,7 +61,7 @@ def resolve_effective_scope(requested_scope: Optional[Scope | str], user_role: s
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid scope: {requested_scope}"
+                detail=ERROR_INVALID_SCOPE.format(requested_scope)
             )
 
     # Use default if no scope requested
@@ -68,7 +71,7 @@ def resolve_effective_scope(requested_scope: Optional[Scope | str], user_role: s
     if effective_scope not in policy["allowed"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied: {effective_scope.value} scope is not permitted for {user_role} role"
+            detail=ERROR_SCOPE_NOT_PERMITTED.format(effective_scope.value, user_role)
         )
         
     return effective_scope
