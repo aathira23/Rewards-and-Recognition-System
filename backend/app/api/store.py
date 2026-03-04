@@ -13,7 +13,11 @@ from app.schemas.points_conversion import PointsConversionResponse
 import logging
 from app.utils.response import success, created, client_error, paginated_success
 from app.utils.enums import UserRole
-from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.constants import (
+    DEFAULT_PAGE_SIZE, SUCCESS_STORE_ITEM_CREATED, SUCCESS_CATALOG_RETRIEVED,
+    ERROR_ONLY_HR_CREATE_STORE_ITEM, ERROR_ONLY_HR_UPDATE_STORE_ITEM,
+    SUCCESS_STORE_ITEM_UPDATED, SUCCESS_REDEMPTION_SUCCESSFUL, SUCCESS_HISTORY_RETRIEVED
+)
 
 router = APIRouter()
 
@@ -35,7 +39,7 @@ def get_catalog_items(
         total=total,
         page=page,
         per_page=per_page,
-        message="Catalog retrieved successfully",
+        message=SUCCESS_CATALOG_RETRIEVED,
     )
 
 
@@ -50,14 +54,14 @@ def create_store_item(
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only HR can create store items"
+            detail=ERROR_ONLY_HR_CREATE_STORE_ITEM
         )
 
     service = StoreService(db)
     try:
         reward = service.create_reward(reward_data)
         data = RewardResponse.model_validate(reward)
-        return created(data=data, message="Store item created successfully")
+        return created(data=data, message=SUCCESS_STORE_ITEM_CREATED)
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.exception("Failed to create store item: %s", str(e))
@@ -76,14 +80,14 @@ def update_store_item(
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only HR can update store items"
+            detail=ERROR_ONLY_HR_UPDATE_STORE_ITEM
         )
 
     service = StoreService(db)
     try:
         reward = service.update_reward(reward_id, reward_data)
         data = RewardResponse.model_validate(reward)
-        return success(data=data, message="Store item updated successfully")
+        return success(data=data, message=SUCCESS_STORE_ITEM_UPDATED)
     except ValueError as e:
         logger = logging.getLogger(__name__)
         logger.exception("Failed to update store item %s: %s", reward_id, str(e))
@@ -104,7 +108,7 @@ def redeem_reward(
             reward_id=redemption_data.reward_id
         )
         data = RedemptionResponse.model_validate(redemption)
-        return created(data=data, message="Redemption successful")
+        return created(data=data, message=SUCCESS_REDEMPTION_SUCCESSFUL)
     except ValueError as e:
         logger = logging.getLogger(__name__)
         logger.exception("Redemption failed for user %s reward %s: %s", current_user_id, redemption_data.reward_id, str(e))
@@ -156,5 +160,5 @@ def get_redemption_history(
             "redemptions": redemption_data,
             "conversions": conversion_data
         },
-        message="History retrieved successfully"
+        message=SUCCESS_HISTORY_RETRIEVED
     )

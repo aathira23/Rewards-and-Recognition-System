@@ -11,7 +11,14 @@ from app.schemas.recognition_feed import RecognitionFeedResponse
 from app.schemas.badges import BadgeCreate, BadgeUpdate, BadgeResponse
 from app.services.recognition_service import RecognitionService
 from app.utils.response import success, created, client_error, conflict, server_error, paginated_success
-from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.constants import (
+    DEFAULT_PAGE_SIZE, SUCCESS_RECOGNITION_SENT, SUCCESS_FEED_RETRIEVED,
+    SUCCESS_OVERVIEW_RETRIEVED, SUCCESS_LEADERBOARD_RETRIEVED,
+    ERROR_ONLY_HR_ADMIN_CREATE_BADGE, SUCCESS_BADGE_CREATED,
+    ERROR_FAILED_CREATE_BADGE, ERROR_ONLY_HR_ADMIN_UPDATE_BADGE,
+    SUCCESS_BADGE_UPDATED, SUCCESS_BADGES_RETRIEVED, ERROR_ECARD_NOT_FOUND,
+    SUCCESS_RECOGNITION_FOUND
+)
 
 router = APIRouter()
 
@@ -37,7 +44,7 @@ def send_recognition(
             data.sender.department_name = ecard.sender.department.name if ecard.sender.department else None
         if data.receiver and ecard.receiver:
             data.receiver.department_name = ecard.receiver.department.name if ecard.receiver.department else None
-        return created(data=data.model_dump(), message="Recognition sent successfully")
+        return created(data=data.model_dump(), message=SUCCESS_RECOGNITION_SENT)
     except ValueError as e:
         return client_error(message=str(e))
 
@@ -66,7 +73,7 @@ def get_recognition_feed(
         total=total,
         page=page,
         per_page=per_page,
-        message="Feed retrieved",
+        message=SUCCESS_FEED_RETRIEVED,
     )
 
 
@@ -79,7 +86,7 @@ def get_my_appreciation_overview(
     service = RecognitionService(db)
     overview = service.get_appreciation_overview(user_id=current_user_id)
     # Service already returns serialized data, use it directly
-    return success(data=overview, message="Overview retrieved")
+    return success(data=overview, message=SUCCESS_OVERVIEW_RETRIEVED)
 
 
 @router.get("/leaderboard")
@@ -93,7 +100,7 @@ def get_leaderboard(
     """Get recognition leaderboard."""
     service = RecognitionService(db)
     data = service.get_leaderboard(period=period, metric=metric, limit=limit)
-    return success(data=data, message="Leaderboard retrieved")
+    return success(data=data, message=SUCCESS_LEADERBOARD_RETRIEVED)
 
 
 # Badges (Used for eCards)
@@ -106,7 +113,7 @@ def create_badge(
     """Create a new badge (HR only)."""
     from app.utils.enums import UserRole
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return client_error(message="Only HR/Admin can create badges", status_code=403)
+        return client_error(message=ERROR_ONLY_HR_ADMIN_CREATE_BADGE, status_code=403)
 
     service = RecognitionService(db)
     try:
@@ -116,12 +123,12 @@ def create_badge(
             icon_url=badge.icon_url
         )
         data = BadgeResponse.model_validate(badge_obj)
-        return created(data=data.model_dump(), message="Badge created")
+        return created(data=data.model_dump(), message=SUCCESS_BADGE_CREATED)
     except ValueError as e:
         # Duplicate badge name
         return conflict(message=str(e), data={"field": "name", "value": badge.name})
     except Exception:
-        return server_error(message="Failed to create badge", data=None)
+        return server_error(message=ERROR_FAILED_CREATE_BADGE, data=None)
 
 
 @router.put("/badges/{badge_id}")
@@ -134,13 +141,13 @@ def update_badge(
     """Update a badge (HR only)."""
     from app.utils.enums import UserRole
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return client_error(message="Only HR/Admin can update badges", status_code=403)
+        return client_error(message=ERROR_ONLY_HR_ADMIN_UPDATE_BADGE, status_code=403)
 
     service = RecognitionService(db)
     try:
         updated = service.update_badge(badge_id, badge.model_dump(exclude_unset=True))
         data = BadgeResponse.model_validate(updated)
-        return success(data=data.model_dump(), message="Badge updated")
+        return success(data=data.model_dump(), message=SUCCESS_BADGE_UPDATED)
     except ValueError as e:
         return client_error(message=str(e), status_code=status.HTTP_404_NOT_FOUND)
 
@@ -154,7 +161,7 @@ def get_badges(
     service = RecognitionService(db)
     badges = service.get_badges()
     data = [BadgeResponse.model_validate(b).model_dump() for b in badges]
-    return success(data=data, message="Badges retrieved")
+    return success(data=data, message=SUCCESS_BADGES_RETRIEVED)
 
 
 @router.get("/{recognition_id}")
@@ -173,11 +180,11 @@ def get_recognition(
     ).filter(ECard.id == recognition_id).first()
 
     if not ecard:
-        return client_error(message="ECard not found", status_code=status.HTTP_404_NOT_FOUND)
+        return client_error(message=ERROR_ECARD_NOT_FOUND, status_code=status.HTTP_404_NOT_FOUND)
     data = ECardResponse.model_validate(ecard)
     # Populate department names in nested user objects
     if data.sender and ecard.sender:
         data.sender.department_name = ecard.sender.department.name if ecard.sender.department else None
     if data.receiver and ecard.receiver:
         data.receiver.department_name = ecard.receiver.department.name if ecard.receiver.department else None
-    return success(data=data.model_dump(), message="Recognition found")
+    return success(data=data.model_dump(), message=SUCCESS_RECOGNITION_FOUND)

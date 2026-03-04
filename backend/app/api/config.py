@@ -11,6 +11,7 @@ from app.utils.enums import UserRole
 from app.services.config_service import ConfigService
 from app.schemas.system_config import SystemConfigResponse, SystemConfigUpdate
 from app.utils.response import success, client_error
+from app.utils.constants import ERROR_ACCESS_DENIED, SUCCESS_CONFIGS_RETRIEVED, ERROR_CONFIG_RETRIEVAL_FAILED, SUCCESS_CONFIG_UPDATED
 
 router = APIRouter()
 
@@ -22,14 +23,14 @@ def list_configs(
 ):
     """List all system configurations (Admin/HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return client_error(message="Access denied", status_code=403)
+        return client_error(message=ERROR_ACCESS_DENIED, status_code=403)
 
     service = ConfigService(db)
     try:
         configs = service.get_all_configs()
-        return success(data=[SystemConfigResponse.model_validate(c) for c in configs], message="Configurations retrieved")
+        return success(data=[SystemConfigResponse.model_validate(c) for c in configs], message=SUCCESS_CONFIGS_RETRIEVED)
     except Exception as e:
-        return client_error(message=f"Config retrieval failed: {str(e)}", status_code=500)
+        return client_error(message=ERROR_CONFIG_RETRIEVAL_FAILED.format(str(e)), status_code=500)
 
 
 @router.put("/{key}")
@@ -41,8 +42,8 @@ def update_config(
 ):
     """Update a system configuration (Admin/HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return client_error(message="Access denied", status_code=403)
+        return client_error(message=ERROR_ACCESS_DENIED, status_code=403)
 
     service = ConfigService(db)
     config = service.set_config(key, payload.value, payload.description)
-    return success(data=SystemConfigResponse.model_validate(config), message=f"Config '{key}' updated")
+    return success(data=SystemConfigResponse.model_validate(config), message=SUCCESS_CONFIG_UPDATED.format(key))

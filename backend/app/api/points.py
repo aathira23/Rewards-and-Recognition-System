@@ -18,7 +18,15 @@ from app.schemas.points_policy import PointsPolicyCreate, PointsPolicyUpdate, Po
 from app.services.points_service import PointsService
 from app.services.store_service import StoreService
 from app.utils.response import success, created, client_error
-from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.constants import (
+    DEFAULT_PAGE_SIZE, SUCCESS_POINTS_BALANCE_FETCHED, SUCCESS_POINTS_HISTORY_FETCHED,
+    SUCCESS_CONVERSION_REQUESTED, ERROR_ONLY_HR_ADMIN_VIEW_PENDING_CONVERSIONS,
+    ERROR_ONLY_HR_ADMIN_ACTION_CONVERSION, ERROR_INVALID_CONVERSION_ACTION,
+    SUCCESS_CONVERSION_APPROVED, SUCCESS_CONVERSION_REJECTED,
+    SUCCESS_POLICIES_RETRIEVED, ERROR_ONLY_HR_ADMIN_CREATE_RULE,
+    SUCCESS_POINT_RULE_CREATED, ERROR_ONLY_HR_ADMIN_UPDATE_RULE,
+    SUCCESS_POINT_RULE_UPDATED
+)
 
 router = APIRouter()
 
@@ -31,7 +39,7 @@ def get_points_balance(
     """Get current user's points balance and aggregates."""
     service = PointsService(db)
     aggregates = service.get_aggregates(current_user.id)
-    return success(data=aggregates, message="Balance fetched")
+    return success(data=aggregates, message=SUCCESS_POINTS_BALANCE_FETCHED)
 
 
 @router.get("/history")
@@ -62,7 +70,7 @@ def get_points_history(
         "per_page": per_page,
         "total": total,
     }
-    return success(data=payload, message="Points history fetched")
+    return success(data=payload, message=SUCCESS_POINTS_HISTORY_FETCHED)
 
 
 @router.post("/convert", response_model=PointsConversionResponse, status_code=status.HTTP_201_CREATED)
@@ -103,7 +111,7 @@ def convert_points_request(
             "approved_at": conversion.approved_at,
         }
         data = PointsConversionResponse.model_validate(conv_dict)
-        return created(data=data, message="Conversion request submitted")
+        return created(data=data, message=SUCCESS_CONVERSION_REQUESTED)
     except ValueError as e:
         return client_error(message=str(e))
 
@@ -149,7 +157,7 @@ def get_pending_conversions(
 ):
     """Get pending conversion requests (HR only)."""
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return forbidden("Only HR/Admin can view pending conversion requests")
+        return forbidden(ERROR_ONLY_HR_ADMIN_VIEW_PENDING_CONVERSIONS)
 
     service = StoreService(db)
     conversions = service.get_pending_conversions()
@@ -186,11 +194,11 @@ def action_conversion(
     try:
         # Only HR/Admin users can approve/reject conversions
         if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
-            return forbidden("Only HR/Admin users can approve or reject conversion requests")
+            return forbidden(ERROR_ONLY_HR_ADMIN_ACTION_CONVERSION)
         # Strictly validate action
         action = (request.action or "").strip().upper()
         if action not in ("APPROVE", "REJECT"):
-            return client_error(message="Invalid action. Must be 'APPROVE' or 'REJECT'.", status_code=400)
+            return client_error(message=ERROR_INVALID_CONVERSION_ACTION, status_code=400)
 
         if action == "APPROVE":
             result = service.approve_conversion(conversion_id, current_user_id)
@@ -208,7 +216,7 @@ def action_conversion(
                 "approved_at": result.approved_at,
             }
             data = PointsConversionResponse.model_validate(conv_dict)
-            return success(data=data, message="Request approved and points deducted")
+            return success(data=data, message=SUCCESS_CONVERSION_APPROVED)
         else:
             result = service.reject_conversion(conversion_id, current_user_id)
             conv_dict = {
@@ -225,7 +233,7 @@ def action_conversion(
                 "approved_at": result.approved_at,
             }
             data = PointsConversionResponse.model_validate(conv_dict)
-            return success(data=data, message="Request rejected")
+            return success(data=data, message=SUCCESS_CONVERSION_REJECTED)
     except ValueError as e:
         return client_error(message=str(e))
 
@@ -241,7 +249,7 @@ def get_points_rules(
     service = StoreService(db)
     policies = service.get_policies()
     data = [PointsPolicyResponse.model_validate(p) for p in policies]
-    return success(data=data, message="Policies retrieved")
+    return success(data=data, message=SUCCESS_POLICIES_RETRIEVED)
 
 
 @router.post("/rules", response_model=PointsPolicyResponse, status_code=status.HTTP_201_CREATED)
@@ -252,12 +260,12 @@ def create_points_rule(
 ):
     """Create a new points policy rule (HR only)."""
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return forbidden("Only HR/Admin can create points rules")
+        return forbidden(ERROR_ONLY_HR_ADMIN_CREATE_RULE)
 
     service = StoreService(db)
     result = service.create_policy(rule)
     data = PointsPolicyResponse.model_validate(result)
-    return created(data=data, message="Rule created successfully")
+    return created(data=data, message=SUCCESS_POINT_RULE_CREATED)
 
 
 @router.put("/rules/{rule_id}", response_model=PointsPolicyResponse)
@@ -269,12 +277,12 @@ def update_points_rule(
 ):
     """Update a points policy rule (HR only)."""
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return forbidden("Only HR/Admin can update points rules")
+        return forbidden(ERROR_ONLY_HR_ADMIN_UPDATE_RULE)
 
     service = StoreService(db)
     try:
         result = service.update_policy(rule_id, rule)
         data = PointsPolicyResponse.model_validate(result)
-        return success(data=data, message="Rule updated successfully")
+        return success(data=data, message=SUCCESS_POINT_RULE_UPDATED)
     except ValueError as e:
         return client_error(message=str(e))

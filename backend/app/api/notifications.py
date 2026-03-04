@@ -9,7 +9,12 @@ from app.core.dependencies import get_current_user_id, get_current_user
 from app.schemas.notifications import NotificationResponse
 
 from app.utils.response import success, client_error, paginated_success
-from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.constants import (
+    DEFAULT_PAGE_SIZE, SUCCESS_NOTIFICATIONS_RETRIEVED, SUCCESS_UNREAD_COUNT_RETRIEVED,
+    SUCCESS_ALL_NOTIFICATIONS_MARKED_READ, ERROR_NOTIFICATION_NOT_FOUND,
+    SUCCESS_NOTIFICATION_MARKED_READ, ERROR_INVALID_MARK_READ_PARAMS,
+    ERROR_ONLY_HR_TRIGGER_REMINDERS, SUCCESS_EXPIRY_REMINDERS_SENT
+)
 
 from app.services.notification_service import NotificationService
 
@@ -39,7 +44,7 @@ def get_notifications(
         total=total,
         page=page,
         per_page=per_page,
-        message="Notifications retrieved",
+        message=SUCCESS_NOTIFICATIONS_RETRIEVED,
     )
 
 
@@ -51,7 +56,7 @@ def get_unread_count(
     """Get count of unread notifications."""
     service = NotificationService(db)
     count = service.get_unread_count(current_user_id)
-    return success(data={"unread_count": count}, message="Unread count retrieved")
+    return success(data={"unread_count": count}, message=SUCCESS_UNREAD_COUNT_RETRIEVED)
 
 
 @router.post("/mark-read")
@@ -66,14 +71,14 @@ def mark_notifications_read(
 
     if mark_all:
         service.mark_all_as_read(current_user_id)
-        return success(message="All notifications marked as read")
+        return success(message=SUCCESS_ALL_NOTIFICATIONS_MARKED_READ)
     elif notification_id:
         updated = service.mark_as_read(notification_id, current_user_id)
         if not updated:
-            return client_error(message="Notification not found or access denied", status_code=404)
-        return success(message="Notification marked as read")
+            return client_error(message=ERROR_NOTIFICATION_NOT_FOUND, status_code=404)
+        return success(message=SUCCESS_NOTIFICATION_MARKED_READ)
     else:
-        return client_error(message="Provide either notification_id or mark_all=true", status_code=400)
+        return client_error(message=ERROR_INVALID_MARK_READ_PARAMS, status_code=400)
 @router.post("/send-expiry-reminders")
 def send_expiry_reminders(
     days_before: int = 7,
@@ -82,8 +87,8 @@ def send_expiry_reminders(
 ):
     """Trigger expiry reminder notifications (Admin/HR only)."""
     if current_user.role != "HR":
-        return client_error(message="Access denied. Only HR can trigger reminders.", status_code=403)
+        return client_error(message=ERROR_ONLY_HR_TRIGGER_REMINDERS, status_code=403)
 
     service = NotificationService(db)
     sent_count = service.send_expiry_reminders(days_before=days_before)
-    return success(data={"sent_count": sent_count}, message=f"Successfully sent {sent_count} expiry reminders.")
+    return success(data={"sent_count": sent_count}, message=SUCCESS_EXPIRY_REMINDERS_SENT.format(sent_count))

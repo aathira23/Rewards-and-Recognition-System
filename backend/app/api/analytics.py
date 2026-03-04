@@ -11,6 +11,7 @@ from app.services.analytics_service import AnalyticsService
 from app.utils.response import success, client_error
 from app.core.dependencies import get_current_user
 from app.utils.enums import UserRole
+from app.utils.constants import SUCCESS_METRICS_RETRIEVED
 
 router = APIRouter()
 
@@ -39,4 +40,4 @@ def get_analytics(
         to_date=to_date
     )
 
-    return success(data=metrics, message="Analytics metrics retrieved successfully")
+    return success(data=metrics, message=SUCCESS_METRICS_RETRIEVED)

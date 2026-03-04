@@ -11,7 +11,11 @@ from app.utils.response import success, client_error, created, forbidden, pagina
 from app.utils.enums import UserRole
 from app.services import users_service
 from app.services.users_service import get_user_count
-from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.constants import (
+    DEFAULT_PAGE_SIZE, ERROR_UNAUTHORIZED_USER_UPDATE, SUCCESS_USER_FETCHED,
+    SUCCESS_USERS_LIST_FETCHED, ERROR_ONLY_HR_ADMIN_CREATE_USER, SUCCESS_USER_CREATED,
+    SUCCESS_USER_UPDATED
+)
 
 router = APIRouter()
 
@@ -21,7 +25,7 @@ def get_current_user_route(
     current_user = Depends(get_current_user)
 ):
     """Get current authenticated user details."""
-    return success(data=users_service.serialize_user(current_user), message="Fetched current user")
+    return success(data=users_service.serialize_user(current_user), message=SUCCESS_USER_FETCHED)
 
 
 @router.get("/")
@@ -40,7 +44,7 @@ def list_users(
         total=total,
         page=page,
         per_page=per_page,
-        message="User list fetched",
+        message=SUCCESS_USERS_LIST_FETCHED,
     )
 
 
@@ -58,14 +62,14 @@ def create_user(
     total = get_user_count(db)
     if total > 0:
         if current_user is None or getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
-            return forbidden("Only HR/Admin users can create new users")
+            return forbidden(ERROR_ONLY_HR_ADMIN_CREATE_USER)
 
     try:
         created_user = users_service.create_user(db, user)
     except ValueError as e:
         return client_error(message=str(e), status_code=409)
 
-    return created(data=users_service.serialize_user(created_user), message="User created")
+    return created(data=users_service.serialize_user(created_user), message=SUCCESS_USER_CREATED)
 
 
 @router.put("/{user_id}")
@@ -78,11 +82,11 @@ def update_user(
     """Update user profile (self or HR)."""
     # Only HR or the user themself may update the profile
     if not (getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value) or getattr(current_user, "id", None) == user_id):
-        return forbidden("You do not have permission to update this user")
+        return forbidden(ERROR_UNAUTHORIZED_USER_UPDATE)
 
     try:
         user = users_service.update_user(db, user_id, payload)
     except ValueError as e:
         return client_error(message=str(e), status_code=404)
 
-    return success(data=users_service.serialize_user(user), message="User updated")
+    return success(data=users_service.serialize_user(user), message=SUCCESS_USER_UPDATED)
