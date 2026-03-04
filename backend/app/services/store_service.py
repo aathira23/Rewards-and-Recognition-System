@@ -117,6 +117,7 @@ class StoreService:
         self.db.refresh(redemption)
 
         # 4. Notify user
+        remaining_balance = self.points_service.get_user_balance(user_id)
         self.notification_service.create_notification(
             user_id=user_id,
             message=f"Redemption successful! You redeemed '{reward.name}' for {reward.points_required} points.",
@@ -124,10 +125,10 @@ class StoreService:
             source_id=redemption.id,
             email_context={
                 "reward_name": reward.name,
-                "points_spent": reward.points_required,
+                "points_used": reward.points_required,
+                "remaining_balance": remaining_balance,
                 "redemption_id": redemption.id,
                 "redemption_date": str(redemption.created_at),
-                "details_url": "",
             },
         )
 

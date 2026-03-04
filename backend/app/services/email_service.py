@@ -239,12 +239,11 @@ class EmailService:
                 msg.attach(MIMEText(body_text, "plain"))
             msg.attach(MIMEText(body_html, "html"))
 
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+            server.ehlo()
             if settings.SMTP_USE_TLS:
-                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
-                server.ehlo()
                 server.starttls()
-            else:
-                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
+                server.ehlo()  # re-identify after STARTTLS
 
             if settings.SMTP_USERNAME:
                 server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)

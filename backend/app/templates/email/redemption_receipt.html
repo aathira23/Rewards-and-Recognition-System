@@ -1,15 +1,34 @@
 <!DOCTYPE html>
-<html>
-<body style="font-family:sans-serif;color:#333;max-width:600px;margin:auto">
-  <h2>Redemption Confirmed</h2>
-  <p>Hi {{ user_name }},</p>
-  <p>Your redemption of <strong>{{ reward_name }}</strong> has been confirmed.</p>
-  <table style="border-collapse:collapse;width:100%">
-    <tr><td style="padding:8px;border:1px solid #ddd"><strong>Points Used</strong></td><td style="padding:8px;border:1px solid #ddd">{{ points_used }}</td></tr>
-    <tr><td style="padding:8px;border:1px solid #ddd"><strong>Remaining Balance</strong></td><td style="padding:8px;border:1px solid #ddd">{{ remaining_balance }}</td></tr>
-  </table>
-  <p><a href="{{ frontend_url }}/store" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none">Visit Store</a></p>
-  <hr>
-  <p style="font-size:12px;color:#888">{{ org_name }} · <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Redemption confirmed – {{ org_name }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f2f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased">
+  <div style="background:#f0f2f5;padding:40px 20px">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+
+      <div style="background:linear-gradient(135deg,#4338ca 0%,#6d28d9 100%);padding:26px 40px">
+        <p style="margin:0;color:#ffffff;font-size:21px;font-weight:700;letter-spacing:-0.3px">{{ org_name }}</p>
+      </div>
+
+      <div style="padding:0 40px"><span style="display:inline-block;background:#dcfce7;color:#14532d;font-size:11px;font-weight:700;padding:4px 12px;border-radius:0 0 8px 8px;letter-spacing:0.6px;text-transform:uppercase">Redemption Confirmed</span></div>
+
+      <div style="padding:34px 40px 30px">
+        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">Redemption Confirmed</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Your redemption of <strong>{{ reward_name }}</strong> is confirmed and being processed.</p><div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:18px 0"><div style="display:flex;background:#f8f9fa;border-bottom:1px solid #e5e7eb"><div style="flex:0 0 45%;padding:9px 14px;font-size:13px;font-weight:600;color:#374151;border-right:1px solid #e5e7eb">Reward</div><div style="flex:1;padding:9px 14px;font-size:13px;color:#111827"><strong>{{ reward_name }}</strong></div></div><div style="display:flex;background:#ffffff;border-bottom:1px solid #e5e7eb"><div style="flex:0 0 45%;padding:9px 14px;font-size:13px;font-weight:600;color:#374151;border-right:1px solid #e5e7eb">Points Used</div><div style="flex:1;padding:9px 14px;font-size:13px;color:#111827"><strong>{{ points_used }}</strong></div></div><div style="display:flex;background:#f8f9fa;border-bottom:1px solid #e5e7eb"><div style="flex:0 0 45%;padding:9px 14px;font-size:13px;font-weight:600;color:#374151;border-right:1px solid #e5e7eb">Remaining Balance</div><div style="flex:1;padding:9px 14px;font-size:13px;color:#111827"><strong>{{ remaining_balance }} pts</strong></div></div><div style="display:flex;background:#ffffff;border-bottom:1px solid #e5e7eb"><div style="flex:0 0 45%;padding:9px 14px;font-size:13px;font-weight:600;color:#374151;border-right:1px solid #e5e7eb">Date</div><div style="flex:1;padding:9px 14px;font-size:13px;color:#111827">{{ redemption_date }}</div></div></div><p style="margin:22px 0 0"><a href="{{ frontend_url }}/store" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">Visit Store</a></p>
+      </div>
+
+      <div style="background:#f8f9fa;padding:16px 40px;border-top:1px solid #e9ecef">
+        <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;line-height:1.6">
+          &copy; {{ org_name }} &nbsp;&middot;&nbsp;
+          <a href="mailto:{{ support_email }}" style="color:#6366f1;text-decoration:none">{{ support_email }}</a>
+          &nbsp;&middot;&nbsp;
+          <a href="{{ manage_prefs_url }}" style="color:#6366f1;text-decoration:none">Notification settings</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
 </body>
 </html>
