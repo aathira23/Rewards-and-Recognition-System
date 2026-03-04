@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;color:#333;max-width:600px;margin:auto">
+  <h2>Redemption Confirmed</h2>
+  <p>Hi {{ user_name }},</p>
+  <p>Your redemption of <strong>{{ reward_name }}</strong> has been confirmed.</p>
+  <table style="border-collapse:collapse;width:100%">
+    <tr><td style="padding:8px;border:1px solid #ddd"><strong>Points Used</strong></td><td style="padding:8px;border:1px solid #ddd">{{ points_used }}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ddd"><strong>Remaining Balance</strong></td><td style="padding:8px;border:1px solid #ddd">{{ remaining_balance }}</td></tr>
+  </table>
+  <p><a href="{{ frontend_url }}/store" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none">Visit Store</a></p>
+  <hr>
+  <p style="font-size:12px;color:#888">{{ org_name }} · <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+</body>
+</html>

@@ -32,5 +32,17 @@ class Settings(BaseSettings):
     # Points expiry reminder window (days before expiry to notify users)
     POINTS_EXPIRY_REMINDER_DAYS: int = 7
 
+    # SMTP / Email Configuration
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM_EMAIL: str = "noreply@example.com"
+    SMTP_FROM_NAME: str = "Rewards & Recognition"
+
+    # Front-end base URL (used for links in emails)
+    FRONTEND_URL: str = "http://localhost:8080"
+
 
 settings = Settings()

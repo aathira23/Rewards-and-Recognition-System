@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;color:#333;max-width:600px;margin:auto">
+  <h2>You've been recognised! 🎉</h2>
+  <p>Hi {{ user_name }},</p>
+  <p><strong>{{ sender_name }}</strong> recognised you{% if badge_name %} with the <strong>{{ badge_name }}</strong> badge{% endif %}.</p>
+  {% if message %}
+  <blockquote style="border-left:4px solid #4f46e5;padding-left:12px;color:#555;margin:16px 0">{{ message }}</blockquote>
+  {% endif %}
+  {% if points_awarded %}
+  <p>You received <strong>{{ points_awarded }} points</strong> for this recognition.</p>
+  {% endif %}
+  <p><a href="{{ frontend_url }}/feed" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none">View Recognition Feed</a></p>
+  <hr>
+  <p style="font-size:12px;color:#888">{{ org_name }} · <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+</body>
+</html>

@@ -16,7 +16,8 @@ from app.api import (
     analytics,
     reports,
     config,
-    departments
+    departments,
+    email,
 )
 
 api_router = APIRouter()
@@ -35,3 +36,4 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["Analytic
 api_router.include_router(reports.router, prefix="/reports", tags=["Reports"])
 api_router.include_router(config.router, prefix="/config", tags=["System Configuration"])
 api_router.include_router(departments.router, prefix="/departments", tags=["Department Management"])
+api_router.include_router(email.router, prefix="/email", tags=["Email Notifications"])

@@ -1,7 +1,7 @@
 """
 User model - Core user entity.
 """
-from sqlalchemy import Column, BigInteger, String, Date, DateTime, ForeignKey
+from sqlalchemy import Column, BigInteger, String, Boolean, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -36,3 +36,4 @@ class User(Base):
     redemptions = relationship("Redemption", back_populates="user")
     conversions = relationship("PointsConversion", foreign_keys="PointsConversion.user_id", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
+    email_notifications_enabled = Column(Boolean, nullable=False, default=True)

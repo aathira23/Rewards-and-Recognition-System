@@ -121,7 +121,14 @@ class StoreService:
             user_id=user_id,
             message=f"Redemption successful! You redeemed '{reward.name}' for {reward.points_required} points.",
             source_type=ReferenceType.REDEMPTION.value,
-            source_id=redemption.id
+            source_id=redemption.id,
+            email_context={
+                "reward_name": reward.name,
+                "points_spent": reward.points_required,
+                "redemption_id": redemption.id,
+                "redemption_date": str(redemption.created_at),
+                "details_url": "",
+            },
         )
 
         return redemption
@@ -160,7 +167,13 @@ class StoreService:
             user_id=user_id,
             message=f"Your request to convert {points} points to cash ({cash_amount}) has been submitted and is pending approval.",
             source_type=ReferenceType.CONVERSION.value,
-            source_id=conversion.id
+            source_id=conversion.id,
+            email_event_type="CONVERSION_SUBMITTED",
+            email_context={
+                "points": points,
+                "cash_amount": cash_amount,
+                "details_url": "",
+            },
         )
 
         return conversion
@@ -217,7 +230,16 @@ class StoreService:
             user_id=conversion.user_id,
             message=f"Your points conversion request for {conversion.points_converted} points has been approved.",
             source_type=ReferenceType.CONVERSION.value,
-            source_id=conversion.id
+            source_id=conversion.id,
+            email_event_type="CONVERSION_APPROVED",
+            email_context={
+                "item_type": "Points Conversion",
+                "status": "Approved",
+                "approver_name": "HR",
+                "comment": "",
+                "points_amount": conversion.points_converted,
+                "details_url": "",
+            },
         )
 
         return conversion
@@ -240,7 +262,16 @@ class StoreService:
             user_id=conversion.user_id,
             message=f"Your points conversion request for {conversion.points_converted} points has been rejected.",
             source_type=ReferenceType.CONVERSION.value,
-            source_id=conversion.id
+            source_id=conversion.id,
+            email_event_type="CONVERSION_REJECTED",
+            email_context={
+                "item_type": "Points Conversion",
+                "status": "Rejected",
+                "approver_name": "HR",
+                "comment": "",
+                "points_amount": conversion.points_converted,
+                "details_url": "",
+            },
         )
 
         return conversion

@@ -134,7 +134,16 @@ class AwardsService:
                 user_id=award.nominee_id,
                 message=f"Congratulations! Your {award.award_type.name} award has been fully approved by HR. {award.points_awarded} points awarded!",
                 source_type=ReferenceType.AWARD.value,
-                source_id=award.id
+                source_id=award.id,
+                email_event_type="AWARD_APPROVED",
+                email_context={
+                    "item_type": "Award",
+                    "status": "Approved",
+                    "approver_name": "HR",
+                    "comment": "",
+                    "points_amount": award.points_awarded,
+                    "details_url": "",
+                },
             )
 
         elif nominator.role != UserRole.EMPLOYEE.value: # Manager or Dept Head
@@ -176,7 +185,16 @@ class AwardsService:
                     user_id=award.nominee_id,
                     message=f"Congratulations! Your {award.award_type.name} award has been fully approved. {award.points_awarded} points awarded!",
                     source_type=ReferenceType.AWARD.value,
-                    source_id=award.id
+                    source_id=award.id,
+                    email_event_type="AWARD_APPROVED",
+                    email_context={
+                        "item_type": "Award",
+                        "status": "Approved",
+                        "approver_name": nominator.name,
+                        "comment": "",
+                        "points_amount": award.points_awarded,
+                        "details_url": "",
+                    },
                 )
             else:
                 # Notify next approver if more approvals are needed
@@ -194,7 +212,15 @@ class AwardsService:
                 user_id=nominee_id,
                 message=f"You have been nominated for a {award_type.name} award by {nominator.name}!",
                 source_type=ReferenceType.AWARD.value,
-                source_id=award.id
+                source_id=award.id,
+                email_event_type="NOMINATION_SUBMITTED",
+                email_context={
+                    "item_type": "Award Nomination",
+                    "status": "Submitted",
+                    "approver_name": nominator.name,
+                    "comment": "",
+                    "details_url": "",
+                },
             )
 
         # 5. Create notification for manager (if nominee has a manager and award is pending)
@@ -391,7 +417,15 @@ class AwardsService:
             user_id=award.nominee_id,
             message=f"Update on your nomination: The {award.award_type.name} award nomination has not been approved at this time.",
             source_type=ReferenceType.AWARD.value,
-            source_id=award.id
+            source_id=award.id,
+            email_event_type="AWARD_REJECTED",
+            email_context={
+                "item_type": "Award Nomination",
+                "status": "Rejected",
+                "approver_name": approval_level,
+                "comment": comments or "",
+                "details_url": "",
+            },
         )
 
         # 4. Notify nominator (the person who submitted it)
@@ -402,7 +436,15 @@ class AwardsService:
             user_id=award.nominator_id,
             message=f"Your nomination for {award.nominee.name} ({award.award_type.name}) was rejected by your {level_label} {approver_name}. Reason: {comments}",
             source_type=ReferenceType.AWARD.value,
-            source_id=award.id
+            source_id=award.id,
+            email_event_type="AWARD_REJECTED",
+            email_context={
+                "item_type": "Award Nomination",
+                "status": "Rejected",
+                "approver_name": approver_name,
+                "comment": comments or "",
+                "details_url": "",
+            },
         )
 
         self.db.commit()

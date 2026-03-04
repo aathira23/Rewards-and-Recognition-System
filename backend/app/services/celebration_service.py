@@ -171,7 +171,13 @@ class CelebrationService:
                 user_id=user.id,
                 message=f"🎉 Happy Birthday! You've been awarded {points} reward points. Have a great day!",
                 source_type=ReferenceType.CELEBRATION.value,
-                source_id=celebration.id
+                source_id=celebration.id,
+                email_context={
+                    "colleague_name": user.name,
+                    "event_type": "Birthday",
+                    "event_date": str(today),
+                    "recognize_url": "",
+                },
             )
 
             count += 1
@@ -238,7 +244,13 @@ class CelebrationService:
                 user_id=user.id,
                 message=f"🎊 Happy Work Anniversary! Celebrating {years} year{'s' if years > 1 else ''} with us. You've earned {points} reward points!",
                 source_type=ReferenceType.CELEBRATION.value,
-                source_id=celebration.id
+                source_id=celebration.id,
+                email_context={
+                    "colleague_name": user.name,
+                    "event_type": f"{years}-Year Work Anniversary",
+                    "event_date": str(today),
+                    "recognize_url": "",
+                },
             )
 
             count += 1

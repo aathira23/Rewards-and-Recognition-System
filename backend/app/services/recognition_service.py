@@ -125,7 +125,14 @@ class RecognitionService:
             user_id=receiver_id,
             message=f"{sender_name} appreciated you with a '{badge.name}' badge! {points} points earned.",
             source_type=ReferenceType.ECARD.value,
-            source_id=ecard.id
+            source_id=ecard.id,
+            email_context={
+                "sender_name": sender_name,
+                "badge_name": badge.name,
+                "recognition_message": message or "",
+                "points": points,
+                "view_url": "",
+            },
         )
 
         return ecard

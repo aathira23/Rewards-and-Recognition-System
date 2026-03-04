@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;color:#333;max-width:600px;margin:auto">
+  <h2>Points Conversion Submitted</h2>
+  <p>Hi {{ user_name }},</p>
+  <p>Your request to convert <strong>{{ points }}</strong> points to <strong>{{ target }}</strong> has been submitted and is under review.</p>
+  <p>You will receive another email once a decision is made.</p>
+  <p><a href="{{ frontend_url }}/wallet" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none">View Wallet</a></p>
+  <hr>
+  <p style="font-size:12px;color:#888">{{ org_name }} · <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+</body>
+</html>
