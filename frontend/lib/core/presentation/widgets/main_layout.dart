@@ -46,9 +46,10 @@ class _MainLayoutState extends State<MainLayout> {
             Container(
               width: 260,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 border: Border(
-                  right: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                  right: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.1)),
                 ),
               ),
               child: Column(
@@ -195,10 +196,10 @@ class _MainLayoutState extends State<MainLayout> {
                   height: 70,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: theme.colorScheme.surface,
                     border: Border(
-                      bottom:
-                          BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                      bottom: BorderSide(
+                          color: theme.dividerColor.withValues(alpha: 0.1)),
                     ),
                   ),
                   child: Row(
@@ -215,7 +216,7 @@ class _MainLayoutState extends State<MainLayout> {
                         style: GoogleFonts.outfit(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const Spacer(),
@@ -236,8 +237,7 @@ class _MainLayoutState extends State<MainLayout> {
                 // Content Area
                 Expanded(
                   child: Container(
-                    color: const Color(
-                        0xFFF8F9FA), // Light grey background for content
+                    color: theme.colorScheme.surfaceContainer,
                     child: widget.destinations[_selectedIndex].page,
                   ),
                 ),

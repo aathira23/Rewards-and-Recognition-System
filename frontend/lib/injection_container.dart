@@ -1,7 +1,9 @@
 /// "Dependency injection container using GetIt to decouple components."
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'core/network/web_token_provider.dart';
 
 import 'core/constants/api_constants.dart';
 import 'core/network/auth_interceptor.dart';
@@ -27,6 +29,15 @@ import 'features/recognitions/domain/usecases/get_recognition_feed_usecase.dart'
 import 'features/recognitions/domain/usecases/send_recognition_usecase.dart';
 import 'features/recognitions/domain/usecases/get_appreciation_stats_usecase.dart';
 import 'features/recognitions/presentation/bloc/recognitions_bloc.dart';
+import 'features/catalog/data/datasources/catalog_remote_data_source.dart';
+import 'features/catalog/data/repositories/catalog_repository_impl.dart';
+import 'features/catalog/domain/repositories/catalog_repository.dart';
+import 'features/catalog/domain/usecases/get_catalog_items_usecase.dart';
+import 'features/catalog/domain/usecases/redeem_item_usecase.dart';
+import 'features/catalog/domain/usecases/get_history_usecase.dart';
+import 'features/catalog/domain/usecases/submit_conversion_usecase.dart';
+import 'features/catalog/domain/usecases/get_points_rules_usecase.dart';
+import 'features/catalog/presentation/bloc/catalog_bloc.dart';
 
 import 'features/points/data/datasources/points_remote_data_source.dart';
 import 'features/points/data/repositories/points_repository_impl.dart';
@@ -75,9 +86,16 @@ Future<void> init() async {
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(client: sl()),
   );
-  sl.registerLazySingleton<AuthLocalDataSource>(
-    () => AuthLocalDataSourceImpl(secureStorage: sl()),
-  );
+  // On web, use SharedPreferences; on native use FlutterSecureStorage.
+  if (kIsWeb) {
+    sl.registerLazySingleton<AuthLocalDataSource>(
+      () => WebTokenProviderImpl(),
+    );
+  } else {
+    sl.registerLazySingleton<AuthLocalDataSource>(
+      () => AuthLocalDataSourceImpl(secureStorage: sl()),
+    );
+  }
 
   //! Features - Profile
   // Use cases
@@ -118,6 +136,35 @@ Future<void> init() async {
     ),
   );
 
+  //! Features - Catalog
+  // Bloc
+  sl.registerFactory(
+    () => CatalogBloc(
+      getCatalogItemsUseCase: sl(),
+      redeemItemUseCase: sl(),
+      getHistoryUseCase: sl(),
+      submitConversionUseCase: sl(),
+      getPointsRulesUseCase: sl(),
+    ),
+  );
+
+  // Use cases
+  sl.registerLazySingleton(() => GetCatalogItemsUseCase(sl()));
+  sl.registerLazySingleton(() => RedeemItemUseCase(sl()));
+  sl.registerLazySingleton(() => GetHistoryUseCase(sl()));
+  sl.registerLazySingleton(() => SubmitConversionUseCase(sl()));
+  sl.registerLazySingleton(() => GetPointsRulesUseCase(sl()));
+
+  // Repository
+  sl.registerLazySingleton<CatalogRepository>(
+    () => CatalogRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<CatalogRemoteDataSource>(
+    () => CatalogRemoteDataSourceImpl(dio: sl()),
+  );
+
   //! Features - Points
   // Use cases
   sl.registerLazySingleton(() => GetPointsSummaryUseCase(sl()));
@@ -151,5 +198,7 @@ Future<void> init() async {
       ),
     ),
   );
-  sl.registerLazySingleton(() => const FlutterSecureStorage());
+  if (!kIsWeb) {
+    sl.registerLazySingleton(() => const FlutterSecureStorage());
+  }
 }
