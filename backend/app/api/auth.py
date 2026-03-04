@@ -12,6 +12,7 @@ from app.core.security import (
     create_access_token,
 )
 from app.models.users import User
+from app.utils.constants import ERROR_INCORRECT_LOGIN, SUCCESS_LOGIN
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -28,7 +29,7 @@ def login(
     if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail=ERROR_INCORRECT_LOGIN,
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -41,5 +42,5 @@ def login(
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
-        "message": "Login successful"
+        "message": SUCCESS_LOGIN
     }

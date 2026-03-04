@@ -10,7 +10,11 @@ from app.core.dependencies import get_current_user_id, get_current_user
 from app.schemas.celebrations import CelebrationResponse
 from app.services.celebration_service import CelebrationService
 from app.utils.response import success, paginated_success
-from app.utils.constants import DEFAULT_PAGE_SIZE
+from app.utils.constants import (
+    DEFAULT_PAGE_SIZE, SUCCESS_CELEBRATIONS_FETCHED,
+    SUCCESS_CELEBRATION_HISTORY_FETCHED, ERROR_ONLY_HR_ADMIN_PROCESS_CELEBRATIONS,
+    SUCCESS_CELEBRATIONS_PROCESSED
+)
 
 router = APIRouter()
 
@@ -24,7 +28,7 @@ def get_upcoming_celebrations(
     """Get upcoming celebrations (birthdays, anniversaries)."""
     service = CelebrationService(db)
     items = service.get_upcoming_celebrations(days=days)
-    return success(data=items, message="Upcoming celebrations fetched")
+    return success(data=items, message=SUCCESS_CELEBRATIONS_FETCHED)
 
 
 @router.get("/history")
@@ -49,7 +53,7 @@ def get_celebration_history(
         total=total,
         page=page,
         per_page=per_page,
-        message="Celebration history fetched",
+        message=SUCCESS_CELEBRATION_HISTORY_FETCHED,
     )
 
 
@@ -63,12 +67,12 @@ def process_today_celebrations(
     from app.utils.response import client_error
 
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
-        return client_error(message="Only HR/Admin can trigger celebration processing", status_code=403)
+        return client_error(message=ERROR_ONLY_HR_ADMIN_PROCESS_CELEBRATIONS, status_code=403)
 
     service = CelebrationService(db)
     result = service.process_today_celebrations()
 
     return success(
         data=result,
-        message=f"Processed {result['birthdays']} birthdays and {result['anniversaries']} anniversaries"
+        message=SUCCESS_CELEBRATIONS_PROCESSED.format(result['birthdays'], result['anniversaries'])
     )

@@ -13,6 +13,11 @@ from app.utils.response import success, client_error
 from app.schemas.reports import ReportResponse
 from app.utils.export import generate_csv_response
 from typing import Union, Any
+from app.utils.constants import (
+    SUCCESS_RECOGNITION_REPORT_GENERATED, SUCCESS_REDEMPTION_REPORT_GENERATED,
+    SUCCESS_WALLET_REPORT_GENERATED, SUCCESS_EXPIRY_FORECAST_GENERATED,
+    ERROR_INVALID_REPORT_TYPE, SUCCESS_PAYROLL_REPORT_GENERATED
+)
 
 router = APIRouter()
 
@@ -35,18 +40,18 @@ def get_reports(
 
     if report_type == "AWARDS_GIVEN" or report_type == "RECOGNITIONS":
         data = service.get_recognition_report(from_date, to_date, department_id)
-        msg = "Recognition report generated"
+        msg = SUCCESS_RECOGNITION_REPORT_GENERATED
     elif report_type == "REDEMPTIONS":
         data = service.get_redemption_report(from_date, to_date)
-        msg = "Redemption report generated"
+        msg = SUCCESS_REDEMPTION_REPORT_GENERATED
     elif report_type == "WALLET_UTILIZATION":
         data = service.get_wallet_utilization_report()
-        msg = "Wallet utilization report generated"
+        msg = SUCCESS_WALLET_REPORT_GENERATED
     elif report_type == "EXPIRY_FORECAST":
         data = service.get_expiry_forecast(days)
-        msg = f"Points expiry forecast for next {days} days generated"
+        msg = SUCCESS_EXPIRY_FORECAST_GENERATED.format(days)
     else:
-        return client_error(message=f"Invalid report type: {report_type}")
+        return client_error(message=ERROR_INVALID_REPORT_TYPE.format(report_type))
 
     if export_format == "csv":
         filename = f"{report_type.lower()}_report_{datetime.now().strftime('%Y%m%d')}"
@@ -86,7 +91,7 @@ def get_payroll_report(
                 "generated_at": datetime.now(),
                 "data": data
             },
-            message=f"Payroll report for {month} generated"
+            message=SUCCESS_PAYROLL_REPORT_GENERATED.format(month)
         )
     except Exception as e:
         return client_error(message=str(e))

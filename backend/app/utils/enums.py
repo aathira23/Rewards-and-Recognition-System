@@ -13,6 +13,13 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 
+class Scope(str, Enum):
+    """Analytics visibility scopes."""
+    ORG = "ORG"
+    DEPARTMENT = "DEPARTMENT"
+    TEAM = "TEAM"
+
+
 class WalletType(str, Enum):
     """Wallet types."""
     EMPLOYEE = "EMPLOYEE"

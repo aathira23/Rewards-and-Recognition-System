@@ -12,7 +12,7 @@ from app.models.wallets import Wallet
 from app.models.wallet_funding import WalletFunding
 from app.models.points_conversion import PointsConversion
 from app.models.points_ledger import PointsLedger
-from app.utils.enums import WalletType, ConversionStatus
+from app.utils.enums import WalletType, ConversionStatus, Scope
 
 
 class AnalyticsService:
@@ -150,7 +150,7 @@ class AnalyticsService:
     def get_dashboard_metrics(
         self,
         current_user: Any,
-        scope: str = "ORG",
+        scope: Scope = Scope.ORG,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None
     ) -> Dict[str, Any]:
@@ -209,14 +209,14 @@ class AnalyticsService:
             "breakdown": breakdown,
         }
 
-    def _get_scope_user_ids(self, user: Any, scope: str) -> Optional[List[int]]:
+    def _get_scope_user_ids(self, user: Any, scope: Scope) -> Optional[List[int]]:
         """Identify which users belong to the requested scope."""
-        if scope == "TEAM":
+        if scope == Scope.TEAM:
             # Direct reports
             subordinates = self.db.query(User.id).filter(User.manager_id == user.id).all()
             return [s.id for s in subordinates]
 
-        elif scope == "DEPARTMENT":
+        elif scope == Scope.DEPARTMENT:
             # Everyone in the dept
             dept_id = user.department_id
             if not dept_id: return []
@@ -226,21 +226,21 @@ class AnalyticsService:
         # ORG scope or HR/Admin role - returns None to signify "no filter" (all users)
         return None
 
-    def _get_scope_name(self, user: Any, scope: str) -> str:
+    def _get_scope_name(self, user: Any, scope: Scope) -> str:
         """Return a human-readable label for the current scope."""
-        if scope == "DEPARTMENT":
+        if scope == Scope.DEPARTMENT:
             dept = self.db.query(Department).filter(
                 Department.id == user.department_id
             ).first()
             return dept.name if dept else "Department"
-        if scope == "TEAM":
+        if scope == Scope.TEAM:
             return f"{user.name}'s Team"
         return "Organization"
 
     def _get_breakdown(
         self,
         user: Any,
-        scope: str,
+        scope: Scope,
         from_date: Optional[date],
         to_date: Optional[date],
     ) -> List[Dict[str, Any]]:
@@ -248,7 +248,7 @@ class AnalyticsService:
         Return a per-department breakdown for ORG scope, or a per-team
         (manager) breakdown for DEPARTMENT scope. Returns [] for TEAM scope.
         """
-        if scope == "ORG":
+        if scope == Scope.ORG:
             departments = self.db.query(Department).all()
             result = []
             for dept in departments:
@@ -293,7 +293,7 @@ class AnalyticsService:
             result.sort(key=lambda x: x["recognition_count"], reverse=True)
             return result
 
-        if scope == "DEPARTMENT":
+        if scope == Scope.DEPARTMENT:
             dept_id = user.department_id
             if not dept_id:
                 return []
