@@ -90,6 +90,8 @@ SUCCESS_PAYROLL_REPORT_GENERATED = "Payroll report for {} generated"
 
 SUCCESS_METRICS_RETRIEVED = "Analytics metrics retrieved successfully"
 SUCCESS_LOGIN = "Login successful"
+SUCCESS_FEATURE_FLAGS_RETRIEVED = "Feature flags retrieved"
+INFO_CONVERSION_FEATURE_DISABLED = "Conversion feature is disabled"
 
 # Error Messages
 ERROR_ONLY_HR_ADMIN_CREATE_USER = "Only HR/Admin users can create new users"

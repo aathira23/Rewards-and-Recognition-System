@@ -11,7 +11,10 @@ from app.utils.enums import UserRole
 from app.services.config_service import ConfigService
 from app.schemas.system_config import SystemConfigResponse, SystemConfigUpdate
 from app.utils.response import success, client_error
-from app.utils.constants import ERROR_ACCESS_DENIED, SUCCESS_CONFIGS_RETRIEVED, ERROR_CONFIG_RETRIEVAL_FAILED, SUCCESS_CONFIG_UPDATED
+from app.utils.constants import (
+    ERROR_ACCESS_DENIED, SUCCESS_CONFIGS_RETRIEVED, ERROR_CONFIG_RETRIEVAL_FAILED,
+    SUCCESS_CONFIG_UPDATED, SUCCESS_FEATURE_FLAGS_RETRIEVED
+)
 from app.utils.feature_flags import get_all_feature_flags
 
 router = APIRouter()
@@ -56,4 +59,4 @@ def get_feature_flags(
 ):
     """Public endpoint — returns current feature flag values (no auth required)."""
     flags = get_all_feature_flags(db)
-    return success(data=flags, message="Feature flags retrieved")
+    return success(data=flags, message=SUCCESS_FEATURE_FLAGS_RETRIEVED)

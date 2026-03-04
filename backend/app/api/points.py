@@ -25,7 +25,7 @@ from app.utils.constants import (
     SUCCESS_CONVERSION_APPROVED, SUCCESS_CONVERSION_REJECTED,
     SUCCESS_POLICIES_RETRIEVED, ERROR_ONLY_HR_ADMIN_CREATE_RULE,
     SUCCESS_POINT_RULE_CREATED, ERROR_ONLY_HR_ADMIN_UPDATE_RULE,
-    SUCCESS_POINT_RULE_UPDATED
+    SUCCESS_POINT_RULE_UPDATED, INFO_CONVERSION_FEATURE_DISABLED
 )
 from app.utils.feature_flags import is_feature_enabled
 
@@ -129,7 +129,7 @@ def get_conversions(
 ):
     """Get conversion requests: HR sees all requests; users see only their own."""
     if not is_feature_enabled(db, 'conversion_enabled'):
-        return success(data=[], message="Conversion feature is disabled")
+        return success(data=[], message=INFO_CONVERSION_FEATURE_DISABLED)
     service = StoreService(db)
     # HR/Admin can view all conversions
     if getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value):
@@ -164,7 +164,7 @@ def get_pending_conversions(
 ):
     """Get pending conversion requests (HR only)."""
     if not is_feature_enabled(db, 'conversion_enabled'):
-        return success(data=[], message="Conversion feature is disabled")
+        return success(data=[], message=INFO_CONVERSION_FEATURE_DISABLED)
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
         return forbidden(ERROR_ONLY_HR_ADMIN_VIEW_PENDING_CONVERSIONS)
 
