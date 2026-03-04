@@ -15,11 +15,15 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for models
 Base = declarative_base()
 
-# Import all model modules so SQLAlchemy registers mappers for relationships
-# This ensures relationships referenced by string names (e.g. "Department")
-# are available when mappers are configured at runtime.
 def import_models():
     """Explicitly import all models to register with Base.metadata."""
+    import importlib
+    import pkgutil
+    import app.models
+    
+    # Dynamically import all modules in the app.models package
+    for loader, module_name, is_pkg in pkgutil.walk_packages(app.models.__path__, app.models.__name__ + "."):
+        importlib.import_module(module_name)
 
 import_models()
 
