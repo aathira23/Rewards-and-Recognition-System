@@ -94,15 +94,8 @@ SUCCESS_FEATURE_FLAGS_RETRIEVED = "Feature flags retrieved"
 INFO_CONVERSION_FEATURE_DISABLED = "Conversion feature is disabled"
 
 # Email notification messages
-SUCCESS_EMAIL_TEMPLATES_RETRIEVED = "Email templates retrieved"
-SUCCESS_EMAIL_TEMPLATE_RETRIEVED = "Template retrieved"
-SUCCESS_EMAIL_TEMPLATE_CREATED = "Email template created"
-SUCCESS_EMAIL_TEMPLATE_UPDATED = "Template updated"
 SUCCESS_EMAIL_LOGS_RETRIEVED = "Email logs retrieved"
-SUCCESS_TEST_EMAIL_DISPATCHED = "Test email dispatched ({})"
-ERROR_EMAIL_TEMPLATE_NOT_FOUND = "Template not found"
-ERROR_EMAIL_TEMPLATE_EXISTS = "Template with this key already exists"
-ERROR_EMAIL_TEMPLATE_INACTIVE = "Template not found or inactive"
+SUCCESS_TEST_EMAIL_DISPATCHED = "Test email dispatched"
 
 # Error Messages
 
