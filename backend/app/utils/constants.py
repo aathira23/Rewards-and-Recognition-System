@@ -128,6 +128,8 @@ ERROR_ONLY_HR_TRIGGER_REMINDERS = "Access denied. Only HR can trigger reminders.
 ERROR_ONLY_HR_ADMIN_VIEW_PENDING_CONVERSIONS = "Only HR/Admin can view pending conversion requests"
 ERROR_ONLY_HR_ADMIN_ACTION_CONVERSION = "Only HR/Admin users can approve or reject conversion requests"
 ERROR_INVALID_CONVERSION_ACTION = "Invalid action. Must be 'APPROVE' or 'REJECT'."
+ERROR_ONLY_HR_ADMIN_CREATE_RULE = "Access denied. Only HR/Admin can create points rules."
+ERROR_ONLY_HR_ADMIN_UPDATE_RULE = "Access denied. Only HR/Admin can update points rules."
 
 ERROR_ONLY_HR_ADMIN_CREATE_BADGE = "Only HR/Admin can create badges"
 ERROR_FAILED_CREATE_BADGE = "Failed to create badge"

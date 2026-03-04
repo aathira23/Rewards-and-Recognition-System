@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.services.analytics_service import AnalyticsService
 from app.utils.response import success, client_error
 from app.core.dependencies import get_current_user
-from app.utils.enums import UserRole
+from app.utils.enums import UserRole, Scope
 from app.utils.constants import SUCCESS_METRICS_RETRIEVED
 
 router = APIRouter()
@@ -30,12 +30,12 @@ def get_analytics(
     from app.core.scope_policy import resolve_effective_scope
     
     # 1. Enforce Role-Based Scope
-    scope = resolve_effective_scope(scope, current_user.role)
+    resolved_scope = resolve_effective_scope(scope, current_user.role)
 
     service = AnalyticsService(db)
     metrics = service.get_dashboard_metrics(
         current_user=current_user,
-        scope=scope,
+        scope=resolved_scope,
         from_date=from_date,
         to_date=to_date
     )
