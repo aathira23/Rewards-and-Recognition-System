@@ -16,7 +16,7 @@
       <div style="padding:0 40px"><span style="display:inline-block;background:#ffedd5;color:#7c2d12;font-size:11px;font-weight:700;padding:4px 12px;border-radius:0 0 8px 8px;letter-spacing:0.6px;text-transform:uppercase">Action Required</span></div>
 
       <div style="padding:34px 40px 30px">
-        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">Your Points Are Expiring Soon</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:18px;text-align:center;margin:18px 0"><p style="margin:0 0 4px;font-size:36px;font-weight:700;color:#92400e">{{ expiring_points }}</p><p style="margin:0;font-size:13px;color:#78350f;font-weight:600">points expiring on {{ expiry_date }}</p></div><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Don&#39;t let your hard-earned points go to waste — redeem them before they expire.</p><p style="margin:22px 0 0"><a href="{{ frontend_url }}/store" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">Redeem Now</a></p>
+        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">Your Points Are Expiring Soon</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:18px;text-align:center;margin:18px 0"><p style="margin:0 0 4px;font-size:36px;font-weight:700;color:#92400e">{{ points }}</p><p style="margin:0;font-size:13px;color:#78350f;font-weight:600">points expiring on {{ expiry_date }}</p></div><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Don&#39;t let your hard-earned points go to waste &#8212; redeem them before they expire.</p><p style="margin:22px 0 0"><a href="{{ frontend_url }}" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">Open Dashboard</a></p>
       </div>
 
       <div style="background:#f8f9fa;padding:16px 40px;border-top:1px solid #e9ecef">
@@ -24,7 +24,7 @@
           &copy; {{ org_name }} &nbsp;&middot;&nbsp;
           <a href="mailto:{{ support_email }}" style="color:#6366f1;text-decoration:none">{{ support_email }}</a>
           &nbsp;&middot;&nbsp;
-          <a href="{{ manage_prefs_url }}" style="color:#6366f1;text-decoration:none">Notification settings</a>
+          <a href="{{ frontend_url }}" style="color:#6366f1;text-decoration:none">Open Dashboard</a>
         </p>
       </div>
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>You've been recognised – {{ org_name }}</title>
+  <title>You&#39;ve been recognised – {{ org_name }}</title>
 </head>
 <body style="margin:0;padding:0;background:#f0f2f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased">
   <div style="background:#f0f2f5;padding:40px 20px">
@@ -13,10 +13,10 @@
         <p style="margin:0;color:#ffffff;font-size:21px;font-weight:700;letter-spacing:-0.3px">{{ org_name }}</p>
       </div>
 
-      <div style="padding:0 40px"><span style="display:inline-block;background:#dcfce7;color:#14532d;font-size:11px;font-weight:700;padding:4px 12px;border-radius:0 0 8px 8px;letter-spacing:0.6px;text-transform:uppercase">You've Been Recognised</span></div>
+      <div style="padding:0 40px"><span style="display:inline-block;background:#dcfce7;color:#14532d;font-size:11px;font-weight:700;padding:4px 12px;border-radius:0 0 8px 8px;letter-spacing:0.6px;text-transform:uppercase">You&#39;ve Been Recognised</span></div>
 
       <div style="padding:34px 40px 30px">
-        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">You&#39;ve been recognised! 🏆</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65"><strong>{{ sender_name }}</strong> has recognised you{% if badge_name %} with the <strong>{{ badge_name }}</strong> badge{% endif %}.</p>{% if message %}<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0"><p style="margin:0;font-size:15px;color:#166534;font-style:italic;line-height:1.6">&#8220;{{ message }}&#8221;</p></div>{% endif %}{% if points_awarded %}<div style="background:#f8faff;border:1px solid #c7d2fe;border-radius:8px;padding:14px 18px;margin:14px 0;text-align:center"><p style="margin:0 0 2px;font-size:28px;font-weight:700;color:#4338ca">+{{ points_awarded }}</p><p style="margin:0;font-size:12px;color:#4f46e5;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Points Awarded</p></div>{% endif %}<p style="margin:22px 0 0"><a href="{{ frontend_url }}/feed" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">View Recognition Feed</a></p>
+        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">You&#39;ve been recognised! &#127942;</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65"><strong>{{ sender_name }}</strong> has recognised you{% if badge_name %} with the <strong>{{ badge_name }}</strong> badge{% endif %}.</p>{% if recognition_message %}<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0"><p style="margin:0;font-size:15px;color:#166534;font-style:italic;line-height:1.6">&#8220;{{ recognition_message }}&#8221;</p></div>{% endif %}{% if points %}<div style="background:#f8faff;border:1px solid #c7d2fe;border-radius:8px;padding:14px 18px;margin:14px 0;text-align:center"><p style="margin:0 0 2px;font-size:28px;font-weight:700;color:#4338ca">+{{ points }}</p><p style="margin:0;font-size:12px;color:#4f46e5;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Points Earned</p></div>{% endif %}<p style="margin:22px 0 0"><a href="{{ frontend_url }}" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">Open Dashboard</a></p>
       </div>
 
       <div style="background:#f8f9fa;padding:16px 40px;border-top:1px solid #e9ecef">
@@ -24,7 +24,7 @@
           &copy; {{ org_name }} &nbsp;&middot;&nbsp;
           <a href="mailto:{{ support_email }}" style="color:#6366f1;text-decoration:none">{{ support_email }}</a>
           &nbsp;&middot;&nbsp;
-          <a href="{{ manage_prefs_url }}" style="color:#6366f1;text-decoration:none">Notification settings</a>
+          <a href="{{ frontend_url }}" style="color:#6366f1;text-decoration:none">Open Dashboard</a>
         </p>
       </div>
 

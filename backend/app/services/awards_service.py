@@ -137,7 +137,7 @@ class AwardsService:
                 source_id=award.id,
                 email_event_type="AWARD_APPROVED",
                 email_context={
-                    "item_type": "Award",
+                    "item_type": f"{award.award_type.name} Award",
                     "status": "Approved",
                     "approver_name": "HR",
                     "comment": "",
@@ -188,7 +188,7 @@ class AwardsService:
                     source_id=award.id,
                     email_event_type="AWARD_APPROVED",
                     email_context={
-                        "item_type": "Award",
+                        "item_type": f"{award.award_type.name} Award",
                         "status": "Approved",
                         "approver_name": nominator.name,
                         "comment": "",
@@ -215,7 +215,7 @@ class AwardsService:
                 source_id=award.id,
                 email_event_type="NOMINATION_SUBMITTED",
                 email_context={
-                    "item_type": "Award Nomination",
+                    "item_type": f"{award_type.name} Award",
                     "status": "Submitted",
                     "approver_name": nominator.name,
                     "comment": "",
@@ -341,12 +341,23 @@ class AwardsService:
                 source_id=award.id
             )
 
-            # Notify nominee
+            # Notify nominee (with email)
+            approver = self.db.query(User).filter(User.id == approver_id).first()
+            approver_name = approver.name if approver else approval_level
             self.notification_service.create_notification(
                 user_id=award.nominee_id,
                 message=f"Congratulations! Your {award.award_type.name} award has been fully approved. {award.points_awarded} points awarded!",
                 source_type=ReferenceType.AWARD.value,
-                source_id=award.id
+                source_id=award.id,
+                email_event_type="AWARD_APPROVED",
+                email_context={
+                    "item_type": f"{award.award_type.name} Award",
+                    "status": "Approved",
+                    "approver_name": approver_name,
+                    "comment": comments or "",
+                    "points_amount": award.points_awarded,
+                    "details_url": "",
+                },
             )
         else:
             # More approvals needed - notify next approver
@@ -420,8 +431,8 @@ class AwardsService:
             source_id=award.id,
             email_event_type="AWARD_REJECTED",
             email_context={
-                "item_type": "Award Nomination",
-                "status": "Rejected",
+                "item_type": f"{award.award_type.name} Award",
+                "status": "Not Approved",
                 "approver_name": approval_level,
                 "comment": comments or "",
                 "details_url": "",
@@ -439,8 +450,8 @@ class AwardsService:
             source_id=award.id,
             email_event_type="AWARD_REJECTED",
             email_context={
-                "item_type": "Award Nomination",
-                "status": "Rejected",
+                "item_type": f"{award.award_type.name} Award",
+                "status": "Not Approved",
                 "approver_name": approver_name,
                 "comment": comments or "",
                 "details_url": "",

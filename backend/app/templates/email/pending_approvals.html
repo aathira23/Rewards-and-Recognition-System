@@ -16,7 +16,7 @@
       <div style="padding:0 40px"><span style="display:inline-block;background:#ffedd5;color:#7c2d12;font-size:11px;font-weight:700;padding:4px 12px;border-radius:0 0 8px 8px;letter-spacing:0.6px;text-transform:uppercase">Your Action Needed</span></div>
 
       <div style="padding:34px 40px 30px">
-        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">Pending Approvals Waiting for You</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:18px;text-align:center;margin:18px 0"><p style="margin:0 0 4px;font-size:38px;font-weight:700;color:#9a3412">{{ pending_count }}</p><p style="margin:0;font-size:13px;color:#7c2d12;font-weight:600">award nomination(s) awaiting your review</p></div><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Please review and action them at your earliest convenience.</p><p style="margin:22px 0 0"><a href="{{ frontend_url }}/approvals" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">Review Now</a></p>
+        <h2 style="margin:0 0 10px;font-size:20px;font-weight:700;color:#111827">Pending Approvals Waiting for You</h2><p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Hi <strong>{{ user_name }}</strong>,</p><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:18px;text-align:center;margin:18px 0"><p style="margin:0 0 4px;font-size:38px;font-weight:700;color:#9a3412">{{ pending_count }}</p><p style="margin:0;font-size:13px;color:#7c2d12;font-weight:600">item(s) awaiting your review</p></div>{% if pending_awards %}<p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65"><strong>{{ pending_awards }}</strong> award nomination(s) need your attention.</p>{% endif %}{% if pending_conversions %}<p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65"><strong>{{ pending_conversions }}</strong> points conversion request(s) need your attention.</p>{% endif %}<p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65">Please review and action them at your earliest convenience.</p><p style="margin:22px 0 0"><a href="{{ frontend_url }}" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.2px">Open Dashboard</a></p>
       </div>
 
       <div style="background:#f8f9fa;padding:16px 40px;border-top:1px solid #e9ecef">
@@ -24,7 +24,7 @@
           &copy; {{ org_name }} &nbsp;&middot;&nbsp;
           <a href="mailto:{{ support_email }}" style="color:#6366f1;text-decoration:none">{{ support_email }}</a>
           &nbsp;&middot;&nbsp;
-          <a href="{{ manage_prefs_url }}" style="color:#6366f1;text-decoration:none">Notification settings</a>
+          <a href="{{ frontend_url }}" style="color:#6366f1;text-decoration:none">Open Dashboard</a>
         </p>
       </div>
 

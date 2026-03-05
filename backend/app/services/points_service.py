@@ -474,10 +474,11 @@ class PointsService:
         """
         Notify users of points batches that will expire within the next `days` days.
 
-        Creates a `Notification` for each qualifying `PointsBatch` unless a notification
-        for the same batch already exists.
+        Aggregates expiring batches per user and sends a single notification
+        (with email) per user via NotificationService.
         """
         from app.models.notifications import Notification
+        from app.services.notification_service import NotificationService
         from app.core.config import settings
 
         if days is None:
@@ -500,35 +501,48 @@ class PointsService:
                 "total_points_notified": 0
             }
 
-        batches_notified = 0
-        total_points_notified = 0
-
+        # Group batches by user, skipping already-notified ones
+        user_batches: Dict[int, list] = {}
         for batch in upcoming_batches:
-            # avoid duplicate reminders for the same batch
             exists = self.db.query(Notification).filter(
                 Notification.source_type == ReferenceType.EXPIRY.value,
                 Notification.source_id == batch.id
             ).first()
             if exists:
                 continue
+            user_batches.setdefault(batch.user_id, []).append(batch)
 
-            days_left = (batch.expiry_date - today).days
+        notification_svc = NotificationService(self.db)
+        batches_notified = 0
+        total_points_notified = 0
+
+        for user_id, batches in user_batches.items():
+            # Use the earliest expiry date and total points for the email
+            total_points = sum(b.remaining_points for b in batches)
+            earliest_expiry = min(b.expiry_date for b in batches)
+            days_left = (earliest_expiry - today).days
+
             message = (
-                f"Reminder: {batch.remaining_points} points will expire on {batch.expiry_date.isoformat()} "
-                f"(in {days_left} days). Use them soon."
+                f"Reminder: {total_points} points will expire on "
+                f"{earliest_expiry.isoformat()} (in {days_left} days). "
+                f"Use them soon."
             )
-            notification = Notification(
-                user_id=batch.user_id,
+
+            # Use the first batch id as source_id (for dedup tracking)
+            notification_svc.create_notification(
+                user_id=user_id,
                 message=message,
                 source_type=ReferenceType.EXPIRY.value,
-                source_id=batch.id
+                source_id=batches[0].id,
+                email_event_type="POINTS_EXPIRY_REMINDER",
+                email_context={
+                    "points": total_points,
+                    "expiry_date": earliest_expiry.isoformat(),
+                },
             )
-            self.db.add(notification)
 
-            batches_notified += 1
-            total_points_notified += batch.remaining_points
-
-        self.db.commit()
+            batches_notified += len(batches)
+            total_points_notified += total_points
 
         return {
             "date": str(today),
