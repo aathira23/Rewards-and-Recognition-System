@@ -136,7 +136,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                       Tab(text: 'Award Types'),
                       Tab(text: 'Badges'),
                       Tab(text: 'Rewards Catalog'),
-                      Tab(text: 'Points Policy'),
+                      Tab(text: 'Policy'),
                       Tab(text: 'Settings'),
                     ],
                   ),
@@ -640,6 +640,13 @@ class _HrConfigViewState extends State<_HrConfigView>
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildPointsPolicyTab(
       BuildContext context, ThemeData theme, HrConfigState state) {
+    final pointsPolicies = state.policies
+        .where((p) => p['recognition_type'] != 'CONVERSION')
+        .toList();
+    final conversionPolicies = state.policies
+        .where((p) => p['recognition_type'] == 'CONVERSION')
+        .toList();
+
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(
           horizontal: Responsive.pagePadding(context), vertical: 4),
@@ -647,29 +654,26 @@ class _HrConfigViewState extends State<_HrConfigView>
         children: [
           _sectionHeader(
             title: 'Points Policy',
-            subtitle: 'Define point values, limits & conversion rules',
+            subtitle: 'Define point values for recognitions',
             actionLabel: 'Add Rule',
             onAction: () => _showPolicyDialog(context),
           ),
           const SizedBox(height: 12),
-          if (state.policies.isEmpty)
+          if (pointsPolicies.isEmpty)
             const EmptyStateView(
               icon: Icons.rule_outlined,
-              title: 'No rules configured',
+              title: 'No point rules configured',
             ),
-          if (state.policies.isNotEmpty)
+          if (pointsPolicies.isNotEmpty)
             _DataCard(
               columns: const [
                 'Recognition Type',
                 'Points',
-                'Monthly Limit',
-                'Cooldown',
-                'Conv. Rate',
                 'Active',
                 ''
               ],
-              flexes: const [3, 1, 2, 1, 2, 1, 1],
-              rows: state.policies.map((p) {
+              flexes: const [3, 2, 1, 1],
+              rows: pointsPolicies.map((p) {
                 final isActive = p['is_active'] ?? true;
                 return [
                   Column(
@@ -688,30 +692,100 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Text('${p['points'] ?? 0}',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w700)),
-                  Text(p['monthly_limit']?.toString() ?? '—',
-                      style:
-                          TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                  Text(p['cooldown_days']?.toString() ?? '—',
-                      style:
-                          TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(p['conversion_rate']?.toString() ?? '—',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade600)),
-                      if (p['conversion_reward_type'] != null &&
-                          p['conversion_reward_type'].toString().isNotEmpty)
-                        Text(p['conversion_reward_type'].toString(),
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey.shade500)),
-                    ],
-                  ),
                   StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
-                  _IconBtn(
-                    icon: Icons.edit_outlined,
-                    color: theme.colorScheme.primary,
-                    onTap: () => _showPolicyDialog(context, existing: p),
+                  Container(
+                    width: double.infinity,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _IconBtn(
+                          icon: Icons.edit_outlined,
+                          color: theme.colorScheme.primary,
+                          onTap: () => _showPolicyDialog(context, existing: p),
+                        ),
+                        const SizedBox(width: 4),
+                        _ToggleIconBtn(
+                          isActive: isActive,
+                          onTap: () => _confirmAction(
+                            context: context,
+                            title: isActive
+                                ? 'Deactivate Policy'
+                                : 'Activate Policy',
+                            message:
+                                'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this policy?',
+                            onConfirm: () => context.read<HrConfigBloc>().add(
+                                  ToggleItem(
+                                    entityType: HrConfigEntityType.policyRule,
+                                    id: p['id'],
+                                    currentlyActive: isActive,
+                                  ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ];
+              }).toList(),
+            ),
+          const SizedBox(height: 32),
+          _sectionHeader(
+            title: 'Conversion Policy',
+            subtitle: 'Define how points are converted',
+          ),
+          const SizedBox(height: 12),
+          if (conversionPolicies.isEmpty)
+            const EmptyStateView(
+              icon: Icons.currency_exchange_outlined,
+              title: 'No conversion rules configured',
+            ),
+          if (conversionPolicies.isNotEmpty)
+            _DataCard(
+              columns: const ['Reward Type', 'Conv. Rate', 'Active', ''],
+              flexes: const [3, 2, 1, 1],
+              rows: conversionPolicies.map((p) {
+                final isActive = p['is_active'] ?? true;
+                return [
+                  Text(p['conversion_reward_type']?.toString() ?? '—',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(p['conversion_rate']?.toString() ?? '—',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700)),
+                  StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
+                  Container(
+                    width: double.infinity,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _IconBtn(
+                          icon: Icons.edit_outlined,
+                          color: theme.colorScheme.primary,
+                          onTap: () => _showPolicyDialog(context, existing: p),
+                        ),
+                        const SizedBox(width: 4),
+                        _ToggleIconBtn(
+                          isActive: isActive,
+                          onTap: () => _confirmAction(
+                            context: context,
+                            title: isActive
+                                ? 'Deactivate Policy'
+                                : 'Activate Policy',
+                            message:
+                                'Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this conversion policy?',
+                            onConfirm: () => context.read<HrConfigBloc>().add(
+                                  ToggleItem(
+                                    entityType: HrConfigEntityType.policyRule,
+                                    id: p['id'],
+                                    currentlyActive: isActive,
+                                  ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ];
               }).toList(),

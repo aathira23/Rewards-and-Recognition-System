@@ -255,11 +255,12 @@ def action_conversion(
 @router.get("/rules", response_model=List[PointsPolicyResponse])
 def get_points_rules(
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user = Depends(get_current_user)
 ):
-    """Get all points policy rules."""
+    """Get all points policy rules. Include inactive if user is HR/ADMIN."""
     service = StoreService(db)
-    policies = service.get_policies()
+    is_admin = getattr(current_user, "role", None) in (UserRole.HR.value, UserRole.ADMIN.value)
+    policies = service.get_policies(include_inactive=is_admin)
     data = [PointsPolicyResponse.model_validate(p) for p in policies]
     return success(data=data, message=SUCCESS_POLICIES_RETRIEVED)
 

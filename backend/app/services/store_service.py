@@ -277,10 +277,13 @@ class StoreService:
 
         return conversion
 
-    def get_policies(self) -> List[Any]:
-        """Get all active points and conversion rules."""
+    def get_policies(self, include_inactive: bool = False) -> List[Any]:
+        """Get all points and conversion rules. If not include_inactive, returns only active."""
         from app.models.points_policy import PointsPolicy
-        return self.db.query(PointsPolicy).filter(PointsPolicy.is_active == True).all()
+        query = self.db.query(PointsPolicy)
+        if not include_inactive:
+            query = query.filter(PointsPolicy.is_active == True)
+        return query.all()
 
     def create_policy(self, policy_data: Any) -> Any:
         """Create a new point policy, deactivating any existing duplicate first.
@@ -299,13 +302,11 @@ class StoreService:
             duplicates = self.db.query(PointsPolicy).filter(
                 PointsPolicy.recognition_type == rec_type,
                 PointsPolicy.conversion_reward_type == conv_reward_type,
-                PointsPolicy.is_active == True,
             ).all()
         else:
             event_key = data.get("event_key")
             query = self.db.query(PointsPolicy).filter(
                 PointsPolicy.recognition_type == rec_type,
-                PointsPolicy.is_active == True,
             )
             if event_key:
                 query = query.filter(PointsPolicy.event_key == event_key)
@@ -313,11 +314,20 @@ class StoreService:
                 query = query.filter(PointsPolicy.event_key == None)
             duplicates = query.all()
 
-        for old in duplicates:
-            old.is_active = False
-
-        policy = PointsPolicy(**data)
-        self.db.add(policy)
+        if duplicates:
+            # Update the existing record instead of creating a new one
+            policy = duplicates[0] # Usually there should only be one
+            for key, value in data.items():
+                if key != "id": # Prevent ID overwrite
+                    setattr(policy, key, value)
+            
+            # Ensure it is active
+            policy.is_active = True
+        else:
+            # Create a new record
+            policy = PointsPolicy(**data)
+            self.db.add(policy)
+            
         self.db.commit()
         self.db.refresh(policy)
         return policy
