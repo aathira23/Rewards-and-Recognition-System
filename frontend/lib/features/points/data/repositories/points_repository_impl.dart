@@ -35,6 +35,7 @@ class PointsRepositoryImpl implements PointsRepository {
     String? category,
     String? startDate,
     String? endDate,
+    String? walletType,
   }) async {
     try {
       final (total, models) = await remoteDataSource.getPointsHistory(
@@ -43,6 +44,7 @@ class PointsRepositoryImpl implements PointsRepository {
         category: category,
         startDate: startDate,
         endDate: endDate,
+        walletType: walletType,
       );
       return Right((total, List<PointTransactionEntity>.from(models)));
     } on ServerException catch (e) {

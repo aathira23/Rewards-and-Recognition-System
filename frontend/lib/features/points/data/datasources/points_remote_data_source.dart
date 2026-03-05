@@ -11,6 +11,7 @@ abstract class PointsRemoteDataSource {
     String? category,
     String? startDate,
     String? endDate,
+    String? walletType,
   });
   Future<List<Map<String, dynamic>>> getLeaderboard(
       {String period = 'MONTHLY'});
@@ -44,11 +45,13 @@ class PointsRemoteDataSourceImpl implements PointsRemoteDataSource {
     String? category,
     String? startDate,
     String? endDate,
+    String? walletType,
   }) async {
     final qp = <String, dynamic>{'page': page, 'per_page': perPage};
     if (category != null) qp['category'] = category;
     if (startDate != null) qp['start_date'] = startDate;
     if (endDate != null) qp['end_date'] = endDate;
+    if (walletType != null) qp['wallet_type'] = walletType;
 
     final response = await client.get(
       ApiConstants.pointsHistory,

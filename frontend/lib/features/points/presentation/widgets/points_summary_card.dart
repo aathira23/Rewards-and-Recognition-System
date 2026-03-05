@@ -19,7 +19,12 @@ class PointsSummaryCard extends StatefulWidget {
     super.key,
     required this.summary,
     this.userRole = 'EMPLOYEE',
+    this.onWalletTypeChanged,
+    this.onActionCompleted,
   });
+
+  final ValueChanged<String>? onWalletTypeChanged;
+  final VoidCallback? onActionCompleted;
 
   @override
   State<PointsSummaryCard> createState() => _PointsSummaryCardState();
@@ -40,6 +45,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
       bloc.add(LoadCurrentUser());
     }
     setState(() => _showManagerWallet = toManager);
+    widget.onWalletTypeChanged?.call(toManager ? 'MANAGER' : 'EMPLOYEE');
   }
 
   // ─── Colours per wallet ───
@@ -62,12 +68,15 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
             content: Text(budgetState.successMessage!),
             backgroundColor: Colors.green,
           ));
+          widget.onActionCompleted?.call();
+          context.read<BudgetBloc>().add(ClearBudgetMessages());
         }
         if (budgetState.error != null && budgetState.wallet != null) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(budgetState.error!),
             backgroundColor: Colors.red,
           ));
+          context.read<BudgetBloc>().add(ClearBudgetMessages());
         }
       },
       child: AnimatedContainer(

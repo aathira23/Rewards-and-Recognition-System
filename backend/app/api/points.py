@@ -52,6 +52,7 @@ def get_points_history(
     end_date: Optional[str] = None,
     page: int = 1,
     per_page: int = DEFAULT_PAGE_SIZE,
+    wallet_type: str = "EMPLOYEE",
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -59,7 +60,7 @@ def get_points_history(
     service = PointsService(db)
     aggregates = service.get_aggregates(current_user.id)
     total, history = service.fetch_ledger_history(
-        current_user.id, category, start_date, end_date, page, per_page
+        current_user.id, category, start_date, end_date, page, per_page, wallet_type
     )
 
     payload = {

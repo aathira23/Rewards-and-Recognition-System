@@ -34,6 +34,7 @@ class _PointsPageState extends State<PointsPage> {
   DateTime? _endDate;
   String? _category; // null = all, 'received', 'spent', 'pending', 'expired'
   int _page = 1;
+  String _walletType = 'EMPLOYEE';
   static const _perPage = kDefaultPageSize;
 
   @override
@@ -63,6 +64,7 @@ class _PointsPageState extends State<PointsPage> {
       category: _category,
       startDate: AppDateFormatter.api(_startDate),
       endDate: AppDateFormatter.api(_endDate),
+      walletType: _walletType,
     ));
   }
 
@@ -101,6 +103,11 @@ class _PointsPageState extends State<PointsPage> {
                               PointsSummaryCard(
                                 summary: state.summary!,
                                 userRole: widget.userRole,
+                                onWalletTypeChanged: (type) {
+                                  setState(() => _walletType = type);
+                                  _fetchHistory(page: 1);
+                                },
+                                onActionCompleted: () => _fetchHistory(page: 1),
                               ),
                               const SizedBox(height: 28),
                             ],
@@ -273,6 +280,7 @@ class _PointsPageState extends State<PointsPage> {
         // Type dropdown
         _TypeDropdown(
           value: _category,
+          walletType: _walletType,
           onChanged: (v) {
             setState(() => _category = v);
             _fetchHistory();
@@ -287,14 +295,22 @@ class _PointsPageState extends State<PointsPage> {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Points History', style: AppTextStyles.sectionTitle()),
+                Text(
+                    _walletType == 'MANAGER'
+                        ? 'Budget Usage History'
+                        : 'Points History',
+                    style: AppTextStyles.sectionTitle()),
                 const SizedBox(height: 12),
                 filters,
               ],
             )
           : Row(
               children: [
-                Text('Points History', style: AppTextStyles.sectionTitle()),
+                Text(
+                    _walletType == 'MANAGER'
+                        ? 'Budget Usage History'
+                        : 'Points History',
+                    style: AppTextStyles.sectionTitle()),
                 const SizedBox(width: 16),
                 Expanded(child: filters),
               ],
@@ -624,8 +640,13 @@ class _DateChip extends StatelessWidget {
 
 class _TypeDropdown extends StatelessWidget {
   final String? value;
+  final String walletType;
   final ValueChanged<String?> onChanged;
-  const _TypeDropdown({required this.value, required this.onChanged});
+  const _TypeDropdown({
+    required this.value,
+    required this.walletType,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -648,12 +669,17 @@ class _TypeDropdown extends StatelessWidget {
       textStyle: AppTextStyles.small(color: Colors.black87),
       trailingIcon: Icon(Icons.keyboard_arrow_down,
           size: 16, color: Colors.grey.shade500),
-      dropdownMenuEntries: const [
-        DropdownMenuEntry(value: null, label: 'All Types'),
-        DropdownMenuEntry(value: 'received', label: 'Earned'),
-        DropdownMenuEntry(value: 'spent', label: 'Redeemed'),
-        DropdownMenuEntry(value: 'pending', label: 'Pending'),
-        DropdownMenuEntry(value: 'expired', label: 'Expired'),
+      dropdownMenuEntries: [
+        const DropdownMenuEntry(value: null, label: 'All Types'),
+        if (walletType == 'EMPLOYEE') ...[
+          const DropdownMenuEntry(value: 'received', label: 'Earned'),
+          const DropdownMenuEntry(value: 'spent', label: 'Redeemed'),
+          const DropdownMenuEntry(value: 'pending', label: 'Pending'),
+          const DropdownMenuEntry(value: 'expired', label: 'Expired'),
+        ] else ...[
+          const DropdownMenuEntry(value: 'received', label: 'Budget Received'),
+          const DropdownMenuEntry(value: 'spent', label: 'Rewards Sent'),
+        ],
       ],
       onSelected: onChanged,
     );

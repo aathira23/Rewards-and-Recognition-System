@@ -27,6 +27,11 @@ class BudgetBloc extends Bloc<BudgetEvent, BudgetState> {
     on<LoadCurrentUser>(_onLoadMe);
     on<AllocateBudget>(_onAllocate);
     on<RewardFromBudget>(_onReward);
+    on<ClearBudgetMessages>(_onClearMessages);
+  }
+
+  void _onClearMessages(ClearBudgetMessages event, Emitter<BudgetState> emit) {
+    emit(state.copyWith(successMessage: null, error: null));
   }
 
   Future<void> _onLoadMe(

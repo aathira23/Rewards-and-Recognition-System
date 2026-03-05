@@ -60,6 +60,7 @@ class PointsBloc extends Bloc<PointsEvent, PointsState> {
       category: event.category,
       startDate: event.startDate,
       endDate: event.endDate,
+      walletType: event.walletType,
     ));
     result.fold(
       (failure) {

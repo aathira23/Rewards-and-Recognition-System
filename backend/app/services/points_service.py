@@ -235,12 +235,20 @@ class PointsService:
         end_date: Optional[str] = None,
         page: int = 1,
         per_page: int = 20,
+        wallet_type: str = "EMPLOYEE"
     ) -> Tuple[int, List[Dict[str, Any]]]:
         """Fetch paginated points history including merged pending/expired entries."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
 
-        wallet = self.get_employee_wallet(user_id)
+        if wallet_type == "MANAGER":
+             wallet = self.db.query(Wallet).filter(
+                Wallet.user_id == user_id,
+                Wallet.wallet_type == WalletType.MANAGER.value
+            ).first()
+        else:
+             wallet = self.get_employee_wallet(user_id)
+
         if not wallet:
             return 0, []
 
@@ -319,7 +327,7 @@ class PointsService:
         # Count extra items (expired batches + pending conversions) for "all" view
         extra_expired_count = 0
         extra_pending_count = 0
-        if not category:
+        if not category and wallet_type == "EMPLOYEE":
             today = date.today()
             extra_expired_count = self.db.query(PointsBatch).filter(
                 PointsBatch.user_id == user_id,
@@ -336,7 +344,7 @@ class PointsService:
         # For "all" view, pending + expired are prepended conceptually.
         # We put them on page 1, then ledger rows fill the remaining space.
         items: list = []
-        if not category:
+        if not category and wallet_type == "EMPLOYEE":
             # Extra items live in virtual positions 0..(extra_count-1)
             extra_count = extra_pending_count + extra_expired_count
             if skip < extra_count:
@@ -400,7 +408,7 @@ class PointsService:
     def _map_ledger_row(self, row: PointsLedger, wallet_id: int) -> Dict[str, Any]:
         is_credit = row.target_wallet_id == wallet_id
         points = int(row.points)
-        description, type_badge = self._enrich_description(row)
+        description, type_badge = self._enrich_description(row, is_credit)
         return {
             "id": row.id,
             "date": row.created_at.strftime("%d/%m/%Y") if row.created_at else "",
@@ -412,13 +420,16 @@ class PointsService:
             "reference_type": (row.reference_type or "").upper(),
         }
 
-    def _enrich_description(self, row: PointsLedger) -> Tuple[str, str]:
+    def _enrich_description(self, row: PointsLedger, is_credit: bool = True) -> Tuple[str, str]:
         """Logic to match the precise UI descriptions from the reference image."""
         ref_type = row.reference_type
         ref_id = row.reference_id
         if not ref_type: return "General Transaction", "Other"
 
         ref_upper = ref_type.upper()
+
+        if ref_upper == ReferenceType.BUDGET_ALLOCATION.value:
+            return "Budget Allocation\nReceived from HR", "Credit"
 
         # 1. Peer Appreciations (eCards)
         if ref_upper == ReferenceType.ECARD.value:
@@ -461,9 +472,14 @@ class PointsService:
             return f"Points Conversion - {ctype}\nCompleted Request", "Redeemed"
 
         if ref_upper == ReferenceType.MANAGER_REWARD.value:
-            manager = self.db.query(User).filter(User.id == ref_id).first()
-            manager_name = manager.name if manager else "Manager"
-            return f"Direct Recognition Reward\nFrom: {manager_name}", "Earned"
+            if is_credit:
+                manager = self.db.query(User).filter(User.id == ref_id).first()
+                manager_name = manager.name if manager else "Manager"
+                return f"Direct Recognition Reward\nFrom: {manager_name}", "Earned"
+            else:
+                employee = self.db.query(User).filter(User.id == ref_id).first()
+                employee_name = employee.name if employee else "Employee"
+                return f"Budget Reward Sent\nTo: {employee_name}", "Spent"
 
         if ref_upper == ReferenceType.EXPIRY.value:
             return "Points Expired\nValidity Period Ended", "Expired"

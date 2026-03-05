@@ -11,6 +11,7 @@ class GetPointsHistoryParams {
   final String? category;
   final String? startDate;
   final String? endDate;
+  final String? walletType;
 
   GetPointsHistoryParams({
     this.page = 1,
@@ -18,6 +19,7 @@ class GetPointsHistoryParams {
     this.category,
     this.startDate,
     this.endDate,
+    this.walletType,
   });
 }
 
@@ -37,6 +39,7 @@ class GetPointsHistoryUseCase
       category: params.category,
       startDate: params.startDate,
       endDate: params.endDate,
+      walletType: params.walletType,
     );
   }
 }

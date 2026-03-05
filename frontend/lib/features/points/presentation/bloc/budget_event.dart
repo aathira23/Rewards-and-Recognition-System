@@ -37,3 +37,5 @@ class RewardFromBudget extends BudgetEvent {
   @override
   List<Object?> get props => [employeeId, points, reason];
 }
+
+class ClearBudgetMessages extends BudgetEvent {}

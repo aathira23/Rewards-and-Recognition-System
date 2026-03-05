@@ -42,6 +42,7 @@ class ReferenceType(str, Enum):
     CELEBRATION = "CELEBRATION"
     MANAGER_REWARD = "MANAGER_REWARD"
     EXPIRY = "EXPIRY"
+    BUDGET_ALLOCATION = "BUDGET_ALLOCATION"
 
 
 class SourceType(str, Enum):

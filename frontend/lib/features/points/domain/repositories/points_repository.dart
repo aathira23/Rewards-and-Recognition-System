@@ -14,6 +14,7 @@ abstract class PointsRepository {
     String? category,
     String? startDate,
     String? endDate,
+    String? walletType,
   });
   Future<Either<Failure, List<LeaderboardEntryEntity>>> getLeaderboard(
       {String period = 'MONTHLY'});
