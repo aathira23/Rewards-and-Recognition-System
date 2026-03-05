@@ -89,12 +89,13 @@ def get_award_types(
 ):
     """Get award types the current user is eligible to nominate for."""
     service = AwardsService(db)
-    # HR and Admin should see all award types in the configuration/nomination lists
-    role_filter = current_user.role
-    if current_user.role in (UserRole.HR.value, UserRole.ADMIN.value):
-        role_filter = None
-    
-    types = service.get_award_types(user_role=role_filter)
+    # HR and Admin see ALL award types (including inactive) for config management.
+    # Other roles only see active award types they are eligible for.
+    is_hr_admin = current_user.role in (UserRole.HR.value, UserRole.ADMIN.value)
+    role_filter = None if is_hr_admin else current_user.role
+    active_only = not is_hr_admin
+
+    types = service.get_award_types(active_only=active_only, user_role=role_filter)
     return success(data=[AwardTypeResponse.model_validate(t) for t in types], message=SUCCESS_AWARD_TYPES_FETCHED)
 
 

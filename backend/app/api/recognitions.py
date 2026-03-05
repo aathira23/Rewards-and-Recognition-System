@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, get_current_user
+from app.models.users import User
 from app.schemas.ecards import ECardCreate, ECardResponse
 from app.schemas.recognition_feed import RecognitionFeedResponse
 from app.schemas.badges import BadgeCreate, BadgeUpdate, BadgeResponse
@@ -155,11 +156,13 @@ def update_badge(
 @router.get("/badges")
 def get_badges(
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user: User = Depends(get_current_user)
 ):
-    """Get all badges."""
+    """Get all badges. HR/Admin receive all badges including inactive ones."""
+    from app.utils.enums import UserRole
     service = RecognitionService(db)
-    badges = service.get_badges()
+    is_hr_admin = current_user.role in (UserRole.HR.value, UserRole.ADMIN.value)
+    badges = service.get_badges(active_only=not is_hr_admin)
     data = [BadgeResponse.model_validate(b).model_dump() for b in badges]
     return success(data=data, message=SUCCESS_BADGES_RETRIEVED)
 
