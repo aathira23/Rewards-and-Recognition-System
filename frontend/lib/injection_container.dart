@@ -60,14 +60,6 @@ import 'features/notifications/domain/usecases/get_unread_count_usecase.dart';
 import 'features/notifications/domain/usecases/mark_as_read_usecase.dart';
 import 'features/notifications/presentation/bloc/notifications_bloc.dart';
 
-// Celebrations
-import 'features/celebrations/data/datasources/celebrations_remote_data_source.dart';
-import 'features/celebrations/data/repositories/celebrations_repository_impl.dart';
-import 'features/celebrations/domain/repositories/celebrations_repository.dart';
-import 'features/celebrations/domain/usecases/get_upcoming_celebrations_usecase.dart';
-import 'features/celebrations/domain/usecases/get_celebration_history_usecase.dart';
-import 'features/celebrations/presentation/bloc/celebrations_bloc.dart';
-
 // Nominations / Awards
 import 'features/nominations/data/datasources/nominations_remote_data_source.dart';
 import 'features/nominations/data/repositories/nominations_repository_impl.dart';
@@ -106,14 +98,14 @@ import 'features/config/domain/usecases/get_points_rules_config_usecase.dart';
 import 'features/config/domain/usecases/update_system_config_usecase.dart';
 import 'features/config/presentation/bloc/config_bloc.dart';
 
-// Budgets
-import 'features/budgets/data/datasources/budget_remote_data_source.dart';
-import 'features/budgets/data/repositories/budget_repository_impl.dart';
-import 'features/budgets/domain/repositories/budget_repository.dart';
-import 'features/budgets/domain/usecases/get_budget_wallet_usecase.dart';
-import 'features/budgets/domain/usecases/allocate_budget_usecase.dart';
-import 'features/budgets/domain/usecases/reward_employee_usecase.dart';
-import 'features/budgets/presentation/bloc/budget_bloc.dart';
+// Points - Budget Wallet
+import 'features/points/data/datasources/budget_remote_data_source.dart';
+import 'features/points/data/repositories/budget_repository_impl.dart';
+import 'features/points/domain/repositories/budget_repository.dart';
+import 'features/points/domain/usecases/get_budget_wallet_usecase.dart';
+import 'features/points/domain/usecases/allocate_budget_usecase.dart';
+import 'features/points/domain/usecases/reward_employee_usecase.dart';
+import 'features/points/presentation/bloc/budget_bloc.dart';
 
 // Reports & Payroll
 import 'features/reports/data/datasources/reports_remote_data_source.dart';
@@ -323,26 +315,6 @@ Future<void> init() async {
     () => NotificationsRemoteDataSourceImpl(client: sl()),
   );
 
-  //! Features - Celebrations
-  // Bloc
-  sl.registerFactory(
-    () => CelebrationsBloc(
-      getUpcomingUseCase: sl(),
-      getHistoryUseCase: sl(),
-    ),
-  );
-  // Use cases
-  sl.registerLazySingleton(() => GetUpcomingCelebrationsUseCase(sl()));
-  sl.registerLazySingleton(() => GetCelebrationHistoryUseCase(sl()));
-  // Repository
-  sl.registerLazySingleton<CelebrationsRepository>(
-    () => CelebrationsRepositoryImpl(remoteDataSource: sl()),
-  );
-  // Data sources
-  sl.registerLazySingleton<CelebrationsRemoteDataSource>(
-    () => CelebrationsRemoteDataSourceImpl(client: sl()),
-  );
-
   //! Features - Nominations / Awards
   // Bloc
   sl.registerFactory(
@@ -434,7 +406,7 @@ Future<void> init() async {
     () => ConfigRemoteDataSourceImpl(client: sl()),
   );
 
-  //! Features - Budgets
+  //! Features - Points (Budget Wallet)
   // Bloc
   sl.registerFactory(
     () => BudgetBloc(

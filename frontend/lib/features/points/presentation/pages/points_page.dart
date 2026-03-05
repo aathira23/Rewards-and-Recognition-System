@@ -9,7 +9,7 @@ import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../injection_container.dart';
-import '../../../budgets/presentation/bloc/budget_bloc.dart';
+import '../bloc/budget_bloc.dart';
 import '../bloc/points_bloc.dart';
 import '../bloc/points_event.dart';
 import '../bloc/points_state.dart';

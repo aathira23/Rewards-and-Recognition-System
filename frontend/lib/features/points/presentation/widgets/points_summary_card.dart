@@ -3,9 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/user_role_utils.dart';
-import '../../../budgets/presentation/bloc/budget_bloc.dart';
-import '../../../budgets/presentation/bloc/budget_event.dart';
-import '../../../budgets/presentation/bloc/budget_state.dart';
+import '../bloc/budget_bloc.dart';
+import '../bloc/budget_event.dart';
+import '../bloc/budget_state.dart';
 import '../../domain/entities/points_summary_entity.dart';
 import '../../../../core/widgets/app_dialog.dart';
 
