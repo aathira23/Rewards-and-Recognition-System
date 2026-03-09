@@ -8,7 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.core.config import settings
-from app.api.router import api_router
+from app.routers.router import api_router
 
 app = FastAPI(
     title=settings.APP_NAME,

@@ -3,7 +3,7 @@ API router initialization and aggregation.
 """
 from fastapi import APIRouter
 
-from app.api import (
+from app.routers import (
     auth,
     users,
     wallets,
