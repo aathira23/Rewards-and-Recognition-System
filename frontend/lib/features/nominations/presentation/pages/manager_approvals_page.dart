@@ -278,6 +278,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                         Icons.check_circle_outline,
                                         showActions: true,
                                         userRole: userRole,
+                                        myId: myId,
                                       ),
 
                                       // My Nominations (submitted by me)
@@ -286,6 +287,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                         state.users,
                                         'You haven\'t nominated anyone yet',
                                         Icons.outbox_rounded,
+                                        myId: myId,
                                       ),
 
                                       // History — nominations I personally acted on
@@ -618,6 +620,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     IconData emptyIcon, {
     bool showActions = false,
     String userRole = 'MANAGER',
+    int? myId,
   }) {
     if (items.isEmpty) {
       return EmptyStateView(
@@ -635,6 +638,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         users,
         showActions: showActions,
         userRole: userRole,
+        myId: myId,
       ),
     );
   }
@@ -644,13 +648,23 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     List<UserEntity> users, {
     bool showActions = false,
     String userRole = 'MANAGER',
+    int? myId,
   }) {
     final nominee = _resolveName(n, true, users);
     final nominator = _resolveName(n, false, users);
     final isPending = n.status == 'PENDING';
-    final isForMe = isPending &&
+
+    // For MANAGER-level approvals, also verify this user is the nominee's
+    // direct manager — prevents buttons appearing for unrelated managers.
+    final roleMatches = isPending &&
         n.nextRequiredLevel != null &&
         n.nextRequiredLevel!.toUpperCase() == userRole.toUpperCase();
+    final isDirectManager = userRole.toUpperCase() != 'MANAGER' ||
+        myId == null ||
+        users
+            .where((u) => u.id == n.nomineeId)
+            .any((u) => u.managerId == myId);
+    final isForMe = roleMatches && isDirectManager;
 
     final cardColor = n.status == 'APPROVED'
         ? const Color(0xFF16A34A)

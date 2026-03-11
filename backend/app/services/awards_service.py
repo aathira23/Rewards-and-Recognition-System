@@ -477,30 +477,49 @@ class AwardsService:
         query = self.db.query(Award)
 
         # Visibility rules:
-        #  HR / ADMIN / DEPT_HEAD : see all nominations
-        #  MANAGER               : see nominations they submitted, received, or
-        #                          where they are the nominee's direct manager
-        #                          (so peer-nominated direct reports appear in their queue)
-        #  EMPLOYEE              : see only nominations they submitted or received
-        if role in [UserRole.HR.value, UserRole.ADMIN.value, UserRole.DEPT_HEAD.value]:
-            pass  # full visibility
-        elif role == UserRole.MANAGER.value:
-            NomineeUser = aliased(User)
-            query = query.join(NomineeUser, Award.nominee_id == NomineeUser.id)
-            query = query.filter(
-                or_(
-                    Award.nominator_id == user_id,
-                    Award.nominee_id   == user_id,
-                    # Pending nominations where this manager manages the nominee
-                    and_(
-                        Award.status == AwardStatus.PENDING.value,
-                        NomineeUser.manager_id == user_id
-                    )
-                )
+        from sqlalchemy.orm import joinedload
+        
+        # 1. Identify award IDs where the user is directly involved
+        # (Nominator, Nominee, or someone who has already provided an approval record)
+        involved_ids_q = self.db.query(Award.id).outerjoin(AwardApproval).filter(
+            or_(
+                Award.nominator_id == user_id,
+                Award.nominee_id == user_id,
+                AwardApproval.approver_id == user_id
             )
-        else:
-            # Employee — only their own
-            query = query.filter((Award.nominator_id == user_id) | (Award.nominee_id == user_id))
+        )
+        visible_ids = {id_val for (id_val,) in involved_ids_q.all()}
+        
+        # 2. Check PENDING awards to determine if it is currently the user's turn
+        # We only check awards that aren't already identified as visible
+        pending_candidates = (
+            self.db.query(Award)
+            .filter(Award.status == AwardStatus.PENDING.value)
+            .filter(~Award.id.in_(visible_ids))
+            .options(joinedload(Award.award_type), joinedload(Award.nominee), joinedload(Award.approvals))
+            .all()
+        )
+        
+        for award in pending_candidates:
+            req_levels = self._get_required_approval_levels(award.award_type)
+            # Find completed levels from existing approvals
+            comp_levels = [
+                str(ap.approval_level).strip().upper() 
+                for ap in award.approvals 
+                if ap.status == ApprovalStatus.APPROVED.value
+            ]
+            next_lvl = self._get_next_required_level(req_levels, comp_levels)
+            
+            if next_lvl and next_lvl.upper() == role.upper():
+                # For MANAGER role, use the direct manager check logic
+                if next_lvl.upper() == 'MANAGER':
+                    if award.nominee and award.nominee.manager_id == user_id:
+                        visible_ids.add(award.id)
+                else:
+                    visible_ids.add(award.id)
+
+        # 3. Restrict final query to visible IDs
+        query = query.filter(Award.id.in_(visible_ids))
 
         if status_filter:
             query = query.filter(Award.status == status_filter)
