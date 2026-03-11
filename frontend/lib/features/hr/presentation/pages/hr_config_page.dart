@@ -1108,7 +1108,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                                     ),
                                   );
                             },
-                            activeColor: theme.colorScheme.primary,
+                            activeThumbColor: theme.colorScheme.primary,
                           ),
                         ] else ...[
                           Container(

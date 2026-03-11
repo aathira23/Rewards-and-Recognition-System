@@ -337,13 +337,21 @@ class _BadgeCountChipState extends State<_BadgeCountChip> {
   }
 }
 
-/// A single received-recognition feed row
-class _ReceivedItem extends StatelessWidget {
+/// A single received-recognition feed row — tappable to open the full ecard.
+class _ReceivedItem extends StatefulWidget {
   final RecognitionEntity recognition;
   const _ReceivedItem({required this.recognition});
 
   @override
+  State<_ReceivedItem> createState() => _ReceivedItemState();
+}
+
+class _ReceivedItemState extends State<_ReceivedItem> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final recognition = widget.recognition;
     final badgeName = recognition.badge?.name ?? 'Badge';
     final info = BadgeUtils.getDisplayInfo(badgeName);
     final pillStyle = BadgeUtils.getPillStyle(badgeName);
@@ -351,128 +359,163 @@ class _ReceivedItem extends StatelessWidget {
     final message = recognition.message;
     final timeAgo = _timeAgo(recognition.createdAt);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: info.color.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: info.color.withValues(alpha: 0.12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top row: sender avatar + name + badge pill
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: info.color.withValues(alpha: 0.15),
-                child: Text(
-                  senderName.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    color: info.color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: AppTextStyles.label(color: Colors.black87),
-                    children: [
-                      TextSpan(
-                          text: senderName,
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      TextSpan(
-                          text: ' appreciated you',
-                          style: TextStyle(color: Colors.grey[500])),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Badge pill – constrained so it never overflows narrow screens
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 140),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: pillStyle.backgroundColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      recognition.badge?.iconUrl != null
-                          ? Image.network(
-                              recognition.badge!.iconUrl!,
-                              width: 12,
-                              height: 12,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => Icon(pillStyle.icon,
-                                  size: 12, color: pillStyle.textColor),
-                            )
-                          : Icon(pillStyle.icon,
-                              size: 12, color: pillStyle.textColor),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          badgeName.toUpperCase(),
-                          style: AppTextStyles.captionBold(
-                              color: pillStyle.textColor),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Message
-          if (message != null && message.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              '"$message"',
-              style: AppTextStyles.small(color: Colors.grey[600])
-                  .copyWith(fontStyle: FontStyle.italic),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () => _showEcardDialog(context, recognition),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? info.color.withValues(alpha: 0.07)
+                : info.color.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _hovered
+                  ? info.color.withValues(alpha: 0.3)
+                  : info.color.withValues(alpha: 0.12),
             ),
-          ],
-          const SizedBox(height: 6),
-          // Bottom row: time + points
-          Row(
+            boxShadow: _hovered
+                ? [
+                    BoxShadow(
+                      color: info.color.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    )
+                  ]
+                : [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.access_time, size: 11, color: Colors.grey[400]),
-              const SizedBox(width: 4),
-              Text(timeAgo,
-                  style: AppTextStyles.small(color: Colors.grey[400])),
-              if (recognition.pointsAwarded > 0) ...[
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: info.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+              // Top row: sender avatar + name + badge pill
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: info.color.withValues(alpha: 0.15),
+                    child: Text(
+                      senderName.substring(0, 1).toUpperCase(),
+                      style: TextStyle(
+                        color: info.color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    '+${recognition.pointsAwarded} pts',
-                    style: AppTextStyles.small(color: info.color)
-                        .copyWith(fontWeight: FontWeight.w600),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: AppTextStyles.label(color: Colors.black87),
+                        children: [
+                          TextSpan(
+                              text: senderName,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                              text: ' appreciated you',
+                              style: TextStyle(color: Colors.grey[500])),
+                        ],
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                  // Badge pill
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 140),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: pillStyle.backgroundColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          recognition.badge?.iconUrl != null
+                              ? Image.network(
+                                  recognition.badge!.iconUrl!,
+                                  width: 12,
+                                  height: 12,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                      pillStyle.icon,
+                                      size: 12,
+                                      color: pillStyle.textColor),
+                                )
+                              : Icon(pillStyle.icon,
+                                  size: 12, color: pillStyle.textColor),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              badgeName.toUpperCase(),
+                              style: AppTextStyles.captionBold(
+                                  color: pillStyle.textColor),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Message
+              if (message != null && message.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '"$message"',
+                  style: AppTextStyles.small(color: Colors.grey[600])
+                      .copyWith(fontStyle: FontStyle.italic),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
+              const SizedBox(height: 6),
+              // Bottom row: time + points + tap hint
+              Row(
+                children: [
+                  Icon(Icons.access_time, size: 11, color: Colors.grey[400]),
+                  const SizedBox(width: 4),
+                  Text(timeAgo,
+                      style: AppTextStyles.small(color: Colors.grey[400])),
+                  if (recognition.pointsAwarded > 0) ...[
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: info.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '+${recognition.pointsAwarded} pts',
+                        style: AppTextStyles.small(color: info.color)
+                            .copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  void _showEcardDialog(BuildContext context, RecognitionEntity recognition) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => _EcardModal(recognition: recognition),
     );
   }
 
@@ -484,5 +527,356 @@ class _ReceivedItem extends StatelessWidget {
     if (diff.inHours >= 1) return '${diff.inHours}h ago';
     if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
     return 'Just now';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Full-screen ecard modal shown when a received recognition is tapped.
+// ─────────────────────────────────────────────────────────────────────────────
+class _EcardModal extends StatelessWidget {
+  final RecognitionEntity recognition;
+
+  const _EcardModal({required this.recognition});
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeName = recognition.badge?.name ?? 'Badge';
+    final info = BadgeUtils.getDisplayInfo(badgeName);
+    final senderName = recognition.senderName ?? 'Someone';
+    final receiverName = recognition.receiverName ?? 'You';
+    final message = recognition.message;
+    final date = DateFormat('MMM d, yyyy').format(recognition.createdAt);
+    final points = recognition.pointsAwarded;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 40,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Top gradient banner with badge ─────────────────────
+              _CardBanner(
+                  info: info,
+                  badgeName: badgeName,
+                  iconUrl: recognition.badge?.iconUrl),
+
+              // ── Card body ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
+                child: Column(
+                  children: [
+                    // Recipient
+                    Text(
+                      receiverName,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                        letterSpacing: -0.3,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'has been recognised for',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w400,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Badge name pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: info.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                            color: info.color.withValues(alpha: 0.25)),
+                      ),
+                      child: Text(
+                        badgeName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: info.color,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+
+                    // Citation / message
+                    if (message != null && message.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: Colors.grey.withValues(alpha: 0.12)),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.format_quote_rounded,
+                                color: info.color, size: 22),
+                            const SizedBox(height: 6),
+                            Text(
+                              message,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF374151),
+                                height: 1.55,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+                    Divider(color: Colors.grey.shade100),
+                    const SizedBox(height: 14),
+
+                    // ── Footer: from / date / points ────────────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // From
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'FROM',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey[400],
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor:
+                                        info.color.withValues(alpha: 0.15),
+                                    child: Text(
+                                      senderName.substring(0, 1).toUpperCase(),
+                                      style: TextStyle(
+                                        color: info.color,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      senderName,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF111827),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Date + Points stacked on right
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'DATE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.grey[400],
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              date,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            if (points > 0) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      info.color.withValues(alpha: 0.9),
+                                      info.color,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '+$points pts',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Gradient top banner of the ecard — holds the large badge icon.
+class _CardBanner extends StatelessWidget {
+  final BadgeDisplayInfo info;
+  final String badgeName;
+  final String? iconUrl;
+
+  const _CardBanner({
+    required this.info,
+    required this.badgeName,
+    required this.iconUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 160,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            info.color.withValues(alpha: 0.15),
+            info.color.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Decorative circles
+          Positioned(
+            top: -20,
+            right: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: info.color.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -30,
+            left: -10,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: info.color.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
+          // Close button
+          Positioned(
+            top: 10,
+            right: 10,
+            child: IconButton(
+              icon:
+                  Icon(Icons.close_rounded, color: Colors.grey[500], size: 20),
+              onPressed: () => Navigator.of(context).pop(),
+              tooltip: 'Close',
+            ),
+          ),
+          // Badge icon in the centre
+          Center(
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: info.color.withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: iconUrl != null
+                    ? Image.network(
+                        iconUrl!,
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => _fallbackIcon(),
+                      )
+                    : _fallbackIcon(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallbackIcon() {
+    return info.hasEmoji
+        ? Text(info.emoji!, style: const TextStyle(fontSize: 40))
+        : Icon(info.icon, color: info.color, size: 48);
   }
 }
