@@ -1,0 +1,2942 @@
+openapi: 3.0.3
+info:
+  title: Rewards & Recognition System API
+  description: >
+    API endpoints for a complete Rewards and Recognition platform, covering user management,
+    peer-to-peer eCard recognitions, formal award nominations with multi-level approvals,
+    points wallets, catalog redemptions, celebrations, analytics, reports, and system
+    configuration. All endpoints (except login and feature-flags) require a valid JWT
+    Bearer token.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ─────────────────────── AUTH ───────────────────────
+
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login
+      description: Authenticates a user with email and password (OAuth2 form data). Returns a JWT access token.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginForm'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Login successful
+                data:
+                  access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type: bearer
+                  user_id: 1
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ─────────────────────── PROFILE ───────────────────────
+
+  /profile/me:
+    get:
+      tags:
+        - profile
+      summary: Get Current User Profile
+      description: Returns the authenticated user's full profile details.
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: User profile retrieved
+                data:
+                  id: 1
+                  name: "Alice Johnson"
+                  email: "alice@company.com"
+                  role: "EMPLOYEE"
+                  department_id: 3
+                  department_name: "Engineering"
+                  manager_id: 5
+                  manager_name: "Bob Smith"
+                  date_of_joining: "2023-03-01"
+                  birth_date: "1992-07-15"
+                  created_at: "2023-03-01T09:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /profile/:
+    get:
+      tags:
+        - profile
+      summary: List All Users
+      description: Returns a paginated list of all users. Visible to all authenticated users.
+      operationId: listUsers
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Users retrieved
+                data:
+                  - id: 1
+                    name: "Alice Johnson"
+                    email: "alice@company.com"
+                    role: "EMPLOYEE"
+                    department_id: 3
+                    date_of_joining: "2023-03-01"
+                    created_at: "2023-03-01T09:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - profile
+      summary: Create User
+      description: Creates a new user account. The first user in the system can be created without authentication. After that, only HR/Admin can create users.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: User created successfully
+                data:
+                  id: 10
+                  name: "Carol White"
+                  email: "carol@company.com"
+                  role: "EMPLOYEE"
+                  department_id: 2
+                  created_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /profile/{user_id}:
+    put:
+      tags:
+        - profile
+      summary: Update User
+      description: Updates a user's profile. Users can update their own profile; HR/Admin can update any user.
+      operationId: updateUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: User updated successfully
+                data:
+                  id: 1
+                  name: "Alice Johnson"
+                  role: "MANAGER"
+                  department_id: 3
+                  updated: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ─────────────────────── BUDGETS / WALLETS ───────────────────────
+
+  /budgets/manager:
+    get:
+      tags:
+        - budgets
+      summary: Get Manager Wallet
+      description: Returns the authenticated manager's budget wallet balance.
+      operationId: getManagerWallet
+      responses:
+        '200':
+          description: Wallet retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Wallet retrieved
+                data:
+                  id: 7
+                  user_id: 5
+                  wallet_type: "MANAGER"
+                  balance: 1500
+                  created_at: "2024-01-01T00:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /budgets/manager/allocate:
+    post:
+      tags:
+        - budgets
+      summary: Allocate Budget to Manager
+      description: HR allocates a points budget to a specific manager's wallet.
+      operationId: allocateManagerBudget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletAllocateRequest'
+      responses:
+        '200':
+          description: Budget allocated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Budget allocated successfully
+                data:
+                  manager_id: 5
+                  points_allocated: 500
+                  new_balance: 2000
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /budgets/manager/reward:
+    post:
+      tags:
+        - budgets
+      summary: Reward Employee
+      description: Manager rewards an employee by transferring points from their budget wallet to the employee's wallet.
+      operationId: rewardEmployee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletRewardRequest'
+      responses:
+        '200':
+          description: Employee rewarded
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Employee rewarded successfully
+                data:
+                  batch_id: 42
+                  employee_id: 8
+                  points: 100
+                  manager_wallet_balance: 1400
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /budgets/manager/bulk-allocate:
+    post:
+      tags:
+        - budgets
+      summary: Bulk Allocate Budget
+      description: HR bulk-allocates a points budget to multiple managers, a department, or a role filter.
+      operationId: bulkAllocateBudget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkBudgetAllocationRequest'
+      responses:
+        '200':
+          description: Bulk allocation completed
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Bulk allocation completed
+                data:
+                  allocated_count: 12
+                  points_per_manager: 500
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────── POINTS ───────────────────────
+
+  /points/balance:
+    get:
+      tags:
+        - points
+      summary: Get Points Balance
+      description: Returns the current user's points balance and aggregate statistics (earned, redeemed, converted, pending).
+      operationId: getPointsBalance
+      responses:
+        '200':
+          description: Points balance retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Points balance retrieved
+                data:
+                  balance: 850
+                  total_earned: 1200
+                  total_redeemed: 200
+                  total_converted: 150
+                  pending_count: 2
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /points/history:
+    get:
+      tags:
+        - points
+      summary: Get Points History
+      description: Returns paginated points ledger history with optional filters.
+      operationId: getPointsHistory
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Filter by transaction category (EARNED, REDEEMED, EXPIRED, PENDING)
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: wallet_type
+          in: query
+          required: false
+          schema:
+            type: string
+            default: EMPLOYEE
+            enum: [EMPLOYEE, MANAGER]
+      responses:
+        '200':
+          description: Points history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Points history retrieved
+                data:
+                  balance: 850
+                  total_earned: 1200
+                  total_redeemed: 200
+                  total_converted: 150
+                  pending_count: 2
+                  history:
+                    - id: 101
+                      points: 50
+                      source: RECOGNITION
+                      description: "Awarded by manager"
+                      created_at: "2025-01-10T10:00:00"
+                  page: 1
+                  per_page: 20
+                  total: 45
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /points/convert:
+    post:
+      tags:
+        - points
+      summary: Request Points Conversion
+      description: Request conversion of accumulated points to cash or payroll. Feature flag `conversion_enabled` must be active.
+      operationId: convertPoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PointsConversionCreate'
+      responses:
+        '201':
+          description: Conversion request created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Conversion request submitted
+                data:
+                  id: 5
+                  user_id: 1
+                  points_converted: 500
+                  conversion_type: CASH
+                  cash_amount: 50.00
+                  status: PENDING
+                  requested_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /points/conversions:
+    get:
+      tags:
+        - points
+      summary: Get Conversion Requests
+      description: HR/Admin see all conversion requests; regular users see only their own.
+      operationId: getConversions
+      responses:
+        '200':
+          description: Conversions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Conversions retrieved
+                data:
+                  - id: 5
+                    user_id: 1
+                    user_name: "Alice Johnson"
+                    points_converted: 500
+                    conversion_type: CASH
+                    cash_amount: 50.00
+                    status: PENDING
+                    requested_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /points/conversions/pending:
+    get:
+      tags:
+        - points
+      summary: Get Pending Conversions
+      description: Returns all pending conversion requests (HR/Admin only).
+      operationId: getPendingConversions
+      responses:
+        '200':
+          description: Pending conversions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Pending conversions retrieved
+                data:
+                  - id: 5
+                    user_id: 1
+                    user_name: "Alice Johnson"
+                    points_converted: 500
+                    conversion_type: CASH
+                    cash_amount: 50.00
+                    status: PENDING
+                    requested_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /points/conversions/{conversion_id}/action:
+    post:
+      tags:
+        - points
+      summary: Approve or Reject Conversion
+      description: HR/Admin approves or rejects a pending points conversion request.
+      operationId: actionConversion
+      parameters:
+        - name: conversion_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversionActionRequest'
+      responses:
+        '200':
+          description: Action taken
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Conversion approved
+                data:
+                  id: 5
+                  status: APPROVED
+                  approved_by: 2
+                  approved_by_name: "HR Manager"
+                  approved_at: "2025-01-15T11:00:00"
+                timestamp: "2025-01-15T11:00:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /points/rules:
+    get:
+      tags:
+        - points
+      summary: Get Points Rules
+      description: Returns all points policy rules. HR/Admin see inactive rules too.
+      operationId: getPointsRules
+      responses:
+        '200':
+          description: Rules retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Policies retrieved
+                data:
+                  - id: 1
+                    recognition_type: PEER
+                    points_allocated: 50
+                    conversion_rate: 0.10
+                    is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - points
+      summary: Create Points Rule
+      description: Create a new points policy rule (HR/Admin only).
+      operationId: createPointsRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PointsPolicyCreate'
+      responses:
+        '201':
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Rule created
+                data:
+                  id: 5
+                  recognition_type: AWARD
+                  points_allocated: 200
+                  is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /points/rules/{rule_id}:
+    put:
+      tags:
+        - points
+      summary: Update Points Rule
+      description: Update an existing points policy rule (HR/Admin only).
+      operationId: updatePointsRule
+      parameters:
+        - name: rule_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PointsPolicyUpdate'
+      responses:
+        '200':
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Rule updated
+                data:
+                  id: 5
+                  is_active: false
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ─────────────────────── RECOGNITIONS (eCARDS) ───────────────────────
+
+  /recognitions/:
+    post:
+      tags:
+        - recognitions
+      summary: Send eCard Recognition
+      description: Sends a peer-to-peer eCard recognition with a message and a badge.
+      operationId: sendRecognition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ECardCreate'
+      responses:
+        '201':
+          description: eCard sent
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Recognition sent successfully
+                data:
+                  id: 88
+                  sender:
+                    id: 1
+                    name: "Alice Johnson"
+                    role: "EMPLOYEE"
+                    department_name: "Engineering"
+                  receiver:
+                    id: 9
+                    name: "David Lee"
+                    role: "EMPLOYEE"
+                    department_name: "Design"
+                  badge:
+                    id: 3
+                    name: "Team Player"
+                    icon_url: "https://cdn.example.com/badges/team-player.png"
+                  message: "Great collaboration on the last sprint!"
+                  created_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /recognitions/feed:
+    get:
+      tags:
+        - recognitions
+      summary: Recognition Feed
+      description: Returns the company-wide recognition feed in reverse chronological order with pagination.
+      operationId: getRecognitionFeed
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Feed retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Feed retrieved
+                data:
+                  items:
+                    - id: 88
+                      event_type: ECARD
+                      actor:
+                        id: 1
+                        name: "Alice Johnson"
+                        department_name: "Engineering"
+                      receiver:
+                        id: 9
+                        name: "David Lee"
+                        department_name: "Design"
+                      message: "Great collaboration!"
+                      badge_name: "Team Player"
+                      created_at: "2025-01-15T10:30:00"
+                  page: 1
+                  per_page: 20
+                  total: 154
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /recognitions/me/overview:
+    get:
+      tags:
+        - recognitions
+      summary: My Recognition Overview
+      description: Returns a summary of recognitions sent and received by the current user.
+      operationId: getMyRecognitionOverview
+      responses:
+        '200':
+          description: Overview retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Overview retrieved
+                data:
+                  received_count: 12
+                  sent_count: 8
+                  recent_received:
+                    - sender_name: "Bob Smith"
+                      badge_name: "Go-Getter"
+                      message: "Excellent work!"
+                      date: "2025-01-10T09:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /recognitions/leaderboard:
+    get:
+      tags:
+        - recognitions
+      summary: Recognition Leaderboard
+      description: Returns a leaderboard of top recognized employees.
+      operationId: getRecognitionLeaderboard
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            default: MONTHLY
+            enum: [MONTHLY, YEARLY]
+        - name: metric
+          in: query
+          required: false
+          schema:
+            type: string
+            default: POINTS
+            enum: [POINTS, COUNT]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Leaderboard retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Leaderboard retrieved
+                data:
+                  - rank: 1
+                    user_id: 9
+                    user_name: "David Lee"
+                    department_name: "Design"
+                    score: 350
+                  - rank: 2
+                    user_id: 1
+                    user_name: "Alice Johnson"
+                    department_name: "Engineering"
+                    score: 280
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /recognitions/badges:
+    get:
+      tags:
+        - recognitions
+      summary: List Badges
+      description: Returns all active badges. HR/Admin also receive inactive badges.
+      operationId: getBadges
+      responses:
+        '200':
+          description: Badges retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Badges retrieved
+                data:
+                  - id: 1
+                    name: "Innovator"
+                    description: "For creative problem solving"
+                    icon_url: "https://cdn.example.com/badges/innovator.png"
+                    is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - recognitions
+      summary: Create Badge
+      description: Creates a new badge (HR/Admin only).
+      operationId: createBadge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BadgeCreate'
+      responses:
+        '201':
+          description: Badge created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Badge created successfully
+                data:
+                  id: 10
+                  name: "Rising Star"
+                  description: "For outstanding new joiners"
+                  icon_url: "https://cdn.example.com/badges/rising-star.png"
+                  is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Conflict – badge name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: error
+                status_code: 409
+                message: Badge name already exists
+
+  /recognitions/badges/{badge_id}:
+    put:
+      tags:
+        - recognitions
+      summary: Update Badge
+      description: Updates a badge's details (HR/Admin only).
+      operationId: updateBadge
+      parameters:
+        - name: badge_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BadgeUpdate'
+      responses:
+        '200':
+          description: Badge updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Badge updated
+                data:
+                  id: 10
+                  name: "Rising Star"
+                  is_active: false
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /recognitions/{recognition_id}:
+    get:
+      tags:
+        - recognitions
+      summary: Get Recognition Detail
+      description: Returns full details of a specific eCard recognition.
+      operationId: getRecognition
+      parameters:
+        - name: recognition_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recognition found
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Recognition found
+                data:
+                  id: 88
+                  sender:
+                    id: 1
+                    name: "Alice Johnson"
+                    department_name: "Engineering"
+                  receiver:
+                    id: 9
+                    name: "David Lee"
+                    department_name: "Design"
+                  badge:
+                    id: 3
+                    name: "Team Player"
+                  message: "Great collaboration!"
+                  created_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ─────────────────────── AWARDS ───────────────────────
+
+  /awards/:
+    get:
+      tags:
+        - awards
+      summary: List Award Types
+      description: Returns all award types. Active-only for regular users; HR/Admin see all.
+      operationId: getAwardTypes
+      parameters:
+        - name: active_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Award types retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Award types retrieved
+                data:
+                  - id: 1
+                    name: "Spot Award"
+                    award_key: "SPOT"
+                    description: "For immediate outstanding contributions"
+                    points: 100
+                    frequency: ADHOC
+                    eligibility_rule: PEER
+                    approval_workflow:
+                      - MANAGER
+                    is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - awards
+      summary: Create Award Type
+      description: Creates a new award type definition (HR/Admin only).
+      operationId: createAwardType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AwardTypeCreate'
+      responses:
+        '201':
+          description: Award type created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Award type created
+                data:
+                  id: 5
+                  name: "Employee of the Quarter"
+                  award_key: "EOQ"
+                  points: 500
+                  frequency: QUARTERLY
+                  is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /awards/types/{type_id}:
+    put:
+      tags:
+        - awards
+      summary: Update Award Type
+      description: Updates an award type definition (HR/Admin only).
+      operationId: updateAwardType
+      parameters:
+        - name: type_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AwardTypeUpdate'
+      responses:
+        '200':
+          description: Award type updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Award type updated
+                data:
+                  id: 1
+                  name: "Spot Award"
+                  is_active: false
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /awards/nominations:
+    get:
+      tags:
+        - awards
+      summary: List Nominations
+      description: >
+        Returns award nominations filtered by the user's role.
+        Employees see their own; Managers see their team's pending approvals;
+        HR/Admin see all nominations. Supports pagination.
+      operationId: listNominations
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Nominations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Nominations retrieved
+                data:
+                  - id: 23
+                    award_type_id: 1
+                    nominee_id: 8
+                    nominator_id: 1
+                    status: PENDING
+                    points_awarded: null
+                    citation: "Led the entire Q4 release"
+                    next_required_level: MANAGER
+                    created_at: "2025-01-10T10:00:00"
+                    nominee:
+                      id: 8
+                      name: "Emma Clark"
+                    award_type:
+                      id: 1
+                      name: "Spot Award"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - awards
+      summary: Create Nomination
+      description: Nominates an employee for an award. Award type determines the approval workflow.
+      operationId: createNomination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AwardNominationCreate'
+      responses:
+        '201':
+          description: Nomination created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Nomination submitted successfully
+                data:
+                  id: 23
+                  award_type_id: 1
+                  nominee_id: 8
+                  nominator_id: 1
+                  status: PENDING
+                  next_required_level: MANAGER
+                  created_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /awards/nominations/my-approvals:
+    get:
+      tags:
+        - awards
+      summary: My Approval History
+      description: Returns a list of nominations the current user has reviewed (approved or rejected).
+      operationId: getMyApprovalHistory
+      responses:
+        '200':
+          description: Approval history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Approval history retrieved
+                data:
+                  - my_action: APPROVED
+                    my_action_at: "2025-01-12T14:00:00"
+                    my_level: MANAGER
+                    my_comments: "Well deserved"
+                    nomination_id: 22
+                    nominee_id: 8
+                    nominator_id: 1
+                    award_type:
+                      id: 1
+                      name: "Spot Award"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /awards/nominations/{nomination_id}:
+    get:
+      tags:
+        - awards
+      summary: Get Nomination Detail
+      description: Returns full details of a specific award nomination.
+      operationId: getNominationDetail
+      parameters:
+        - name: nomination_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Nomination detail retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Nomination detail retrieved
+                data:
+                  id: 23
+                  award_type_id: 1
+                  nominee_id: 8
+                  nominator_id: 1
+                  status: PENDING
+                  points_awarded: null
+                  citation: "Exceptional work on the dashboard project"
+                  next_required_level: MANAGER
+                  reviewer_comment: null
+                  reviewer_name: null
+                  reviewer_level: null
+                  nominee:
+                    id: 8
+                    name: "Emma Clark"
+                  nominator:
+                    id: 1
+                    name: "Alice Johnson"
+                  award_type:
+                    id: 1
+                    name: "Spot Award"
+                  created_at: "2025-01-10T10:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /awards/nominations/{nomination_id}/action:
+    post:
+      tags:
+        - awards
+      summary: Approve or Reject Nomination
+      description: Manager, Dept Head, or HR approves or rejects an award nomination at their level in the workflow.
+      operationId: actionNomination
+      parameters:
+        - name: nomination_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AwardActionRequest'
+      responses:
+        '200':
+          description: Action taken
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Nomination approved
+                data:
+                  id: 23
+                  status: APPROVED
+                  points_awarded: 100
+                  next_required_level: DEPT_HEAD
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /awards/nominations/{nomination_id}/approval-status:
+    get:
+      tags:
+        - awards
+      summary: Get Approval Workflow Status
+      description: Returns the full multi-level approval workflow progress for a nomination.
+      operationId: getNominationApprovalStatus
+      parameters:
+        - name: nomination_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Approval status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Approval status retrieved
+                data:
+                  nomination_id: 23
+                  current_status: PENDING
+                  next_required_level: DEPT_HEAD
+                  workflow:
+                    - level: MANAGER
+                      status: APPROVED
+                      reviewer: "Bob Smith"
+                      reviewed_at: "2025-01-12T14:00:00"
+                      comments: "Well deserved"
+                    - level: DEPT_HEAD
+                      status: PENDING
+                      reviewer: null
+                      reviewed_at: null
+                      comments: null
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ─────────────────────── CATALOG / STORE ───────────────────────
+
+  /catalog/items:
+    get:
+      tags:
+        - catalog
+      summary: Browse Catalog
+      description: Returns a paginated list of available rewards/items.
+      operationId: getCatalogItems
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Catalog items retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Catalog retrieved
+                data:
+                  items:
+                    - id: 1
+                      name: "Amazon Gift Card"
+                      description: "₹500 Amazon Gift Card"
+                      points_required: 500
+                      category: "VOUCHER"
+                      is_active: true
+                      image_url: "https://cdn.example.com/amazon.png"
+                  page: 1
+                  per_page: 20
+                  total: 32
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - catalog
+      summary: Create Catalog Item
+      description: Creates a new store item (HR/Admin only).
+      operationId: createCatalogItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewardCreate'
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Catalog item created
+                data:
+                  id: 10
+                  name: "Movie Voucher"
+                  points_required: 300
+                  is_active: true
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /catalog/items/{reward_id}:
+    put:
+      tags:
+        - catalog
+      summary: Update Catalog Item
+      description: Updates a store item's details (HR/Admin only).
+      operationId: updateCatalogItem
+      parameters:
+        - name: reward_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewardUpdate'
+      responses:
+        '200':
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Catalog item updated
+                data:
+                  id: 10
+                  name: "Movie Voucher"
+                  is_active: false
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /catalog/redeem:
+    post:
+      tags:
+        - catalog
+      summary: Redeem Reward
+      description: Redeems a catalog item using accumulated points.
+      operationId: redeemReward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionCreate'
+      responses:
+        '201':
+          description: Redemption successful
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Reward redeemed successfully
+                data:
+                  redemption_id: 55
+                  reward_name: "Amazon Gift Card"
+                  points_spent: 500
+                  remaining_balance: 350
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /catalog/history:
+    get:
+      tags:
+        - catalog
+      summary: Redemption History
+      description: Returns the current user's redemption history.
+      operationId: getRedemptionHistory
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Redemption history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Redemption history retrieved
+                data:
+                  - id: 55
+                    reward_name: "Amazon Gift Card"
+                    points_spent: 500
+                    redeemed_at: "2025-01-10T14:00:00"
+                    status: FULFILLED
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ─────────────────────── INBOX / NOTIFICATIONS ───────────────────────
+
+  /inbox/:
+    get:
+      tags:
+        - inbox
+      summary: Get Notifications
+      description: Returns a paginated list of the current user's notifications.
+      operationId: getNotifications
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Notifications retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Notifications retrieved
+                data:
+                  items:
+                    - id: 201
+                      message: "You received a Spot Award!"
+                      is_read: false
+                      created_at: "2025-01-14T09:00:00"
+                      notification_type: AWARD
+                  page: 1
+                  per_page: 20
+                  total: 5
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /inbox/unread-count:
+    get:
+      tags:
+        - inbox
+      summary: Get Unread Count
+      description: Returns the number of unread notifications for the current user.
+      operationId: getUnreadCount
+      responses:
+        '200':
+          description: Unread count retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Unread count retrieved
+                data:
+                  unread_count: 3
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /inbox/mark-read:
+    post:
+      tags:
+        - inbox
+      summary: Mark Notifications Read
+      description: Marks one or all notifications as read for the current user.
+      operationId: markNotificationsRead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkReadRequest'
+      responses:
+        '200':
+          description: Notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Notifications marked as read
+                data:
+                  updated_count: 3
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /inbox/send-expiry-reminders:
+    post:
+      tags:
+        - inbox
+      summary: Send Expiry Reminders
+      description: Triggers expiry reminder notifications for users with soon-to-expire points (HR/Admin only).
+      operationId: sendExpiryReminders
+      responses:
+        '200':
+          description: Reminders dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Expiry reminders sent
+                data:
+                  notifications_sent: 24
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────── ANALYTICS ───────────────────────
+
+  /analytics/:
+    get:
+      tags:
+        - analytics
+      summary: Dashboard Metrics
+      description: >
+        Returns aggregated dashboard metrics. Scope is automatically determined from the
+        user's role (ORG for HR/Admin, DEPARTMENT for Dept Heads/Managers, TEAM for others).
+      operationId: getAnalytics
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ORG, DEPARTMENT, TEAM]
+            description: Override default scope (HR/Admin only)
+      responses:
+        '200':
+          description: Analytics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Analytics retrieved
+                data:
+                  total_recognitions: 1420
+                  total_awards_given: 85
+                  total_points_issued: 280500
+                  total_points_redeemed: 95000
+                  active_employees: 142
+                  recognitions_this_month: 112
+                  top_department: "Engineering"
+                  budget_utilization_pct: 34.2
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ─────────────────────── REPORTS ───────────────────────
+
+  /reports/:
+    get:
+      tags:
+        - reports
+      summary: Generate Report
+      description: >
+        Generates a report based on `report_type`. Supports JSON or CSV export.
+        Report types: AWARDS_GIVEN (or RECOGNITIONS), REDEMPTIONS, WALLET_UTILIZATION, EXPIRY_FORECAST.
+      operationId: getReport
+      parameters:
+        - name: report_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [AWARDS_GIVEN, RECOGNITIONS, REDEMPTIONS, WALLET_UTILIZATION, EXPIRY_FORECAST]
+        - name: from_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: department_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: days
+          in: query
+          required: false
+          description: Used for EXPIRY_FORECAST – number of days to look ahead
+          schema:
+            type: integer
+            default: 30
+        - name: export_format
+          in: query
+          required: false
+          schema:
+            type: string
+            default: json
+            enum: [json, csv]
+      responses:
+        '200':
+          description: Report generated (JSON or CSV file attachment)
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Recognition report generated
+                data:
+                  report_type: RECOGNITIONS
+                  generated_at: "2025-01-15T10:30:00"
+                  data:
+                    - sender_name: "Alice Johnson"
+                      receiver_name: "David Lee"
+                      badge: "Team Player"
+                      date: "2025-01-10"
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /reports/payroll:
+    get:
+      tags:
+        - reports
+      summary: Payroll Report
+      description: Generates a monthly payroll encashment report (HR only). Supports JSON or CSV export.
+      operationId: getPayrollReport
+      parameters:
+        - name: month
+          in: query
+          required: true
+          description: Month in YYYY-MM format
+          schema:
+            type: string
+            example: "2025-01"
+        - name: export_format
+          in: query
+          required: false
+          schema:
+            type: string
+            default: json
+            enum: [json, csv]
+      responses:
+        '200':
+          description: Payroll report generated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: "Payroll report generated for 2025-01"
+                data:
+                  report_type: PAYROLL
+                  month: "2025-01"
+                  generated_at: "2025-01-15T10:30:00"
+                  data:
+                    - employee_name: "Alice Johnson"
+                      employee_id: 1
+                      points_converted: 500
+                      cash_amount: 50.00
+                      status: APPROVED
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ─────────────────────── SYSTEM CONFIG ───────────────────────
+
+  /config/:
+    get:
+      tags:
+        - config
+      summary: List System Configurations
+      description: Returns all system configuration key-value pairs (HR/Admin only).
+      operationId: listConfigs
+      responses:
+        '200':
+          description: Configurations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Configurations retrieved
+                data:
+                  - key: "max_monthly_recognitions"
+                    value: "5"
+                    description: "Maximum recognitions an employee can send per month"
+                    updated_at: "2025-01-01T00:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /config/feature-flags:
+    get:
+      tags:
+        - config
+      summary: Get Feature Flags
+      description: Public endpoint returning current feature flag values. No authentication required.
+      operationId: getFeatureFlags
+      security: []
+      responses:
+        '200':
+          description: Feature flags retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Feature flags retrieved
+                data:
+                  conversion_enabled: true
+                  catalog_enabled: true
+                  celebrations_enabled: true
+                  awards_enabled: true
+                timestamp: "2025-01-15T10:30:00"
+
+  /config/{key}:
+    put:
+      tags:
+        - config
+      summary: Update Configuration
+      description: Updates a single system configuration value (HR/Admin only).
+      operationId: updateConfig
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            example: max_monthly_recognitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemConfigUpdate'
+      responses:
+        '200':
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: "Config 'max_monthly_recognitions' updated"
+                data:
+                  key: "max_monthly_recognitions"
+                  value: "10"
+                  description: "Maximum recognitions per month"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────── DEPARTMENTS ───────────────────────
+
+  /departments/:
+    get:
+      tags:
+        - departments
+      summary: List Departments
+      description: Returns all departments. Available to all authenticated users.
+      operationId: listDepartments
+      responses:
+        '200':
+          description: Departments retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Departments retrieved
+                data:
+                  - id: 1
+                    name: "Engineering"
+                    created_at: "2024-01-01T00:00:00"
+                  - id: 2
+                    name: "Design"
+                    created_at: "2024-01-01T00:00:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - departments
+      summary: Create Department
+      description: Creates a new department (HR/Admin only).
+      operationId: createDepartment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentCreate'
+      responses:
+        '201':
+          description: Department created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 201
+                message: Department created
+                data:
+                  id: 5
+                  name: "Product"
+                  created_at: "2025-01-15T10:30:00"
+                timestamp: "2025-01-15T10:30:00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /departments/{dept_id}:
+    put:
+      tags:
+        - departments
+      summary: Update Department
+      description: Updates a department's name (HR/Admin only).
+      operationId: updateDepartment
+      parameters:
+        - name: dept_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentUpdate'
+      responses:
+        '200':
+          description: Department updated
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Department updated
+                data:
+                  id: 5
+                  name: "Product & Design"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      tags:
+        - departments
+      summary: Delete Department
+      description: Deletes a department (HR/Admin only).
+      operationId: deleteDepartment
+      parameters:
+        - name: dept_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Department deleted
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Department deleted successfully
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ─────────────────────── CELEBRATIONS ───────────────────────
+
+  /celebrations/upcoming:
+    get:
+      tags:
+        - celebrations
+      summary: Upcoming Celebrations
+      description: Returns upcoming birthdays and work anniversaries within the next N days.
+      operationId: getUpcomingCelebrations
+      parameters:
+        - name: days
+          in: query
+          required: false
+          description: How many days ahead to look (default 7)
+          schema:
+            type: integer
+            default: 7
+      responses:
+        '200':
+          description: Upcoming celebrations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Celebrations fetched
+                data:
+                  - id: 1
+                    user_id: 8
+                    user_name: "Emma Clark"
+                    celebration_type: BIRTHDAY
+                    celebration_date: "2025-01-18"
+                    years: null
+                  - id: 2
+                    user_id: 3
+                    user_name: "Carlos Rivera"
+                    celebration_type: WORK_ANNIVERSARY
+                    celebration_date: "2025-01-20"
+                    years: 3
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /celebrations/history:
+    get:
+      tags:
+        - celebrations
+      summary: Celebration History
+      description: Returns paginated past celebration records.
+      operationId: getCelebrationHistory
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Celebration history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Celebration history fetched
+                data:
+                  items:
+                    - id: 1
+                      user_id: 8
+                      user_name: "Emma Clark"
+                      celebration_type: BIRTHDAY
+                      celebration_date: "2025-01-01"
+                  page: 1
+                  per_page: 20
+                  total: 48
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /celebrations/process-today:
+    post:
+      tags:
+        - celebrations
+      summary: Process Today's Celebrations
+      description: Manually triggers processing of today's birthdays and work anniversaries – sends notifications and points (HR/Admin only).
+      operationId: processTodayCelebrations
+      responses:
+        '200':
+          description: Celebrations processed
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: "Processed 2 birthdays and 1 anniversaries"
+                data:
+                  birthdays: 2
+                  anniversaries: 1
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────── EMAIL ───────────────────────
+
+  /email/logs:
+    get:
+      tags:
+        - email
+      summary: Email Logs
+      description: Returns paginated email send history (HR only).
+      operationId: getEmailLogs
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Email logs retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Email logs retrieved
+                data:
+                  - id: 301
+                    to_email: "alice@company.com"
+                    template_name: "ecard_received"
+                    status: SENT
+                    sent_at: "2025-01-14T09:05:00"
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /email/test-send:
+    post:
+      tags:
+        - email
+      summary: Send Test Email
+      description: Renders a template file with the provided context and sends a test email (HR only).
+      operationId: sendTestEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTestEmailRequest'
+      responses:
+        '200':
+          description: Test email dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: success
+                status_code: 200
+                message: Test email dispatched
+                data:
+                  status: SENT
+                  log_id: 302
+                timestamp: "2025-01-15T10:30:00"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          description: Template file not found or send failed
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: error
+                status_code: 422
+                message: "Template file not found or send failed."
+
+# ─────────────────────── COMPONENTS ───────────────────────
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    # ── Auth ──
+    LoginForm:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: User email address
+          example: alice@company.com
+        password:
+          type: string
+          format: password
+          example: "S3cur3P@ssw0rd"
+
+    # ── Users ──
+    UserCreate:
+      type: object
+      required:
+        - name
+        - email
+        - role
+        - password
+      properties:
+        name:
+          type: string
+          example: "Carol White"
+        email:
+          type: string
+          format: email
+          example: "carol@company.com"
+        role:
+          type: string
+          enum: [EMPLOYEE, MANAGER, DEPT_HEAD, HR, ADMIN]
+          example: EMPLOYEE
+        password:
+          type: string
+          format: password
+        department_id:
+          type: integer
+          nullable: true
+          example: 3
+        manager_id:
+          type: integer
+          nullable: true
+          example: 5
+        date_of_joining:
+          type: string
+          format: date
+          nullable: true
+          example: "2025-01-15"
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+          example: "1994-06-20"
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        role:
+          type: string
+          enum: [EMPLOYEE, MANAGER, DEPT_HEAD, HR, ADMIN]
+          nullable: true
+        department_id:
+          type: integer
+          nullable: true
+        manager_id:
+          type: integer
+          nullable: true
+        date_of_joining:
+          type: string
+          format: date
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+
+    # ── Budgets/Wallets ──
+    WalletAllocateRequest:
+      type: object
+      required:
+        - manager_id
+        - points
+      properties:
+        manager_id:
+          type: integer
+          example: 5
+        points:
+          type: integer
+          example: 500
+
+    WalletRewardRequest:
+      type: object
+      required:
+        - employee_id
+        - points
+        - reason
+      properties:
+        employee_id:
+          type: integer
+          example: 8
+        points:
+          type: integer
+          example: 100
+        reason:
+          type: string
+          example: "Excellent delivery on the Q4 sprint"
+
+    BulkBudgetAllocationRequest:
+      type: object
+      required:
+        - points
+      properties:
+        points:
+          type: integer
+          example: 500
+        department_id:
+          type: integer
+          nullable: true
+          example: 3
+        user_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+          example: [5, 7, 12]
+        role_filter:
+          type: string
+          nullable: true
+          example: MANAGER
+
+    # ── Points Conversion ──
+    PointsConversionCreate:
+      type: object
+      required:
+        - points_converted
+        - conversion_type
+      properties:
+        points_converted:
+          type: integer
+          example: 500
+        conversion_type:
+          type: string
+          enum: [CASH, PAYROLL]
+          example: CASH
+
+    ConversionActionRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum: [APPROVE, REJECT]
+          example: APPROVE
+        comments:
+          type: string
+          nullable: true
+          example: "Approved for January payroll cycle"
+
+    # ── Points Policy ──
+    PointsPolicyCreate:
+      type: object
+      required:
+        - recognition_type
+        - points_allocated
+      properties:
+        recognition_type:
+          type: string
+          example: PEER
+        points_allocated:
+          type: integer
+          example: 50
+        conversion_rate:
+          type: number
+          format: float
+          nullable: true
+          example: 0.1
+        conversion_reward_type:
+          type: string
+          nullable: true
+          example: CASH
+        is_active:
+          type: boolean
+          default: true
+
+    PointsPolicyUpdate:
+      type: object
+      properties:
+        points_allocated:
+          type: integer
+          nullable: true
+        conversion_rate:
+          type: number
+          format: float
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+
+    # ── Recognitions / eCards ──
+    ECardCreate:
+      type: object
+      required:
+        - receiver_id
+        - badge_id
+        - message
+      properties:
+        receiver_id:
+          type: integer
+          example: 9
+        badge_id:
+          type: integer
+          example: 3
+        message:
+          type: string
+          example: "Brilliant work on the dashboard — really raised the bar!"
+
+    BadgeCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Rising Star"
+        description:
+          type: string
+          nullable: true
+          example: "For outstanding new joiners showing exceptional initiative"
+        icon_url:
+          type: string
+          nullable: true
+          example: "https://cdn.example.com/badges/rising-star.png"
+
+    BadgeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        icon_url:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+
+    # ── Awards ──
+    AwardTypeCreate:
+      type: object
+      required:
+        - award_key
+        - name
+        - points
+        - frequency
+        - eligibility_rule
+      properties:
+        award_key:
+          type: string
+          example: "SPOT"
+        name:
+          type: string
+          example: "Spot Award"
+        description:
+          type: string
+          nullable: true
+          example: "For immediate recognition of outstanding contributions"
+        points:
+          type: integer
+          example: 100
+        frequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, ADHOC]
+          example: ADHOC
+        eligibility_rule:
+          type: string
+          enum: [MANAGER_ONLY, PEER, SENIOR_MGMT]
+          example: PEER
+        approval_workflow:
+          type: array
+          items:
+            type: string
+            enum: [MANAGER, DEPT_HEAD, HR]
+          nullable: true
+          example: [MANAGER]
+        is_active:
+          type: boolean
+          default: true
+
+    AwardTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        points:
+          type: integer
+          nullable: true
+        frequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, ADHOC]
+          nullable: true
+        eligibility_rule:
+          type: string
+          enum: [MANAGER_ONLY, PEER, SENIOR_MGMT]
+          nullable: true
+        approval_workflow:
+          type: array
+          items:
+            type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+
+    AwardNominationCreate:
+      type: object
+      required:
+        - nominee_id
+        - award_type_id
+      properties:
+        nominee_id:
+          type: integer
+          example: 8
+        award_type_id:
+          type: integer
+          example: 1
+        citation:
+          type: string
+          nullable: true
+          example: "Led the Q4 release single-handedly under tight deadlines"
+
+    AwardActionRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum: [APPROVE, REJECT]
+          example: APPROVE
+        comments:
+          type: string
+          nullable: true
+          example: "Strong performance, well deserved"
+
+    # ── Catalog / Store ──
+    RewardCreate:
+      type: object
+      required:
+        - name
+        - points_required
+      properties:
+        name:
+          type: string
+          example: "Movie Voucher"
+        description:
+          type: string
+          nullable: true
+          example: "Single-use PVR movie voucher worth ₹300"
+        points_required:
+          type: integer
+          example: 300
+        category:
+          type: string
+          nullable: true
+          example: "VOUCHER"
+        image_url:
+          type: string
+          nullable: true
+          example: "https://cdn.example.com/pvr.png"
+        is_active:
+          type: boolean
+          default: true
+
+    RewardUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        points_required:
+          type: integer
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+
+    RedemptionCreate:
+      type: object
+      required:
+        - reward_id
+      properties:
+        reward_id:
+          type: integer
+          example: 1
+
+    # ── Notifications ──
+    MarkReadRequest:
+      type: object
+      properties:
+        notification_id:
+          type: integer
+          nullable: true
+          description: If null or omitted, all unread notifications are marked as read
+          example: 201
+
+    # ── Departments ──
+    DepartmentCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Product"
+
+    DepartmentUpdate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Product & Design"
+
+    # ── System Config ──
+    SystemConfigUpdate:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          example: "10"
+        description:
+          type: string
+          nullable: true
+          example: "Maximum recognitions an employee can send per month"
+
+    # ── Email ──
+    SendTestEmailRequest:
+      type: object
+      required:
+        - to_email
+        - template_name
+      properties:
+        to_email:
+          type: string
+          format: email
+          example: "hr@company.com"
+        template_name:
+          type: string
+          example: "ecard_received"
+          description: Name of the email template file (without extension)
+        context:
+          type: object
+          nullable: true
+          description: Template variable substitutions
+          example:
+            sender_name: "Alice Johnson"
+            badge_name: "Team Player"
+            message: "Great work on the sprint!"
+
+    # ── Shared Response Envelope ──
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        status_code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "Operation completed successfully"
+        data:
+          description: Response payload (object or array, varies per endpoint)
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00"
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized – missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            type: object
+            example:
+              status: error
+              status_code: 401
+              message: "Could not validate credentials"
+              data: null
+              timestamp: "2025-01-15T10:30:00"
+
+    ForbiddenError:
+      description: Forbidden – user does not have the required role
+      content:
+        application/json:
+          schema:
+            type: object
+            example:
+              status: error
+              status_code: 403
+              message: "Access denied"
+              data: null
+              timestamp: "2025-01-15T10:30:00"
+
+    NotFoundError:
+      description: Not Found – the requested resource does not exist
+      content:
+        application/json:
+          schema:
+            type: object
+            example:
+              status: error
+              status_code: 404
+              message: "Resource not found"
+              data: null
+              timestamp: "2025-01-15T10:30:00"
+
+    BadRequestError:
+      description: Bad Request – invalid input or business logic violation
+      content:
+        application/json:
+          schema:
+            type: object
+            example:
+              status: error
+              status_code: 400
+              message: "Validation failed"
+              data: null
+              timestamp: "2025-01-15T10:30:00"
