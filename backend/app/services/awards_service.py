@@ -197,11 +197,10 @@ class AwardsService:
                     },
                 )
             else:
-                # Notify next approver if more approvals are needed
+                # Notify next approver in the nominee's approval chain
                 next_level = self._get_next_required_level(required_levels, current_approvals)
                 if next_level:
-                    # Logic to notify the next approver (e.g., Dept Head if Manager approved)
-                    pass # Placeholder for actual notification logic
+                    self._notify_next_approver(award, next_level)
 
         self.db.commit()
         self.db.refresh(award)
@@ -223,14 +222,13 @@ class AwardsService:
                 },
             )
 
-        # 5. Create notification for manager (if nominee has a manager and award is pending)
-        if award.status == AwardStatus.PENDING.value and award.nominee.manager_id:
-            self.notification_service.create_notification(
-                user_id=award.nominee.manager_id,
-                message=f"New Award Nomination: {award.nominee.name} has been nominated for {award_type.name}.",
-                source_type=ReferenceType.AWARD.value,
-                source_id=award.id
-            )
+        # 5. Notify the next required approver in the nominee's department chain
+        if award.status == AwardStatus.PENDING.value:
+            required_levels_now = self._get_required_approval_levels(award_type)
+            completed_levels_now = self._get_existing_approvals(award.id)
+            next_level_now = self._get_next_required_level(required_levels_now, completed_levels_now)
+            if next_level_now:
+                self._notify_next_approver(award, next_level_now)
 
         if award.status != 'PENDING':
             award.next_required_level = None
@@ -306,6 +304,22 @@ class AwardsService:
                     detail="Only the nominee's direct manager can approve at the MANAGER level."
                 )
 
+        # 3c. For DEPT_HEAD-level approval, enforce that only the nominee's dept head
+        #     may approve — prevents the nominator's dept head from acting on cross-dept
+        #     nominations.
+        if approval_level == 'DEPT_HEAD':
+            nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+            if nominee:
+                nominee_dept_head = self.db.query(User).filter(
+                    User.department_id == nominee.department_id,
+                    User.role == UserRole.DEPT_HEAD.value,
+                ).first()
+                if nominee_dept_head and nominee_dept_head.id != approver_id:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Only the nominee's department head can approve at the DEPT_HEAD level."
+                    )
+
         # 4. Create approval record
         approval = AwardApproval(
             award_id=award_id,
@@ -360,12 +374,10 @@ class AwardsService:
                 },
             )
         else:
-            # More approvals needed - notify next approver
+            # More approvals needed - notify the next approver in the nominee's chain
             next_level = self._get_next_required_level(required_levels, all_approvals)
             if next_level:
-                # Find users with the next approval level and notify them
-                # For now, we'll just log that more approvals are needed
-                pass
+                self._notify_next_approver(award, next_level)
 
         self.db.commit()
         self.db.refresh(award)
@@ -511,9 +523,20 @@ class AwardsService:
             next_lvl = self._get_next_required_level(req_levels, comp_levels)
             
             if next_lvl and next_lvl.upper() == role.upper():
-                # For MANAGER role, use the direct manager check logic
+                # For MANAGER role, only the nominee's direct manager may see it
                 if next_lvl.upper() == 'MANAGER':
                     if award.nominee and award.nominee.manager_id == user_id:
+                        visible_ids.add(award.id)
+                elif next_lvl.upper() == 'DEPT_HEAD':
+                    # Only the nominee's own dept head may see it
+                    nominee_dept_head = (
+                        self.db.query(User).filter(
+                            User.department_id == award.nominee.department_id,
+                            User.role == UserRole.DEPT_HEAD.value,
+                        ).first()
+                        if award.nominee else None
+                    )
+                    if nominee_dept_head and nominee_dept_head.id == user_id:
                         visible_ids.add(award.id)
                 else:
                     visible_ids.add(award.id)
@@ -700,6 +723,50 @@ class AwardsService:
         return award_type
 
     # --- Multi-Level Approval Helper Methods ---
+
+    def _notify_next_approver(self, award: Award, next_level: str) -> None:
+        """
+        Send a pending-approval notification to the correct person based on the
+        nominee's department chain, not the nominator's.
+        """
+        nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+        if not nominee:
+            return
+
+        msg = (
+            f"New Award Nomination: {nominee.name} has been nominated for "
+            f"{award.award_type.name} and requires your approval."
+        )
+
+        if next_level == 'MANAGER':
+            if nominee.manager_id:
+                self.notification_service.create_notification(
+                    user_id=nominee.manager_id,
+                    message=msg,
+                    source_type=ReferenceType.AWARD.value,
+                    source_id=award.id,
+                )
+        elif next_level == 'DEPT_HEAD':
+            dept_head = self.db.query(User).filter(
+                User.department_id == nominee.department_id,
+                User.role == UserRole.DEPT_HEAD.value,
+            ).first()
+            if dept_head:
+                self.notification_service.create_notification(
+                    user_id=dept_head.id,
+                    message=msg,
+                    source_type=ReferenceType.AWARD.value,
+                    source_id=award.id,
+                )
+        elif next_level in ('HR', 'ADMIN'):
+            hr_users = self.db.query(User).filter(User.role == UserRole.HR.value).all()
+            for hr_user in hr_users:
+                self.notification_service.create_notification(
+                    user_id=hr_user.id,
+                    message=msg,
+                    source_type=ReferenceType.AWARD.value,
+                    source_id=award.id,
+                )
 
     def _get_required_approval_levels(self, award_type: AwardType) -> List[str]:
         """

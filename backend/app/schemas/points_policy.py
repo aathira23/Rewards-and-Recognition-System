@@ -14,6 +14,8 @@ class PointsPolicyBase(BaseModel):
     points: int
     monthly_limit: Optional[int] = None
     cooldown_days: Optional[int] = None
+    cooldown_hours: Optional[int] = None
+    consecutive_limit: Optional[int] = None
     conversion_rate: Optional[Decimal] = None
     conversion_reward_type: Optional[str] = None
     is_active: bool = True
@@ -29,6 +31,8 @@ class PointsPolicyUpdate(BaseModel):
     points: Optional[int] = None
     monthly_limit: Optional[int] = None
     cooldown_days: Optional[int] = None
+    cooldown_hours: Optional[int] = None
+    consecutive_limit: Optional[int] = None
     conversion_rate: Optional[Decimal] = None
     is_active: Optional[bool] = None
 

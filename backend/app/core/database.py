@@ -40,6 +40,8 @@ if getattr(settings, "DEBUG", False):
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+            conn.execute(text("ALTER TABLE points_policy ADD COLUMN IF NOT EXISTS cooldown_hours INTEGER;"))
+            conn.execute(text("ALTER TABLE points_policy ADD COLUMN IF NOT EXISTS consecutive_limit INTEGER;"))
     except Exception:
         # Best-effort only; don't raise so app can continue to start.
         pass

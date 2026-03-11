@@ -44,5 +44,8 @@ class Settings(BaseSettings):
     # Front-end base URL (used for links in emails)
     FRONTEND_URL: str = "http://localhost:8080"
 
+    ECARD_CONSECUTIVE_WINDOW_HOURS: int = 24
+    ECARD_DEFAULT_COOLDOWN_HOURS: int = 1
+
 
 settings = Settings()

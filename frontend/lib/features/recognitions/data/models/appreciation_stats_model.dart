@@ -9,6 +9,12 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
     required super.badgeIcons,
     super.sentRecognitions,
     super.receivedRecognitions,
+    super.monthlyLimit,
+    super.monthlySent = 0,
+    super.cooldownDays,
+    super.consecutiveLimit,
+    super.cooldownHours,
+    super.nextAvailableAt,
   });
 
   factory AppreciationStatsModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +56,14 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       badgeIcons: badgeIcons,
       sentRecognitions: sentRecognitions,
       receivedRecognitions: receivedRecognitions,
+      monthlyLimit: json['monthly_limit'] as int?,
+      monthlySent: (json['monthly_sent'] as int?) ?? 0,
+      cooldownDays: json['cooldown_days'] as int?,
+      consecutiveLimit: json['consecutive_limit'] as int?,
+      cooldownHours: json['cooldown_hours'] as int?,
+      nextAvailableAt: json['next_available_at'] != null
+          ? DateTime.tryParse(json['next_available_at'] as String)
+          : null,
     );
   }
 
@@ -63,6 +77,7 @@ class AppreciationStatsModel extends AppreciationStatsEntity {
       badgeIcons: {},
       sentRecognitions: [],
       receivedRecognitions: [],
+      monthlySent: 0,
     );
   }
 }

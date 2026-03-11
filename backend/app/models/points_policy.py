@@ -18,6 +18,10 @@ class PointsPolicy(Base):
     points = Column(Integer, nullable=False)
     monthly_limit = Column(Integer, nullable=True)
     cooldown_days = Column(Integer, nullable=True)
+    # New: cooldown in hours (preferred for ECARD consecutive-send cooldown)
+    cooldown_hours = Column(Integer, nullable=True)
+    # Number of consecutive eCards that trigger the cooldown when reached
+    consecutive_limit = Column(Integer, nullable=True)
     conversion_rate = Column(Numeric(10, 2), nullable=True)
     conversion_reward_type = Column(String, nullable=True)  # PAYROLL, CSR, VOUCHER
     is_active = Column(Boolean, default=True, nullable=False)

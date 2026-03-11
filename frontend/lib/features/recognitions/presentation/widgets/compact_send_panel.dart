@@ -31,6 +31,16 @@ class CompactSendPanel extends StatelessWidget {
     final sentCount = stats?.sentCount ?? 0;
     const brandBlue = Color(0xFF1A60FF);
 
+    // ── Limit / cooldown state ──────────────────────────────────
+    final int? monthlyLimit = stats?.monthlyLimit;
+    final int monthlySent = stats?.monthlySent ?? 0;
+    final DateTime? nextAvailableAt = stats?.nextAvailableAt;
+    final bool limitReached =
+        monthlyLimit != null && monthlySent >= monthlyLimit;
+    final bool onCooldown =
+        nextAvailableAt != null && DateTime.now().isBefore(nextAvailableAt);
+    final bool canSend = badges.isNotEmpty && !limitReached && !onCooldown;
+
     // Collect up to 5 recent unique badges with their entities
     final rawRecent = <_RecentBadge>[];
     for (final r in stats?.sentRecognitions ?? []) {
@@ -76,14 +86,23 @@ class CompactSendPanel extends StatelessWidget {
           children: [
             // ── Header ─────────────────────────────────────────────
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    'Appreciations Sent',
-                    style: AppTextStyles.pageTitle(),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  'Appreciations Sent',
+                  style: AppTextStyles.pageTitle(),
                 ),
+                const Spacer(),
+                // Pills sit right next to "View all"
+                _StatusPills(
+                  monthlyLimit: monthlyLimit,
+                  monthlySent: monthlySent,
+                  limitReached: limitReached,
+                  onCooldown: onCooldown,
+                  nextAvailableAt: nextAvailableAt,
+                  brandBlue: brandBlue,
+                ),
+                const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => _showSentHistory(context),
                   style: TextButton.styleFrom(
@@ -228,10 +247,22 @@ class CompactSendPanel extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed:
-                    badges.isEmpty ? null : () => _showBadgePicker(context),
-                icon: const Icon(Icons.add_reaction_outlined, size: 18),
-                label: const Text('Send New Appreciation'),
+                onPressed: canSend ? () => _showBadgePicker(context) : null,
+                icon: Icon(
+                  limitReached
+                      ? Icons.block_rounded
+                      : onCooldown
+                          ? Icons.timer_outlined
+                          : Icons.add_reaction_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  limitReached
+                      ? 'Monthly Limit Reached'
+                      : onCooldown
+                          ? 'Cooldown Active'
+                          : 'Send New Appreciation',
+                ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -286,9 +317,175 @@ class _RecentBadge {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Badge picker dialog (shown when "Send New Appreciation" is pressed)
-// Step 1: pick a badge.  Step 2: fill in recipient + message.
+// Status pills row — shown below the card subtitle
 // ─────────────────────────────────────────────────────────────────────────────
+class _StatusPills extends StatelessWidget {
+  final int? monthlyLimit;
+  final int monthlySent;
+  final bool limitReached;
+  final bool onCooldown;
+  final DateTime? nextAvailableAt;
+  final Color brandBlue;
+
+  const _StatusPills({
+    required this.monthlyLimit,
+    required this.monthlySent,
+    required this.limitReached,
+    required this.onCooldown,
+    required this.nextAvailableAt,
+    required this.brandBlue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (monthlyLimit != null) _monthlyPill(),
+        _cooldownPill(), // always shown — green "Ready" when not on cooldown
+      ],
+    );
+  }
+
+  Widget _monthlyPill() {
+    final ratio = (monthlySent / monthlyLimit!).clamp(0.0, 1.0);
+    final remaining = (monthlyLimit! - monthlySent).clamp(0, monthlyLimit!);
+    final isNearLimit = ratio >= 0.8;
+
+    final Color fg;
+    final Color bg;
+    if (limitReached) {
+      fg = const Color(0xFFDC2626);
+      bg = const Color(0xFFDC2626);
+    } else if (isNearLimit) {
+      fg = const Color(0xFFD97706);
+      bg = const Color(0xFFD97706);
+    } else {
+      fg = brandBlue;
+      bg = brandBlue;
+    }
+
+    final label = limitReached
+        ? 'Limit Reached · $monthlySent / $monthlyLimit'
+        : '$monthlySent / $monthlyLimit · $remaining left';
+
+    final tooltipMsg = limitReached
+        ? 'Monthly limit reached. You can send again next month.'
+        : isNearLimit
+            ? 'Almost at your monthly limit — only $remaining eCard${remaining == 1 ? '' : 's'} left this month.'
+            : 'Monthly eCards: $monthlySent sent, $remaining remaining this month.';
+
+    return Tooltip(
+        message: tooltipMsg,
+        preferBelow: true,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: bg.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: fg.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                limitReached
+                    ? Icons.block_rounded
+                    : isNearLimit
+                        ? Icons.warning_amber_rounded
+                        : Icons.calendar_month_outlined,
+                size: 13,
+                color: fg,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: fg,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ));
+  }
+
+  Widget _cooldownPill() {
+    if (!onCooldown || nextAvailableAt == null) {
+      // Ready state — green
+      return Tooltip(
+        message: 'No cooldown active — you can send an appreciation right now.',
+        preferBelow: true,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFD1FAE5),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: const Color(0xFF34D399).withValues(alpha: 0.5)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle_outline_rounded,
+                  size: 13, color: Color(0xFF059669)),
+              SizedBox(width: 5),
+              Text(
+                'Ready',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF059669),
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final now = DateTime.now();
+    final diff = nextAvailableAt!.difference(now);
+    final String timeLeft;
+    if (diff.inHours >= 24) {
+      final days = diff.inDays;
+      timeLeft = '$days day${days == 1 ? '' : 's'}';
+    } else if (diff.inHours >= 1) {
+      timeLeft = '${diff.inHours}h ${diff.inMinutes.remainder(60)}m';
+    } else {
+      timeLeft = '${diff.inMinutes + 1} min';
+    }
+
+    const fg = Color(0xFFD97706);
+    return Tooltip(
+      message:
+          'You sent appreciations too quickly. Wait $timeLeft before sending again.',
+      preferBelow: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: fg.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.timer_outlined, size: 13, color: fg),
+            const SizedBox(width: 5),
+            Text(
+              'Cooldown: $timeLeft',
+              style: const TextStyle(
+                  fontSize: 12, color: fg, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _BadgePickerDialog extends StatefulWidget {
   final List<BadgeEntity> badges;

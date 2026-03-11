@@ -666,12 +666,7 @@ class _HrConfigViewState extends State<_HrConfigView>
             ),
           if (pointsPolicies.isNotEmpty)
             _DataCard(
-              columns: const [
-                'Recognition Type',
-                'Points',
-                'Active',
-                ''
-              ],
+              columns: const ['Recognition Type', 'Points', 'Active', ''],
               flexes: const [3, 2, 1, 1],
               rows: pointsPolicies.map((p) {
                 final isActive = p['is_active'] ?? true;
@@ -689,9 +684,38 @@ class _HrConfigViewState extends State<_HrConfigView>
                                 fontSize: 11, color: Colors.grey.shade500)),
                     ],
                   ),
-                  Text('${p['points'] ?? 0}',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w700)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${p['points'] ?? 0} pts',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w700)),
+                      if (p['recognition_type'] == 'ECARD') ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          [
+                            if ((p['monthly_limit'] as int?) != null)
+                              'Limit: ${p['monthly_limit']}/mo',
+                            if ((p['consecutive_limit'] as int?) != null)
+                              'Consec: ${p['consecutive_limit']}',
+                            if ((p['cooldown_hours'] as int?) != null)
+                              'Cooldown: ${p['cooldown_hours']}h',
+                          ].isEmpty
+                              ? 'No limit / cooldown'
+                              : [
+                                  if ((p['monthly_limit'] as int?) != null)
+                                    'Limit: ${p['monthly_limit']}/mo',
+                                  if ((p['consecutive_limit'] as int?) != null)
+                                    'Consec: ${p['consecutive_limit']}',
+                                  if ((p['cooldown_hours'] as int?) != null)
+                                    'Cooldown: ${p['cooldown_hours']}h',
+                                ].join('  ·  '),
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ],
+                  ),
                   StatusBadge(status: isActive ? 'ACTIVE' : 'INACTIVE'),
                   Container(
                     width: double.infinity,
@@ -807,6 +831,18 @@ class _HrConfigViewState extends State<_HrConfigView>
     final pointsC = TextEditingController(text: '${existing?['points'] ?? ''}');
     final rateC =
         TextEditingController(text: '${existing?['conversion_rate'] ?? ''}');
+    final monthlyLimitC = TextEditingController(
+        text: existing?['monthly_limit'] != null
+            ? '${existing!['monthly_limit']}'
+            : '');
+    final consecutiveLimitC = TextEditingController(
+        text: existing?['consecutive_limit'] != null
+            ? '${existing!['consecutive_limit']}'
+            : '');
+    final cooldownC = TextEditingController(
+        text: existing?['cooldown_hours'] != null
+            ? '${existing!['cooldown_hours']}'
+            : '');
 
     final outerCtx = context;
 
@@ -823,7 +859,49 @@ class _HrConfigViewState extends State<_HrConfigView>
                 child: TextField(
                   controller: pointsC,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Points'),
+                  decoration: const InputDecoration(
+                    labelText: 'Points per eCard',
+                    hintText: 'e.g. 50',
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: monthlyLimitC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Monthly send limit (optional)',
+                    hintText: 'Leave blank for no limit',
+                    helperText:
+                        'Max number of eCards an employee can send per month',
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: consecutiveLimitC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Consecutive sends before cooldown (optional)',
+                    hintText: 'e.g. 5',
+                    helperText:
+                        'Number of consecutive eCards that trigger the cooldown',
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: cooldownC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Cooldown after threshold (hours, optional)',
+                    hintText: 'Leave blank for no cooldown',
+                    helperText:
+                        'Hours to block sending after the consecutive threshold is reached',
+                  ),
                 ),
               ),
             ];
@@ -974,6 +1052,18 @@ class _HrConfigViewState extends State<_HrConfigView>
                         if (pointsC.text.isNotEmpty) {
                           data['points'] = int.tryParse(pointsC.text);
                         }
+                        if (selectedType == 'ECARD') {
+                          data['monthly_limit'] = monthlyLimitC.text.isNotEmpty
+                              ? int.tryParse(monthlyLimitC.text)
+                              : null;
+                          data['consecutive_limit'] =
+                              consecutiveLimitC.text.isNotEmpty
+                                  ? int.tryParse(consecutiveLimitC.text)
+                                  : null;
+                          data['cooldown_hours'] = cooldownC.text.isNotEmpty
+                              ? int.tryParse(cooldownC.text)
+                              : null;
+                        }
                       }
                       outerCtx.read<HrConfigBloc>().add(SaveItem(
                             entityType: HrConfigEntityType.policyRule,
@@ -987,6 +1077,17 @@ class _HrConfigViewState extends State<_HrConfigView>
                       };
                       if (selectedType == 'ECARD') {
                         data['points'] = int.tryParse(pointsC.text) ?? 0;
+                        if (monthlyLimitC.text.isNotEmpty) {
+                          data['monthly_limit'] =
+                              int.tryParse(monthlyLimitC.text);
+                        }
+                        if (consecutiveLimitC.text.isNotEmpty) {
+                          data['consecutive_limit'] =
+                              int.tryParse(consecutiveLimitC.text);
+                        }
+                        if (cooldownC.text.isNotEmpty) {
+                          data['cooldown_hours'] = int.tryParse(cooldownC.text);
+                        }
                       } else if (selectedType == 'CELEBRATION') {
                         data['points'] = int.tryParse(pointsC.text) ?? 0;
                         if (eventC.text.isNotEmpty) {

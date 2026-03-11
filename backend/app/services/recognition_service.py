@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional, List, Any, Dict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from app.models.badges import Badge
 from app.models.ecards import ECard
@@ -10,6 +10,7 @@ from app.models.users import User
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
 from app.utils.enums import ReferenceType
+from app.core.config import settings
 
 
 class RecognitionService:
@@ -59,6 +60,93 @@ class RecognitionService:
         return badge
 
     # --- eCard / Recognition Logic ---
+    def _get_ecard_policy(self) -> Optional[PointsPolicy]:
+        """Return the generic (event_key IS NULL) ECARD policy row, or None."""
+        return self.db.query(PointsPolicy).filter(
+            PointsPolicy.recognition_type == "ECARD",
+            PointsPolicy.event_key == None,
+            PointsPolicy.is_active == True
+        ).first()
+
+    def _check_monthly_limit(self, sender_id: int, policy: PointsPolicy) -> None:
+        """Raise ValueError if sender has hit their monthly eCard limit."""
+        if not policy or not policy.monthly_limit:
+            return
+        start_of_month = datetime.now(timezone.utc).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+        monthly_sent = self.db.query(ECard).filter(
+            ECard.sender_id == sender_id,
+            ECard.created_at >= start_of_month
+        ).count()
+        if monthly_sent >= policy.monthly_limit:
+            raise ValueError(
+                f"You have reached your monthly eCard limit of {policy.monthly_limit}. "
+                "Your limit resets at the start of next month."
+            )
+
+    def _check_cooldown(self, sender_id: int, policy: PointsPolicy) -> None:
+        """Raise ValueError if sender is still within the cooldown window."""
+        if not policy:
+            return
+
+        # New behaviour: if a `consecutive_limit` is configured, count only
+        # eCards within a recent window (hours) so the consecutive threshold
+        # applies to recent sends (e.g., same day). When the threshold is
+        # reached, determine a cooldown in hours using the policy's
+        # `cooldown_hours` if present, else fall back to `cooldown_days`
+        # converted to hours, and finally to a default setting.
+        if getattr(policy, 'consecutive_limit', None):
+            # --- Consecutive-send window cooldown ---
+            # Count sends within the configurable window. If the sender has hit
+            # consecutive_limit sends in that window, activate a cooldown.
+            # The legacy cooldown_days path is intentionally SKIPPED when
+            # consecutive_limit is configured.
+            n = int(policy.consecutive_limit)
+            now_utc = datetime.now(timezone.utc)
+            window_start = now_utc - timedelta(hours=int(getattr(settings, 'ECARD_CONSECUTIVE_WINDOW_HOURS', 24)))
+            window_count = self.db.query(ECard).filter(
+                ECard.sender_id == sender_id,
+                ECard.created_at >= window_start
+            ).count()
+            if window_count >= n:
+                # Find the most recent send in the window to anchor the cooldown.
+                last_ecard = self.db.query(ECard).filter(
+                    ECard.sender_id == sender_id,
+                    ECard.created_at >= window_start
+                ).order_by(ECard.created_at.desc()).first()
+                if getattr(policy, 'cooldown_hours', None) is not None:
+                    cooldown_hours = int(policy.cooldown_hours)
+                else:
+                    cooldown_hours = int(getattr(settings, 'ECARD_DEFAULT_COOLDOWN_HOURS', 24))
+
+                cooldown_end = last_ecard.created_at + timedelta(hours=cooldown_hours)
+                if now_utc < cooldown_end:
+                    hours_left = max(1, int((cooldown_end - now_utc).total_seconds() / 3600) + 1)
+                    raise ValueError(
+                        f"Please wait {hours_left} more hour(s) before sending another eCard "
+                        f"(cooldown: {cooldown_hours} hour(s) after {policy.consecutive_limit} sends in the window)."
+                    )
+            # Whether limit was reached or not, do NOT fall through to legacy logic.
+            return
+
+        # Legacy path: only reached when consecutive_limit is NOT configured.
+        # Backwards-compatible behaviour: if cooldown_days is configured use it
+        if getattr(policy, 'cooldown_days', None):
+            last_ecard = self.db.query(ECard).filter(
+                ECard.sender_id == sender_id
+            ).order_by(ECard.created_at.desc()).first()
+            if not last_ecard:
+                return
+            cooldown_end = last_ecard.created_at + timedelta(days=policy.cooldown_days)
+            now_utc = datetime.now(timezone.utc)
+            if now_utc < cooldown_end:
+                hours_left = max(1, int((cooldown_end - now_utc).total_seconds() / 3600) + 1)
+                raise ValueError(
+                    f"Please wait {hours_left} more hour(s) before sending another eCard "
+                    f"(cooldown: {policy.cooldown_days} day(s) between sends)."
+                )
+
     def send_ecard(
         self,
         sender_id: int,
@@ -75,21 +163,23 @@ class RecognitionService:
         if not badge or not badge.is_active:
             raise ValueError("Invalid or inactive badge selected.")
 
-        # 2. Get points value — priority:
-        #    1) badge.points column (set per-badge via HR Badges tab)
-        #    2) generic ECARD policy row (event_key IS NULL) — org-wide default
-        #    3) hardcoded fallback of 50
+        # 2. Get ECARD policy (points, monthly_limit, cooldown_days)
+        policy = self._get_ecard_policy()
+
+        # 3. Determine points for this eCard
+        #    Priority: badge.points > policy.points > fallback 50
         if badge.points is not None:
             points = badge.points
+        elif policy:
+            points = policy.points
         else:
-            generic_policy = self.db.query(PointsPolicy).filter(
-                PointsPolicy.recognition_type == "ECARD",
-                PointsPolicy.event_key == None,
-                PointsPolicy.is_active == True
-            ).first()
-            points = generic_policy.points if generic_policy else 50
+            points = 50
 
-        # 3. Create eCard record
+        # 4. Enforce monthly limit and cooldown (raises ValueError if blocked)
+        self._check_monthly_limit(sender_id, policy)
+        self._check_cooldown(sender_id, policy)
+
+        # 5. Create eCard record
         ecard = ECard(
             sender_id=sender_id,
             receiver_id=receiver_id,
@@ -101,7 +191,7 @@ class RecognitionService:
         self.db.commit()
         self.db.refresh(ecard)
 
-        # 4. Award points to receiver
+        # 6. Award points to receiver
         self.points_service.award_points(
             user_id=receiver_id,
             points=points,
@@ -176,12 +266,64 @@ class RecognitionService:
             joinedload(ECard.badge)
         ).filter(ECard.sender_id == user_id).order_by(ECard.created_at.desc()).all()
 
+        # Limit context for the sender's UI
+        policy = self._get_ecard_policy()
+        start_of_month = datetime.now(timezone.utc).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+        monthly_sent = self.db.query(ECard).filter(
+            ECard.sender_id == user_id,
+            ECard.created_at >= start_of_month
+        ).count()
+
+        next_available_at = None
+        # Determine next available send time according to configured policy.
+        if policy:
+            # If a consecutive_limit is configured, count only eCards within a
+            # recent window (hours). When threshold is reached, compute the
+            # cooldown using policy values or fallbacks.
+            if getattr(policy, 'consecutive_limit', None):
+                n = int(policy.consecutive_limit)
+                now_utc = datetime.now(timezone.utc)
+                window_start = now_utc - timedelta(hours=int(getattr(settings, 'ECARD_CONSECUTIVE_WINDOW_HOURS', 24)))
+                window_count = self.db.query(ECard).filter(
+                    ECard.sender_id == user_id,
+                    ECard.created_at >= window_start
+                ).count()
+                if window_count >= n:
+                    last = self.db.query(ECard).filter(
+                        ECard.sender_id == user_id,
+                        ECard.created_at >= window_start
+                    ).order_by(ECard.created_at.desc()).first()
+                    if getattr(policy, 'cooldown_hours', None) is not None:
+                        cooldown_hours = int(policy.cooldown_hours)
+                    else:
+                        cooldown_hours = int(getattr(settings, 'ECARD_DEFAULT_COOLDOWN_HOURS', 24))
+                    cooldown_end = last.created_at + timedelta(hours=cooldown_hours)
+                    if now_utc < cooldown_end:
+                        next_available_at = cooldown_end.isoformat()
+            # Legacy: only when consecutive_limit is NOT configured.
+            elif getattr(policy, 'cooldown_days', None):
+                last_ecard = self.db.query(ECard).filter(
+                    ECard.sender_id == user_id
+                ).order_by(ECard.created_at.desc()).first()
+                if last_ecard:
+                    cooldown_end = last_ecard.created_at + timedelta(days=policy.cooldown_days)
+                    if datetime.now(timezone.utc) < cooldown_end:
+                        next_available_at = cooldown_end.isoformat()
+
         return {
             "received": [ECardResponse.model_validate(r).model_dump() for r in received],
             "sent": [ECardResponse.model_validate(s).model_dump() for s in sent],
             "total_received": len(received),
-            "total_sent": len(sent)
+            "total_sent": len(sent),
+            "monthly_sent": monthly_sent,
+            "monthly_limit": policy.monthly_limit if policy else None,
+            "consecutive_limit": getattr(policy, 'consecutive_limit', None) if policy else None,
+            "cooldown_hours": getattr(policy, 'cooldown_hours', None) if policy else None,
+            "next_available_at": next_available_at,
         }
+
     def create_feed_entry(
         self,
         actor_id: int,
