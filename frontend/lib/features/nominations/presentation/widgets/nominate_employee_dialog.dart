@@ -5,6 +5,7 @@ import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/utils/user_role_utils.dart';
 import '../../../../core/utils/award_utils.dart';
 
@@ -601,12 +602,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   // ─── Submit ──────────────────────────────────────────────────
   void _onSubmit() {
     if (_selectedUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a nominee'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackbar.warning(context, 'Please select a nominee');
       return;
     }
     if (!(_formKey.currentState?.validate() ?? false)) return;

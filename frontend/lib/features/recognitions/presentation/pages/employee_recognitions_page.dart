@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../injection_container.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
@@ -26,20 +27,10 @@ class EmployeeRecognitionsPage extends StatelessWidget {
         listener: (context, state) {
           if (state.status == RecognitionStatus.success &&
               state.lastSentRecognition != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Recognition sent successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            AppSnackbar.success(context, 'Recognition sent successfully!');
           } else if (state.status == RecognitionStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text(state.errorMessage ?? 'Failed to send recognition'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            AppSnackbar.error(
+                context, state.errorMessage ?? 'Failed to send recognition');
           }
         },
         child: Scaffold(

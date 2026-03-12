@@ -169,7 +169,11 @@ class ApiClient {
       String message = 'Something went wrong on the server.';
 
       // Try to extract error message from backend response if available
-      if (data is Map && data.containsKey('message')) {
+      if (data is Map &&
+          data.containsKey('errorMessage') &&
+          data['errorMessage'] != null) {
+        message = data['errorMessage'].toString();
+      } else if (data is Map && data.containsKey('message')) {
         message = data['message'];
       } else if (data is Map && data.containsKey('detail')) {
         // Handle FastAPI detail messages

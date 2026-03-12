@@ -4,6 +4,7 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/action_buttons.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/app_page_header.dart';
@@ -830,11 +831,11 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
   // ─── Helpers ────────────────────────────────────────────────────
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-    ));
+    if (isError) {
+      AppSnackbar.error(context, msg);
+    } else {
+      AppSnackbar.success(context, msg);
+    }
   }
 }
 

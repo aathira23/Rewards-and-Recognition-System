@@ -5,6 +5,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/utils/file_download_helper.dart';
 import '../../../../injection_container.dart';
 import '../bloc/reports_bloc.dart';
@@ -247,10 +248,7 @@ class _ReportsViewState extends State<_ReportsView> {
     return BlocConsumer<ReportsBloc, ReportsState>(
       listener: (context, state) {
         if (state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.successMessage!),
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.success(context, state.successMessage!);
         }
 
         // Trigger CSV download if data available
@@ -264,11 +262,7 @@ class _ReportsViewState extends State<_ReportsView> {
         }
 
         if (state.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: ${state.error}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.error(context, state.error!);
         }
       },
       builder: (context, state) {
@@ -554,7 +548,8 @@ class _ReportsViewState extends State<_ReportsView> {
               width: 180,
               inputDecorationTheme: InputDecorationTheme(
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(
@@ -576,7 +571,8 @@ class _ReportsViewState extends State<_ReportsView> {
                     _deptId != null ? Colors.blue.shade50 : Colors.grey.shade50,
               ),
               textStyle: TextStyle(fontSize: 12, color: Colors.grey.shade800),
-              label: Text('All Departments', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              label: Text('All Departments',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
               dropdownMenuEntries: [
                 const DropdownMenuEntry(value: null, label: 'All Departments'),
                 ...state.departments.map((d) => DropdownMenuEntry(

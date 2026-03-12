@@ -8,6 +8,7 @@ import '../bloc/budget_event.dart';
 import '../bloc/budget_state.dart';
 import '../../domain/entities/points_summary_entity.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 
 /// Wallet card with a toggle between "My Points" and "Manager Wallet".
 /// The toggle only appears for MANAGER / DEPT_HEAD / HR roles.
@@ -64,18 +65,12 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
           prev.error != curr.error,
       listener: (context, budgetState) {
         if (budgetState.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(budgetState.successMessage!),
-            backgroundColor: Colors.green,
-          ));
+          AppSnackbar.success(context, budgetState.successMessage!);
           widget.onActionCompleted?.call();
           context.read<BudgetBloc>().add(ClearBudgetMessages());
         }
         if (budgetState.error != null && budgetState.wallet != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(budgetState.error!),
-            backgroundColor: Colors.red,
-          ));
+          AppSnackbar.error(context, budgetState.error!);
           context.read<BudgetBloc>().add(ClearBudgetMessages());
         }
       },

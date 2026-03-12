@@ -32,6 +32,10 @@ class PointsService:
         """Get total available points for a user across all non-expired batches."""
         return self.repository.get_available_balance(user_id)
 
+    def get_pending_conversion_points(self, user_id: int) -> int:
+        """Get total points locked in pending conversion requests."""
+        return self.repository.get_pending_conversion_points(user_id)
+
     def award_points(
         self,
         user_id: int,

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
@@ -749,12 +750,7 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       if (receiverId == null) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a recipient.'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                        AppSnackbar.warning(ctx, 'Please select a recipient.');
                         return;
                       }
                       widget.outerContext

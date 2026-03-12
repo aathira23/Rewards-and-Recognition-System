@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/system_config_entity.dart';
 import '../../../../core/widgets/app_page_header.dart';
@@ -33,18 +34,10 @@ class _SystemConfigView extends StatelessWidget {
     return BlocConsumer<ConfigBloc, ConfigState>(
       listener: (context, state) {
         if (state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.successMessage!),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.success(context, state.successMessage!);
         }
         if (state.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: ${state.error}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.error(context, state.error!);
         }
       },
       builder: (context, state) {

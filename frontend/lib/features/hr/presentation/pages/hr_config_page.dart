@@ -5,6 +5,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../injection_container.dart';
 import '../../data/datasources/hr_config_remote_data_source.dart';
@@ -1430,11 +1431,11 @@ class _HrConfigViewState extends State<_HrConfigView>
 
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-    ));
+    if (isError) {
+      AppSnackbar.error(context, msg);
+    } else {
+      AppSnackbar.success(context, msg);
+    }
   }
 }
 

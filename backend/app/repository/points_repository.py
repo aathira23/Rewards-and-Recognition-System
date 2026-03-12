@@ -172,6 +172,13 @@ class PointsRepository:
             PointsConversion.status == "PENDING",
         ).scalar() or 0
 
+    def get_pending_conversion_points(self, user_id: int) -> int:
+        """Return total points locked in PENDING conversion requests."""
+        return self.db.query(func.sum(PointsConversion.points_converted)).filter(
+            PointsConversion.user_id == user_id,
+            PointsConversion.status == "PENDING",
+        ).scalar() or 0
+
     def get_expiring_points(self, user_id: int, on_date: date) -> int:
         return self.db.query(func.sum(PointsBatch.remaining_points)).filter(
             PointsBatch.user_id == user_id,

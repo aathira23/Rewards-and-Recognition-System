@@ -10,6 +10,7 @@ import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../widgets/nominate_employee_dialog.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/app_page_header.dart';
@@ -90,17 +91,11 @@ class _ApprovalsViewState extends State<_ApprovalsView>
       body: BlocListener<NominationsBloc, NominationsState>(
         listener: (context, state) {
           if (state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.successMessage!),
-              backgroundColor: Colors.green,
-            ));
+            AppSnackbar.success(context, state.successMessage!);
           }
           if (state.status == NominationsStatus.failure &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.errorMessage!),
-              backgroundColor: Colors.red,
-            ));
+            AppSnackbar.error(context, state.errorMessage!);
           }
         },
         child: SingleChildScrollView(

@@ -7,6 +7,7 @@ import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../bloc/nominations_state.dart';
 import '../../../../core/widgets/action_buttons.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../widgets/nominate_employee_dialog.dart';
@@ -96,17 +97,11 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
       body: BlocListener<NominationsBloc, NominationsState>(
         listener: (context, state) {
           if (state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.successMessage!),
-              backgroundColor: Colors.green,
-            ));
+            AppSnackbar.success(context, state.successMessage!);
           }
           if (state.status == NominationsStatus.failure &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.errorMessage!),
-              backgroundColor: Colors.red,
-            ));
+            AppSnackbar.error(context, state.errorMessage!);
           }
         },
         child: SingleChildScrollView(
@@ -661,9 +656,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         n.nextRequiredLevel!.toUpperCase() == userRole.toUpperCase();
     final isDirectManager = userRole.toUpperCase() != 'MANAGER' ||
         myId == null ||
-        users
-            .where((u) => u.id == n.nomineeId)
-            .any((u) => u.managerId == myId);
+        users.where((u) => u.id == n.nomineeId).any((u) => u.managerId == myId);
     final isForMe = roleMatches && isDirectManager;
 
     final cardColor = n.status == 'APPROVED'
@@ -982,9 +975,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     useFilledStyle: true,
                     onPressed: () {
                       if (commentsController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Reason is required')),
-                        );
+                        AppSnackbar.warning(context, 'Reason is required');
                         return;
                       }
                       Navigator.of(dialogContext).pop();

@@ -4,6 +4,7 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
@@ -74,15 +75,15 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
       child: BlocListener<CatalogBloc, CatalogState>(
         listener: (context, state) {
           if (state.redemptionSuccess == true) {
-            _showSuccessOverlay(context, 'Redemption Successful!',
-                'Your reward is being processed.');
+            AppSnackbar.success(context,
+                'Redemption successful! Your reward is being processed.');
             context.read<PointsBloc>().add(GetPointsSummaryRequested());
             context.read<CatalogBloc>().add(GetHistoryRequested());
             context.read<CatalogBloc>().add(GetCatalogItemsRequested());
           }
           if (state.conversionSuccess == true) {
-            _showSuccessOverlay(context, 'Request Submitted!',
-                'Your points conversion is pending approval.');
+            AppSnackbar.success(context,
+                'Request submitted! Your points conversion is pending approval.');
             context.read<CatalogBloc>().add(GetHistoryRequested());
           }
           if (state.status == CatalogStatus.failure &&
@@ -92,15 +93,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 msg.toLowerCase().contains('insufficient balance')) {
               _showInsufficientPointsDialog(context, msg);
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(msg),
-                  backgroundColor: Colors.redAccent,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-              );
+              AppSnackbar.error(context, msg);
             }
           }
         },
@@ -220,33 +213,6 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             child: ElevatedButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Got it'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSuccessOverlay(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AppDialog(
-        title: title,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_outline_rounded,
-                color: Colors.green, size: 80),
-            const SizedBox(height: 20),
-            Text(message, textAlign: TextAlign.center),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Great!'),
             ),
           ),
         ],
@@ -800,9 +766,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
   void _handleSubmitConversion(BuildContext context) {
     final pts = int.tryParse(_pointsController.text);
     if (pts == null || pts < 500) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Minimum conversion is 500 points')),
-      );
+      AppSnackbar.warning(context, 'Minimum conversion is 500 points');
       return;
     }
 

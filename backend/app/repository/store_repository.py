@@ -109,6 +109,13 @@ class StoreRepository:
             .all()
         )
 
+    def has_pending_conversion(self, user_id: int) -> bool:
+        """Check if user already has a PENDING conversion request."""
+        return self.db.query(PointsConversion).filter(
+            PointsConversion.user_id == user_id,
+            PointsConversion.status == ConversionStatus.PENDING.value,
+        ).first() is not None
+
     def save_conversion(self, conversion: PointsConversion) -> PointsConversion:
         self.db.commit()
         self.db.refresh(conversion)

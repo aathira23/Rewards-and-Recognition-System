@@ -74,6 +74,16 @@ class StoreService:
                 self.repository.save_reward(reward)
                 raise ValueError("This reward is out of stock.")
 
+        # Check balance accounting for points locked in pending conversions
+        current_balance = self.points_service.get_user_balance(user_id)
+        pending_points = self.points_service.get_pending_conversion_points(user_id)
+        available = current_balance - pending_points
+        if available < reward.points_required:
+            raise ValueError(
+                f"Insufficient points. Available: {available} "
+                f"({pending_points} points are reserved for a pending conversion request)."
+            )
+
         # 1. Deduct points via FIFO
         self.points_service.deduct_points(
             user_id=user_id,
@@ -125,10 +135,19 @@ class StoreService:
     ) -> PointsConversion:
         """Create a conversion request for Payroll or CSR (requires approval)."""
 
-        # 1. Check balance first
+        # 0. Block if user already has a pending conversion request
+        if self.repository.has_pending_conversion(user_id):
+            raise ValueError(
+                "You already have a pending conversion request. "
+                "Please wait for it to be approved or rejected before submitting a new one."
+            )
+
+        # 1. Check balance (minus points already locked in pending conversions)
         current_balance = self.points_service.get_user_balance(user_id)
-        if current_balance < points:
-            raise ValueError(f"Insufficient points. Balance: {current_balance}, Requested: {points}")
+        pending_points = self.points_service.get_pending_conversion_points(user_id)
+        available = current_balance - pending_points
+        if available < points:
+            raise ValueError(f"Insufficient points. Available: {available}, Requested: {points}")
 
         # 2. Create conversion record (PENDING)
         conversion = self.repository.create_conversion(
@@ -182,6 +201,14 @@ class StoreService:
 
         if conversion.status != ConversionStatus.PENDING.value:
             raise ValueError("Only pending requests can be approved.")
+
+        # Re-validate that user still has enough points before deducting
+        current_balance = self.points_service.get_user_balance(conversion.user_id)
+        if current_balance < conversion.points_converted:
+            raise ValueError(
+                f"Cannot approve: user's balance ({current_balance}) is less than "
+                f"the requested conversion ({conversion.points_converted} points)."
+            )
 
         # 1. Deduct points via FIFO upon approval
         self.points_service.deduct_points(
