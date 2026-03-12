@@ -15,10 +15,8 @@ class ApiClient {
       : _dio = dio ?? Dio() {
     _applyBaseOptions();
     // Use browser HTTP adapter when running on web.
-    // withCredentials:true is required because the backend sends
-    // Access-Control-Allow-Credentials:true with a specific origin.
     if (kIsWeb) {
-      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: true);
+      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: false);
     }
 
     if (authInterceptor != null) {
@@ -40,6 +38,19 @@ class ApiClient {
   }
 
   void _initializeInterceptors() {
+    // Unwrap the backend envelope: { "responseData": ... } → { "data": ... }
+    _dio.interceptors.add(InterceptorsWrapper(
+      onResponse: (response, handler) {
+        if (response.data is Map && response.data.containsKey('responseData')) {
+          response.data = {
+            ...response.data,
+            'data': response.data['responseData'],
+          };
+        }
+        handler.next(response);
+      },
+    ));
+
     // Only log in debug mode to avoid noisy connection errors in production.
     if (kDebugMode) {
       _dio.interceptors.add(LogInterceptor(

@@ -39,9 +39,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     // Map the success response to our AuthModel
-    // ApiClient success returns dynamic data inside response.data
+    // Backend wraps data inside 'responseData', unwrapped to 'data' by interceptor
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return AuthModel.fromJson(response.data);
+      return AuthModel.fromJson(response.data['data']);
     } else {
       // Exceptions are usually handled inside ApiClient._handleError,
       // but we add a fallback for extra safety.

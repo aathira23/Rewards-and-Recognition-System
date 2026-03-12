@@ -13,6 +13,7 @@ from app.core.security import (
 )
 from app.models.users import User
 from app.utils.constants import ERROR_INCORRECT_LOGIN, SUCCESS_LOGIN
+from app.utils.response import build_response, SUCCESS_MESSAGE, FAILURE_MESSAGE
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -37,10 +38,13 @@ def login(
     token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
     access_token = create_access_token(data=token_data, expires_delta=access_expires)
 
-    # Return standard OAuth2 response at the top level for Swagger compatibility
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_id": user.id,
-        "message": SUCCESS_LOGIN
-    }
+    return build_response(
+        status.HTTP_200_OK,
+        SUCCESS_MESSAGE,
+        None,
+        {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": user.id,
+        },
+    )

@@ -29,8 +29,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.email_logs import EmailLog
-from app.models.users import User
 from app.utils.enums import EmailEventType
+from app.repository.email_repository import EmailRepository
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,7 @@ class EmailService:
 
     def __init__(self, db: Session):
         self.db = db
+        self.repository = EmailRepository(db)
 
     # ------------------------------------------------------------------
     # Public API
@@ -104,11 +105,11 @@ class EmailService:
         force: bool = False,
     ) -> Optional[EmailLog]:
         """Resolve template, check preferences, render and dispatch."""
-        if not force and not self._is_email_enabled():
+        if not force and not self.repository.is_email_enabled():
             logger.debug("Email notifications globally disabled – skipping.")
             return None
 
-        user = self.db.query(User).filter(User.id == recipient_user_id).first()
+        user = self.repository.get_user_by_id(recipient_user_id)
         if not user:
             logger.warning("EmailService.send: user %s not found", recipient_user_id)
             return None
@@ -169,13 +170,7 @@ class EmailService:
     # ------------------------------------------------------------------
 
     def get_email_logs(self, limit: int = 50, offset: int = 0):
-        return (
-            self.db.query(EmailLog)
-            .order_by(EmailLog.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        return self.repository.get_logs(limit, offset)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -200,16 +195,6 @@ class EmailService:
 
         return subject, body_html, body_text
 
-    def _is_email_enabled(self) -> bool:
-        from app.models.system_config import SystemConfig
-
-        row = (
-            self.db.query(SystemConfig)
-            .filter(SystemConfig.key == "feature.email_notifications_enabled")
-            .first()
-        )
-        return row is not None and row.value.lower() in ("true", "1", "yes")
-
     def _dispatch(
         self,
         *,
@@ -220,7 +205,7 @@ class EmailService:
         body_html: str,
         body_text: Optional[str],
     ) -> EmailLog:
-        log = EmailLog(
+        log = self.repository.create_log(
             recipient_email=to_email,
             user_id=user_id,
             template_key=template_name,
@@ -228,8 +213,6 @@ class EmailService:
             body_html=body_html,
             status="QUEUED",
         )
-        self.db.add(log)
-        self.db.flush()
 
         try:
             msg = MIMEMultipart("alternative")
@@ -262,6 +245,6 @@ class EmailService:
             log.error_message = str(exc)[:500]
             logger.exception("Failed to send email to %s: %s", to_email, exc)
 
-        self.db.commit()
-        self.db.refresh(log)
+        self.repository.commit()
+        self.repository.refresh(log)
         return log

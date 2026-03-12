@@ -40,14 +40,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Login successful
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                   token_type: bearer
                   user_id: 1
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -68,10 +67,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: User profile retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 1
                   name: "Alice Johnson"
                   email: "alice@company.com"
@@ -83,7 +82,6 @@ paths:
                   date_of_joining: "2023-03-01"
                   birth_date: "1992-07-15"
                   created_at: "2023-03-01T09:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -115,10 +113,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Users retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 1
                     name: "Alice Johnson"
                     email: "alice@company.com"
@@ -126,7 +124,6 @@ paths:
                     department_id: 3
                     date_of_joining: "2023-03-01"
                     created_at: "2023-03-01T09:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -149,17 +146,16 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: User created successfully
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 10
                   name: "Carol White"
                   email: "carol@company.com"
                   role: "EMPLOYEE"
                   department_id: 2
                   created_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -192,16 +188,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: User updated successfully
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 1
                   name: "Alice Johnson"
                   role: "MANAGER"
                   department_id: 3
                   updated: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -226,16 +221,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Wallet retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 7
                   user_id: 5
                   wallet_type: "MANAGER"
                   balance: 1500
                   created_at: "2024-01-01T00:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -260,14 +254,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Budget allocated successfully
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   manager_id: 5
                   points_allocated: 500
                   new_balance: 2000
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -294,15 +287,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Employee rewarded successfully
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   batch_id: 42
                   employee_id: 8
                   points: 100
                   manager_wallet_balance: 1400
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -329,13 +321,12 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Bulk allocation completed
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   allocated_count: 12
                   points_per_manager: 500
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -358,16 +349,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Points balance retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   balance: 850
                   total_earned: 1200
                   total_redeemed: 200
                   total_converted: 150
                   pending_count: 2
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -424,10 +414,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Points history retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   balance: 850
                   total_earned: 1200
                   total_redeemed: 200
@@ -442,7 +432,6 @@ paths:
                   page: 1
                   per_page: 20
                   total: 45
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -467,10 +456,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Conversion request submitted
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   user_id: 1
                   points_converted: 500
@@ -478,7 +467,6 @@ paths:
                   cash_amount: 50.00
                   status: PENDING
                   requested_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -499,10 +487,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Conversions retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 5
                     user_id: 1
                     user_name: "Alice Johnson"
@@ -511,7 +499,6 @@ paths:
                     cash_amount: 50.00
                     status: PENDING
                     requested_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -530,10 +517,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Pending conversions retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 5
                     user_id: 1
                     user_name: "Alice Johnson"
@@ -542,7 +529,6 @@ paths:
                     cash_amount: 50.00
                     status: PENDING
                     requested_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -575,16 +561,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Conversion approved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   status: APPROVED
                   approved_by: 2
                   approved_by_name: "HR Manager"
                   approved_at: "2025-01-15T11:00:00"
-                timestamp: "2025-01-15T11:00:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -607,16 +592,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Policies retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 1
                     recognition_type: PEER
                     points_allocated: 50
                     conversion_rate: 0.10
                     is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -639,15 +623,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Rule created
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   recognition_type: AWARD
                   points_allocated: 200
                   is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -680,13 +663,12 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Rule updated
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   is_active: false
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -717,10 +699,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Recognition sent successfully
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 88
                   sender:
                     id: 1
@@ -736,9 +718,9 @@ paths:
                     id: 3
                     name: "Team Player"
                     icon_url: "https://cdn.example.com/badges/team-player.png"
-                  message: "Great collaboration on the last sprint!"
+                  statusMessage: "Success"
+                  errorMessage: null
                   created_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -772,10 +754,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Feed retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   items:
                     - id: 88
                       event_type: ECARD
@@ -787,13 +769,13 @@ paths:
                         id: 9
                         name: "David Lee"
                         department_name: "Design"
-                      message: "Great collaboration!"
+                      statusMessage: "Success"
+                      errorMessage: null
                       badge_name: "Team Player"
                       created_at: "2025-01-15T10:30:00"
                   page: 1
                   per_page: 20
                   total: 154
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -812,18 +794,18 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Overview retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   received_count: 12
                   sent_count: 8
                   recent_received:
                     - sender_name: "Bob Smith"
                       badge_name: "Go-Getter"
-                      message: "Excellent work!"
+                      statusMessage: "Success"
+                      errorMessage: null
                       date: "2025-01-10T09:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -863,10 +845,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Leaderboard retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - rank: 1
                     user_id: 9
                     user_name: "David Lee"
@@ -877,7 +859,6 @@ paths:
                     user_name: "Alice Johnson"
                     department_name: "Engineering"
                     score: 280
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -896,16 +877,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Badges retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 1
                     name: "Innovator"
                     description: "For creative problem solving"
                     icon_url: "https://cdn.example.com/badges/innovator.png"
                     is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -928,16 +908,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Badge created successfully
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 10
                   name: "Rising Star"
                   description: "For outstanding new joiners"
                   icon_url: "https://cdn.example.com/badges/rising-star.png"
                   is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -949,9 +928,9 @@ paths:
               schema:
                 type: object
               example:
-                status: error
-                status_code: 409
-                message: Badge name already exists
+                statusCode: 409
+                statusMessage: "Failed"
+                errorMessage: Badge name already exists
 
   /recognitions/badges/{badge_id}:
     put:
@@ -980,14 +959,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Badge updated
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 10
                   name: "Rising Star"
                   is_active: false
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1016,10 +994,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Recognition found
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 88
                   sender:
                     id: 1
@@ -1032,9 +1010,9 @@ paths:
                   badge:
                     id: 3
                     name: "Team Player"
-                  message: "Great collaboration!"
+                  statusMessage: "Success"
+                  errorMessage: null
                   created_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
@@ -1064,10 +1042,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Award types retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 1
                     name: "Spot Award"
                     award_key: "SPOT"
@@ -1078,7 +1056,6 @@ paths:
                     approval_workflow:
                       - MANAGER
                     is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -1101,17 +1078,16 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Award type created
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   name: "Employee of the Quarter"
                   award_key: "EOQ"
                   points: 500
                   frequency: QUARTERLY
                   is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1144,14 +1120,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Award type updated
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 1
                   name: "Spot Award"
                   is_active: false
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1196,10 +1171,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Nominations retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 23
                     award_type_id: 1
                     nominee_id: 8
@@ -1215,7 +1190,6 @@ paths:
                     award_type:
                       id: 1
                       name: "Spot Award"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -1238,10 +1212,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Nomination submitted successfully
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 23
                   award_type_id: 1
                   nominee_id: 8
@@ -1249,7 +1223,6 @@ paths:
                   status: PENDING
                   next_required_level: MANAGER
                   created_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -1270,10 +1243,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Approval history retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - my_action: APPROVED
                     my_action_at: "2025-01-12T14:00:00"
                     my_level: MANAGER
@@ -1284,7 +1257,6 @@ paths:
                     award_type:
                       id: 1
                       name: "Spot Award"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1309,10 +1281,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Nomination detail retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 23
                   award_type_id: 1
                   nominee_id: 8
@@ -1334,7 +1306,6 @@ paths:
                     id: 1
                     name: "Spot Award"
                   created_at: "2025-01-10T10:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
@@ -1367,15 +1338,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Nomination approved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 23
                   status: APPROVED
                   points_awarded: 100
                   next_required_level: DEPT_HEAD
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -1406,10 +1376,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Approval status retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   nomination_id: 23
                   current_status: PENDING
                   next_required_level: DEPT_HEAD
@@ -1424,7 +1394,6 @@ paths:
                       reviewer: null
                       reviewed_at: null
                       comments: null
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
@@ -1465,10 +1434,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Catalog retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   items:
                     - id: 1
                       name: "Amazon Gift Card"
@@ -1480,7 +1449,6 @@ paths:
                   page: 1
                   per_page: 20
                   total: 32
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -1503,15 +1471,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Catalog item created
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 10
                   name: "Movie Voucher"
                   points_required: 300
                   is_active: true
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1544,14 +1511,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Catalog item updated
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 10
                   name: "Movie Voucher"
                   is_active: false
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1580,15 +1546,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Reward redeemed successfully
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   redemption_id: 55
                   reward_name: "Amazon Gift Card"
                   points_spent: 500
                   remaining_balance: 350
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -1622,16 +1587,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Redemption history retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 55
                     reward_name: "Amazon Gift Card"
                     points_spent: 500
                     redeemed_at: "2025-01-10T14:00:00"
                     status: FULFILLED
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1665,20 +1629,20 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Notifications retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   items:
                     - id: 201
-                      message: "You received a Spot Award!"
+                      statusMessage: "Success"
+                      errorMessage: null
                       is_read: false
                       created_at: "2025-01-14T09:00:00"
                       notification_type: AWARD
                   page: 1
                   per_page: 20
                   total: 5
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1697,12 +1661,11 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Unread count retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   unread_count: 3
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1727,12 +1690,11 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Notifications marked as read
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   updated_count: 3
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1751,12 +1713,11 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Expiry reminders sent
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   notifications_sent: 24
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1789,10 +1750,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Analytics retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   total_recognitions: 1420
                   total_awards_given: 85
                   total_points_issued: 280500
@@ -1801,7 +1762,6 @@ paths:
                   recognitions_this_month: 112
                   top_department: "Engineering"
                   budget_utilization_pct: 34.2
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1862,18 +1822,17 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Recognition report generated
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   report_type: RECOGNITIONS
                   generated_at: "2025-01-15T10:30:00"
-                  data:
+                  responseData:
                     - sender_name: "Alice Johnson"
                       receiver_name: "David Lee"
                       badge: "Team Player"
                       date: "2025-01-10"
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -1909,20 +1868,19 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: "Payroll report generated for 2025-01"
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   report_type: PAYROLL
                   month: "2025-01"
                   generated_at: "2025-01-15T10:30:00"
-                  data:
+                  responseData:
                     - employee_name: "Alice Johnson"
                       employee_id: 1
                       points_converted: 500
                       cash_amount: 50.00
                       status: APPROVED
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -1945,15 +1903,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Configurations retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - key: "max_monthly_recognitions"
                     value: "5"
                     description: "Maximum recognitions an employee can send per month"
                     updated_at: "2025-01-01T00:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -1975,15 +1932,14 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Feature flags retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   conversion_enabled: true
                   catalog_enabled: true
                   celebrations_enabled: true
                   awards_enabled: true
-                timestamp: "2025-01-15T10:30:00"
 
   /config/{key}:
     put:
@@ -2013,14 +1969,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: "Config 'max_monthly_recognitions' updated"
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   key: "max_monthly_recognitions"
                   value: "10"
                   description: "Maximum recognitions per month"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2043,17 +1998,16 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Departments retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 1
                     name: "Engineering"
                     created_at: "2024-01-01T00:00:00"
                   - id: 2
                     name: "Design"
                     created_at: "2024-01-01T00:00:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     post:
@@ -2076,14 +2030,13 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 201
-                message: Department created
-                data:
+                statusCode: 201
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   name: "Product"
                   created_at: "2025-01-15T10:30:00"
-                timestamp: "2025-01-15T10:30:00"
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -2118,13 +2071,12 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Department updated
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   id: 5
                   name: "Product & Design"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2151,10 +2103,9 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Department deleted successfully
-                timestamp: "2025-01-15T10:30:00"
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2187,10 +2138,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Celebrations fetched
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 1
                     user_id: 8
                     user_name: "Emma Clark"
@@ -2203,7 +2154,6 @@ paths:
                     celebration_type: WORK_ANNIVERSARY
                     celebration_date: "2025-01-20"
                     years: 3
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -2235,10 +2185,10 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Celebration history fetched
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   items:
                     - id: 1
                       user_id: 8
@@ -2248,7 +2198,6 @@ paths:
                   page: 1
                   per_page: 20
                   total: 48
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -2267,13 +2216,12 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: "Processed 2 birthdays and 1 anniversaries"
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   birthdays: 2
                   anniversaries: 1
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2309,16 +2257,15 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Email logs retrieved
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   - id: 301
                     to_email: "alice@company.com"
                     template_name: "ecard_received"
                     status: SENT
                     sent_at: "2025-01-14T09:05:00"
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2345,13 +2292,12 @@ paths:
               schema:
                 type: object
               example:
-                status: success
-                status_code: 200
-                message: Test email dispatched
-                data:
+                statusCode: 200
+                statusMessage: "Success"
+                errorMessage: null
+                responseData:
                   status: SENT
                   log_id: 302
-                timestamp: "2025-01-15T10:30:00"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2363,9 +2309,9 @@ paths:
               schema:
                 type: object
               example:
-                status: error
-                status_code: 422
-                message: "Template file not found or send failed."
+                statusCode: 422
+                statusMessage: "Failed"
+                errorMessage: "Template file not found or send failed."
 
 # ─────────────────────── COMPONENTS ───────────────────────
 
@@ -2866,27 +2812,25 @@ components:
           example:
             sender_name: "Alice Johnson"
             badge_name: "Team Player"
-            message: "Great work on the sprint!"
+            statusMessage: "Success"
+            errorMessage: null
 
     # ── Shared Response Envelope ──
     SuccessResponse:
       type: object
       properties:
-        status:
-          type: string
-          example: success
-        status_code:
+        statusCode:
           type: integer
           example: 200
-        message:
+        statusMessage:
           type: string
-          example: "Operation completed successfully"
-        data:
+          example: "Success"
+        errorMessage:
+          nullable: true
+          example: null
+        responseData:
           description: Response payload (object or array, varies per endpoint)
-        timestamp:
-          type: string
-          format: date-time
-          example: "2025-01-15T10:30:00"
+          nullable: true
 
   responses:
     UnauthorizedError:
@@ -2896,11 +2840,10 @@ components:
           schema:
             type: object
             example:
-              status: error
-              status_code: 401
-              message: "Could not validate credentials"
-              data: null
-              timestamp: "2025-01-15T10:30:00"
+              statusCode: 401
+              statusMessage: "Failed"
+              errorMessage: "Could not validate credentials"
+              responseData: null
 
     ForbiddenError:
       description: Forbidden – user does not have the required role
@@ -2909,11 +2852,10 @@ components:
           schema:
             type: object
             example:
-              status: error
-              status_code: 403
-              message: "Access denied"
-              data: null
-              timestamp: "2025-01-15T10:30:00"
+              statusCode: 403
+              statusMessage: "Failed"
+              errorMessage: "Access denied"
+              responseData: null
 
     NotFoundError:
       description: Not Found – the requested resource does not exist
@@ -2922,11 +2864,10 @@ components:
           schema:
             type: object
             example:
-              status: error
-              status_code: 404
-              message: "Resource not found"
-              data: null
-              timestamp: "2025-01-15T10:30:00"
+              statusCode: 404
+              statusMessage: "Failed"
+              errorMessage: "Resource not found"
+              responseData: null
 
     BadRequestError:
       description: Bad Request – invalid input or business logic violation
@@ -2935,8 +2876,7 @@ components:
           schema:
             type: object
             example:
-              status: error
-              status_code: 400
-              message: "Validation failed"
-              data: null
-              timestamp: "2025-01-15T10:30:00"
+              statusCode: 400
+              statusMessage: "Failed"
+              errorMessage: "Validation failed"
+              responseData: null

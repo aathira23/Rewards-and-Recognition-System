@@ -1,15 +1,13 @@
 """
 Awards service - Business logic for award nominations and approvals.
 """
-from sqlalchemy.orm import Session, aliased
-from sqlalchemy import and_, or_
+from __future__ import annotations
+
+from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException
 
-from app.models.awards import Award
-from app.models.award_types import AwardType
-from app.models.award_approvals import AwardApproval
-from app.models.users import User
+from app.repository.awards_repository import AwardsRepository
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
 from app.services.recognition_service import RecognitionService
@@ -20,6 +18,7 @@ class AwardsService:
 
     def __init__(self, db: Session):
         self.db = db
+        self.repository = AwardsRepository(db)
         self.points_service = PointsService(db)
         self.notification_service = NotificationService(db)
         self.recognition_service = RecognitionService(db)
@@ -37,7 +36,7 @@ class AwardsService:
         - Managers and Dept Heads' own level is marked as approved automatically.
         - Employees can nominate; their nominations follow the full workflow.
         """
-        nominator = self.db.query(User).filter(User.id == nominator_id).first()
+        nominator = self.repository.get_user_by_id(nominator_id)
         if not nominator:
             raise HTTPException(status_code=404, detail="Nominator not found.")
 
@@ -45,21 +44,17 @@ class AwardsService:
         if nominator_id == nominee_id:
             raise HTTPException(status_code=400, detail="You cannot nominate yourself for an award.")
 
-        award_type = self.db.query(AwardType).filter(AwardType.id == award_type_id, AwardType.is_active == True).first()
+        award_type = self.repository.get_award_type_by_id(award_type_id, active_only=True)
         if not award_type:
             raise HTTPException(status_code=404, detail="Award type not found or inactive.")
 
         # Prevent duplicate pending nominations for same nominee and award type
-        existing_nom = self.db.query(Award).filter(
-            Award.nominee_id == nominee_id,
-            Award.award_type_id == award_type_id,
-            Award.status == AwardStatus.PENDING.value
-        ).first()
+        existing_nom = self.repository.find_pending_nomination(nominee_id, award_type_id)
         if existing_nom:
             raise HTTPException(status_code=400, detail="A pending nomination for this nominee and award type already exists.")
 
         # --- Eligibility checks based on nominator role ---
-        nominee = self.db.query(User).filter(User.id == nominee_id).first()
+        nominee = self.repository.get_user_by_id(nominee_id)
         if not nominee:
             raise HTTPException(status_code=404, detail="Nominee not found.")
 
@@ -76,19 +71,14 @@ class AwardsService:
         # HR may nominate anyone; Employees follow existing rules (no extra restriction)
 
         # 2. Create award record with PENDING status
-        award = Award(
+        award = self.repository.create_award(
             nominee_id=nominee_id,
             nominator_id=nominator_id,
             award_type_id=award_type_id,
             status=AwardStatus.PENDING.value,
-            points_awarded=award_type.points,
-            citation=citation
+            points=award_type.points,
+            citation=citation,
         )
-        self.db.add(award)
-        self.db.flush() # Use flush to get award.id before commit
-
-        # Refresh to load the award_type relationship
-        self.db.refresh(award)
 
         # 3. Handle Auto-Approval for Nominator's Own Level (Only for Manager+, not Employee)
         # HR nominations are fully auto-approved.
@@ -102,14 +92,13 @@ class AwardsService:
             award.status = AwardStatus.APPROVED.value
             required_levels = self._get_required_approval_levels(award_type)
             for level in required_levels:
-                approval = AwardApproval(
+                self.repository.create_approval(
                     award_id=award.id,
                     approver_id=nominator_id,
                     approval_level=level,
                     status=ApprovalStatus.APPROVED.value,
-                    comments="Auto-approved by HR nominator"
+                    comments="Auto-approved by HR nominator",
                 )
-                self.db.add(approval)
                 current_approvals.append(level)
 
             # Create feed entry for Award
@@ -152,14 +141,13 @@ class AwardsService:
             nominator_level = nominator.role # e.g., "MANAGER" or "DEPT_HEAD"
 
             # Only auto-approve the nominator's own level (not preceding levels)
-            approval = AwardApproval(
+            self.repository.create_approval(
                 award_id=award.id,
                 approver_id=nominator_id,
                 approval_level=nominator_level,
                 status=ApprovalStatus.APPROVED.value,
-                comments=f"Auto-approved by {nominator_level} nominator"
+                comments=f"Auto-approved by {nominator_level} nominator",
             )
-            self.db.add(approval)
             current_approvals.append(nominator_level)
 
             # Check if all approvals are now complete due to nominator's role
@@ -202,8 +190,8 @@ class AwardsService:
                 if next_level:
                     self._notify_next_approver(award, next_level)
 
-        self.db.commit()
-        self.db.refresh(award)
+        self.repository.commit()
+        self.repository.refresh(award)
 
         # 4. Create notification for nominee (if not already approved)
         if award.status == AwardStatus.PENDING.value:
@@ -225,7 +213,7 @@ class AwardsService:
         # 5. Notify the next required approver in the nominee's department chain
         if award.status == AwardStatus.PENDING.value:
             required_levels_now = self._get_required_approval_levels(award_type)
-            completed_levels_now = self._get_existing_approvals(award.id)
+            completed_levels_now = self.repository.get_approved_levels(award.id)
             next_level_now = self._get_next_required_level(required_levels_now, completed_levels_now)
             if next_level_now:
                 self._notify_next_approver(award, next_level_now)
@@ -234,7 +222,7 @@ class AwardsService:
             award.next_required_level = None
         else:
             required_levels = self._get_required_approval_levels(award_type)
-            completed_levels = self._get_existing_approvals(award.id)
+            completed_levels = self.repository.get_approved_levels(award.id)
             award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
 
         return award
@@ -253,7 +241,7 @@ class AwardsService:
         Approvals must be completed in sequence. Once all required approvals are obtained,
         the award is marked as APPROVED and points are awarded.
         """
-        award = self.db.query(Award).filter(Award.id == award_id).first()
+        award = self.repository.get_by_id(award_id)
         if not award:
             raise HTTPException(status_code=404, detail="Award nomination not found.")
 
@@ -275,7 +263,7 @@ class AwardsService:
             required_levels = [approval_level]
 
         # 2. Check if this approval level is required and not already approved
-        existing_approvals = self._get_existing_approvals(award_id)
+        existing_approvals = self.repository.get_approved_levels(award_id)
 
         approval_level = str(approval_level).strip().upper()
         if approval_level in existing_approvals:
@@ -297,7 +285,7 @@ class AwardsService:
         # 3b. For MANAGER-level approval, enforce that only the nominee's direct manager
         #     may approve — prevents any random manager from acting on the nomination.
         if approval_level == 'MANAGER':
-            nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+            nominee = self.repository.get_user_by_id(award.nominee_id)
             if nominee and nominee.manager_id != approver_id:
                 raise HTTPException(
                     status_code=403,
@@ -308,12 +296,9 @@ class AwardsService:
         #     may approve — prevents the nominator's dept head from acting on cross-dept
         #     nominations.
         if approval_level == 'DEPT_HEAD':
-            nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+            nominee = self.repository.get_user_by_id(award.nominee_id)
             if nominee:
-                nominee_dept_head = self.db.query(User).filter(
-                    User.department_id == nominee.department_id,
-                    User.role == UserRole.DEPT_HEAD.value,
-                ).first()
+                nominee_dept_head = self.repository.get_dept_head(nominee.department_id)
                 if nominee_dept_head and nominee_dept_head.id != approver_id:
                     raise HTTPException(
                         status_code=403,
@@ -321,15 +306,13 @@ class AwardsService:
                     )
 
         # 4. Create approval record
-        approval = AwardApproval(
+        self.repository.create_approval(
             award_id=award_id,
             approver_id=approver_id,
             approval_level=approval_level,
             status=ApprovalStatus.APPROVED.value,
-            comments=comments if comments else f"Approved by {approval_level}"
+            comments=comments if comments else f"Approved by {approval_level}",
         )
-        self.db.add(approval)
-        self.db.flush()
 
         # 5. Check if all required approvals are now complete
         all_approvals = existing_approvals + [approval_level]
@@ -356,7 +339,7 @@ class AwardsService:
             )
 
             # Notify nominee (with email)
-            approver = self.db.query(User).filter(User.id == approver_id).first()
+            approver = self.repository.get_user_by_id(approver_id)
             approver_name = approver.name if approver else approval_level
             self.notification_service.create_notification(
                 user_id=award.nominee_id,
@@ -379,14 +362,14 @@ class AwardsService:
             if next_level:
                 self._notify_next_approver(award, next_level)
 
-        self.db.commit()
-        self.db.refresh(award)
+        self.repository.commit()
+        self.repository.refresh(award)
 
         if award.status != 'PENDING':
             award.next_required_level = None
         else:
             required_levels = self._get_required_approval_levels(award.award_type)
-            completed_levels = self._get_existing_approvals(award.id)
+            completed_levels = self.repository.get_approved_levels(award.id)
             award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
 
         return award
@@ -399,7 +382,7 @@ class AwardsService:
         comments: str
     ) -> Award:
         """Reject an award nomination."""
-        award = self.db.query(Award).filter(Award.id == award_id).first()
+        award = self.repository.get_by_id(award_id)
         if not award:
             raise HTTPException(status_code=404, detail="Award nomination not found.")
 
@@ -415,7 +398,7 @@ class AwardsService:
 
         # For MANAGER-level rejection, enforce that only the nominee's direct manager may reject.
         if approval_level.upper() == 'MANAGER':
-            nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+            nominee = self.repository.get_user_by_id(award.nominee_id)
             if nominee and nominee.manager_id != approver_id:
                 raise HTTPException(
                     status_code=403,
@@ -423,14 +406,13 @@ class AwardsService:
                 )
 
         # 1. Create approval record with REJECTED status
-        approval = AwardApproval(
+        self.repository.create_approval(
             award_id=award_id,
             approver_id=approver_id,
             approval_level=approval_level,
             status=ApprovalStatus.REJECTED.value,
-            comments=comments if comments else None
+            comments=comments if comments else None,
         )
-        self.db.add(approval)
 
         # 2. Update award status to REJECTED
         award.status = AwardStatus.REJECTED.value
@@ -452,7 +434,7 @@ class AwardsService:
         )
 
         # 4. Notify nominator (the person who submitted it)
-        approver = self.db.query(User).filter(User.id == approver_id).first()
+        approver = self.repository.get_user_by_id(approver_id)
         approver_name = approver.name if approver else approval_level
         level_label = {'MANAGER': 'Manager', 'DEPT_HEAD': 'Dept Head', 'HR': 'HR', 'ADMIN': 'Admin'}.get(approval_level.upper(), approval_level.replace('_', ' ').title())
         self.notification_service.create_notification(
@@ -470,8 +452,8 @@ class AwardsService:
             },
         )
 
-        self.db.commit()
-        self.db.refresh(award)
+        self.repository.commit()
+        self.repository.refresh(award)
         award.next_required_level = None
         return award
 
@@ -486,31 +468,16 @@ class AwardsService:
         """Get award nominations based on user role. Returns (total, items)."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
-        query = self.db.query(Award)
 
         # Visibility rules:
-        from sqlalchemy.orm import joinedload
         
         # 1. Identify award IDs where the user is directly involved
         # (Nominator, Nominee, or someone who has already provided an approval record)
-        involved_ids_q = self.db.query(Award.id).outerjoin(AwardApproval).filter(
-            or_(
-                Award.nominator_id == user_id,
-                Award.nominee_id == user_id,
-                AwardApproval.approver_id == user_id
-            )
-        )
-        visible_ids = {id_val for (id_val,) in involved_ids_q.all()}
+        visible_ids = self.repository.get_involved_award_ids(user_id)
         
         # 2. Check PENDING awards to determine if it is currently the user's turn
         # We only check awards that aren't already identified as visible
-        pending_candidates = (
-            self.db.query(Award)
-            .filter(Award.status == AwardStatus.PENDING.value)
-            .filter(~Award.id.in_(visible_ids))
-            .options(joinedload(Award.award_type), joinedload(Award.nominee), joinedload(Award.approvals))
-            .all()
-        )
+        pending_candidates = self.repository.get_pending_awards_not_in(visible_ids)
         
         for award in pending_candidates:
             req_levels = self._get_required_approval_levels(award.award_type)
@@ -530,10 +497,7 @@ class AwardsService:
                 elif next_lvl.upper() == 'DEPT_HEAD':
                     # Only the nominee's own dept head may see it
                     nominee_dept_head = (
-                        self.db.query(User).filter(
-                            User.department_id == award.nominee.department_id,
-                            User.role == UserRole.DEPT_HEAD.value,
-                        ).first()
+                        self.repository.get_dept_head(award.nominee.department_id)
                         if award.nominee else None
                     )
                     if nominee_dept_head and nominee_dept_head.id == user_id:
@@ -542,13 +506,7 @@ class AwardsService:
                     visible_ids.add(award.id)
 
         # 3. Restrict final query to visible IDs
-        query = query.filter(Award.id.in_(visible_ids))
-
-        if status_filter:
-            query = query.filter(Award.status == status_filter)
-
-        total = query.count()
-        awards = query.order_by(Award.created_at.desc()).offset(skip).limit(per_page).all()
+        total, awards = self.repository.get_filtered_awards(visible_ids, status_filter, skip, per_page)
 
         # Attach next_required_level to each award for the API response
         for award in awards:
@@ -557,18 +515,13 @@ class AwardsService:
                 continue
 
             required_levels = self._get_required_approval_levels(award.award_type)
-            completed_levels = self._get_existing_approvals(award.id)
+            completed_levels = self.repository.get_approved_levels(award.id)
             award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
 
         # Attach latest human reviewer comment (single batched query, no N+1)
         if awards:
             award_ids = [a.id for a in awards]
-            all_aps = (
-                self.db.query(AwardApproval)
-                .filter(AwardApproval.award_id.in_(award_ids))
-                .order_by(AwardApproval.created_at.desc())
-                .all()
-            )
+            all_aps = self.repository.get_approvals_for_awards(award_ids)
             latest_map: Dict[int, AwardApproval] = {}
             for ap in all_aps:
                 if ap.award_id not in latest_map:
@@ -598,15 +551,15 @@ class AwardsService:
 
         return total, awards
 
-    def get_nomination(self, award_id: int) -> Optional[Award]:
+    def get_nomination(self, award_id: int):
         """Get specific nomination details."""
-        award = self.db.query(Award).filter(Award.id == award_id).first()
+        award = self.repository.get_by_id(award_id)
         if award:
             if award.status != 'PENDING':
                 award.next_required_level = None
             else:
                 required_levels = self._get_required_approval_levels(award.award_type)
-                completed_levels = self._get_existing_approvals(award.id)
+                completed_levels = self.repository.get_approved_levels(award.id)
                 award.next_required_level = self._get_next_required_level(required_levels, completed_levels)
         return award
 
@@ -616,12 +569,7 @@ class AwardsService:
         Reads directly from award_approvals joined with awards — no filtering
         on nomination status so the user sees both in-progress and finalised ones.
         """
-        approvals = (
-            self.db.query(AwardApproval)
-            .filter(AwardApproval.approver_id == user_id)
-            .order_by(AwardApproval.created_at.desc())
-            .all()
-        )
+        approvals = self.repository.get_approvals_by_user(user_id)
         result = []
         for ap in approvals:
             award = ap.award
@@ -658,20 +606,18 @@ class AwardsService:
         self,
         active_only: bool = True,
         user_role: Optional[str] = None
-    ) -> List[AwardType]:
+    ):
         """Get award types visible to the requesting user's role."""
-        query = self.db.query(AwardType)
-        if active_only:
-            query = query.filter(AwardType.is_active == True)
-        
+        eligibility_rules = None
         if user_role:
-            allowed_rules = self._ROLE_ELIGIBLE_RULES.get(
+            eligibility_rules = self._ROLE_ELIGIBLE_RULES.get(
                 user_role.upper(),
-                ['PEER']          # safe fallback for unknown roles
+                ['PEER']
             )
-            query = query.filter(AwardType.eligibility_rule.in_(allowed_rules))
-            
-        return query.all()
+        return self.repository.get_award_types(
+            active_only=active_only,
+            eligibility_rules=eligibility_rules,
+        )
 
     def create_award_type(
         self,
@@ -685,32 +631,27 @@ class AwardsService:
     ) -> AwardType:
         """Create a new award type (admin only)."""
         # Prevent duplicate award_key or name (case-insensitive)
-        from sqlalchemy import func
-        existing_key = self.db.query(AwardType).filter(AwardType.award_key == award_key).first()
+        existing_key = self.repository.get_award_type_by_key(award_key)
         if existing_key:
             raise HTTPException(status_code=400, detail="Award type with this key already exists")
 
-        existing_name = self.db.query(AwardType).filter(func.lower(AwardType.name) == name.lower()).first()
+        existing_name = self.repository.get_award_type_by_name(name)
         if existing_name:
             raise HTTPException(status_code=400, detail="Award type with this name already exists")
 
-        award_type = AwardType(
+        return self.repository.create_award_type(
             award_key=award_key,
             name=name,
             points=points,
             frequency=frequency,
             eligibility_rule=eligibility_rule,
             description=description,
-            approval_workflow=approval_workflow
+            approval_workflow=approval_workflow,
         )
-        self.db.add(award_type)
-        self.db.commit()
-        self.db.refresh(award_type)
-        return award_type
 
-    def update_award_type(self, type_id: int, updates: Dict[str, Any]) -> Optional[AwardType]:
+    def update_award_type(self, type_id: int, updates: Dict[str, Any]):
         """Update an award type."""
-        award_type = self.db.query(AwardType).filter(AwardType.id == type_id).first()
+        award_type = self.repository.get_award_type_by_id(type_id)
         if not award_type:
             return None
 
@@ -718,9 +659,7 @@ class AwardsService:
             if value is not None:
                 setattr(award_type, field, value)
 
-        self.db.commit()
-        self.db.refresh(award_type)
-        return award_type
+        return self.repository.save_award_type(award_type)
 
     # --- Multi-Level Approval Helper Methods ---
 
@@ -729,7 +668,7 @@ class AwardsService:
         Send a pending-approval notification to the correct person based on the
         nominee's department chain, not the nominator's.
         """
-        nominee = self.db.query(User).filter(User.id == award.nominee_id).first()
+        nominee = self.repository.get_user_by_id(award.nominee_id)
         if not nominee:
             return
 
@@ -747,10 +686,7 @@ class AwardsService:
                     source_id=award.id,
                 )
         elif next_level == 'DEPT_HEAD':
-            dept_head = self.db.query(User).filter(
-                User.department_id == nominee.department_id,
-                User.role == UserRole.DEPT_HEAD.value,
-            ).first()
+            dept_head = self.repository.get_dept_head(nominee.department_id)
             if dept_head:
                 self.notification_service.create_notification(
                     user_id=dept_head.id,
@@ -759,7 +695,7 @@ class AwardsService:
                     source_id=award.id,
                 )
         elif next_level in ('HR', 'ADMIN'):
-            hr_users = self.db.query(User).filter(User.role == UserRole.HR.value).all()
+            hr_users = self.repository.get_hr_users()
             for hr_user in hr_users:
                 self.notification_service.create_notification(
                     user_id=hr_user.id,
@@ -784,19 +720,8 @@ class AwardsService:
         return levels if levels else ["MANAGER", "DEPT_HEAD", "HR"]
 
     def _get_existing_approvals(self, award_id: int) -> List[str]:
-        """
-        Get list of approval levels that have already approved this award.
-        
-        Returns:
-            List of approval levels that have approved (e.g., ["MANAGER"])
-        """
-        approvals = self.db.query(AwardApproval).filter(
-            AwardApproval.award_id == award_id,
-            AwardApproval.status == ApprovalStatus.APPROVED.value
-        ).all()
-
-        # Normalize stored approval level strings to uppercase for reliable comparisons
-        return [str(approval.approval_level).strip().upper() for approval in approvals]
+        """Get list of approval levels that have already approved this award."""
+        return self.repository.get_approved_levels(award_id)
 
     def _get_next_required_level(self, required_levels: List[str], completed_levels: List[str]) -> Optional[str]:
         """
@@ -871,18 +796,16 @@ class AwardsService:
         Returns:
             Dict with approval progress information
         """
-        award = self.db.query(Award).filter(Award.id == award_id).first()
+        award = self.repository.get_by_id(award_id)
         if not award:
             return None
 
         required_levels = self._get_required_approval_levels(award.award_type)
-        completed_levels = self._get_existing_approvals(award_id)
+        completed_levels = self.repository.get_approved_levels(award_id)
         next_level = self._get_next_required_level(required_levels, completed_levels)
 
         # Get approval details
-        approvals = self.db.query(AwardApproval).filter(
-            AwardApproval.award_id == award_id
-        ).all()
+        approvals = self.repository.get_approvals_for_award(award_id)
 
         approval_details = [
             {

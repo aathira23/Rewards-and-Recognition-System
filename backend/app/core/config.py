@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "Rewards & Recognition System"
     DEBUG: bool = True
-    API_V1_STR: str = ""  # Professional root-level endpoints
+    API_V1_STR: str = "/api/v1"
 
     # Database
     DATABASE_URL: str

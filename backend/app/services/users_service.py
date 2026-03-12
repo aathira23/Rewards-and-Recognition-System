@@ -4,67 +4,44 @@ from sqlalchemy.orm import Session
 
 from app.models.users import User
 from app.schemas.users import UserCreate, UserUpdate
-from app.core.security import get_password_hash
+from app.repository.users_repository import UsersRepository
 
+
+# ─── Repository-backed module functions (backward-compatible) ────────
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    return db.query(User).filter(User.email == email).first()
+    return UsersRepository(db).get_by_email(email)
 
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
-    return db.query(User).filter(User.id == user_id).first()
+    return UsersRepository(db).get_by_id(user_id)
 
 
 def list_users(db: Session, page: int = 1, per_page: int = 20):
     """Return (total, users) for the requested page."""
     from app.utils.constants import clamp_pagination
     page, per_page, skip = clamp_pagination(page, per_page)
-    total = db.query(User).count()
-    users = db.query(User).offset(skip).limit(per_page).all()
-    return total, users
+    return UsersRepository(db).list_paginated(skip, per_page)
 
 
 def get_user_count(db: Session) -> int:
-    return db.query(User).count()
+    return UsersRepository(db).count()
 
 
 def create_user(db: Session, user_in: UserCreate) -> User:
-    existing = get_user_by_email(db, user_in.email)
+    repo = UsersRepository(db)
+    existing = repo.get_by_email(user_in.email)
     if existing:
         raise ValueError("User with this email already exists")
-
-    hashed = get_password_hash(user_in.password)
-    user = User(
-        name=user_in.name,
-        email=user_in.email,
-        password=hashed,
-        role=user_in.role,
-        department_id=user_in.department_id if user_in.department_id != 0 else None,
-        manager_id=user_in.manager_id if user_in.manager_id != 0 else None,
-        date_of_joining=user_in.date_of_joining,
-        birth_date=user_in.birth_date,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    return repo.create(user_in)
 
 
 def update_user(db: Session, user_id: int, user_in: UserUpdate) -> User:
-    user = get_user_by_id(db, user_id)
+    repo = UsersRepository(db)
+    user = repo.get_by_id(user_id)
     if not user:
         raise ValueError("User not found")
-
-    for field, value in user_in.__dict__.items():
-        if field in ["department_id", "manager_id"] and value == 0:
-            value = None
-        if value is not None:
-            setattr(user, field, value)
-
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    return repo.update(user, user_in)
 
 
 def serialize_user(user: User, include_sensitive: bool = True) -> Dict[str, Any]:
