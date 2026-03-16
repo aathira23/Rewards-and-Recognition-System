@@ -47,5 +47,16 @@ class Settings(BaseSettings):
     ECARD_CONSECUTIVE_WINDOW_HOURS: int = 24
     ECARD_DEFAULT_COOLDOWN_HOURS: int = 1
 
+    # ── User Service Integration ──────────────────────────────
+    USER_SERVICE_BASE_URL: str = "http://localhost:9102"
+    # Cache 1 endpoint — validate token and get user identity
+    GET_USER_DETAILS_URL: str = "http://localhost:9102/python/api/v1/auth/token/get_user_details"
+    # Cache 2 endpoints — fetch user profiles by id or in bulk
+    GET_USERS_URL: str = "http://localhost:9102/python/api/v1/users"
+    GET_USER_BATCH_URL: str = "http://localhost:9102/python/api/v1/users/batch"
+
+    # Auth mode: "user_service" (production) or "local" (dev/testing with local JWT)
+    AUTH_MODE: str = "local"
+
 
 settings = Settings()
