@@ -139,3 +139,28 @@ async def update_user(
 
     return success(data=users_service.serialize_user(user), message=SUCCESS_USER_UPDATED)
 
+
+@router.get("/debug/cache")
+async def debug_cache():
+    """Temporary debug endpoint — shows live cache contents from inside the running process."""
+    from app.services.user_service_client import _user_cache
+    from app.services.user_profiles_client import _profile_cache, _picker_cache
+
+    return {
+        "cache1_tokens": {
+            "size": len(_user_cache),
+            "users": [
+                {"user_id": v.id, "name": v.name, "email": v.email, "ttl_remaining_s": int(_user_cache.timer() - _user_cache._TTLCache__links[k].expires + _user_cache.ttl) if hasattr(_user_cache, '_TTLCache__links') else "n/a"}
+                for k, v in list(_user_cache.items())
+            ],
+        },
+        "cache2_profiles": {
+            "size": len(_profile_cache),
+            "user_ids": list(_profile_cache.keys()),
+        },
+        "cache2_pickers": {
+            "size": len(_picker_cache),
+            "keys": list(_picker_cache.keys()),
+        },
+    }
+

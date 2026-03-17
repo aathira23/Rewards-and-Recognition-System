@@ -44,8 +44,10 @@ async def get_user_context(token: str) -> UserContext:
     """
     # 1. Cache check
     if token in _user_cache:
+        logger.info("Cache 1 HIT  — user_id=%s (no User Service call)", _user_cache[token].id)
         return _user_cache[token]
 
+    logger.info("Cache 1 MISS — calling User Service: %s", settings.GET_USER_DETAILS_URL)
     # 2. Call User Service
     clean_token = token.strip()
     headers = {
@@ -96,6 +98,7 @@ async def get_user_context(token: str) -> UserContext:
 
     # Cache it
     _user_cache[clean_token] = user_ctx
+    logger.info("Cache 1 stored — user_id=%s, cache_size=%d", user_ctx.id, len(_user_cache))
     return user_ctx
 
 

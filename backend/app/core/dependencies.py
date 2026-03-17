@@ -124,12 +124,13 @@ def _upsert_user_from_context(db: Session, ctx) -> None:
         logger.warning("Failed to upsert user %s from UserContext", ctx.id, exc_info=True)
 
 
-async def _get_current_user_from_service(token: str, db: Session):
+async def _get_current_user_from_service(token: str, db_factory):
     """
     Validate token via User Service (Cache 1) → return UserContext.
 
     On a cache miss (first request for this token), also upserts the user
     and their department into the local DB so ORM joins resolve correctly.
+    The DB session is only opened when actually needed (cache miss path).
     """
     from app.services.user_service_client import get_user_context, _user_cache
 
@@ -137,8 +138,12 @@ async def _get_current_user_from_service(token: str, db: Session):
     ctx = await get_user_context(token)        # validates via User Service on miss
 
     if not was_cached:
-        # Only run the DB upsert when we actually called the User Service
-        _upsert_user_from_context(db, ctx)
+        # Only open a DB connection + run the upsert on a real cache miss
+        db = next(db_factory())
+        try:
+            _upsert_user_from_context(db, ctx)
+        finally:
+            db.close()
 
     return ctx
 
@@ -147,7 +152,6 @@ async def _get_current_user_from_service(token: str, db: Session):
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
 ):
     """
     Get current authenticated user.
@@ -157,11 +161,18 @@ async def get_current_user(
         - AUTH_MODE == "local":        User ORM model (from local DB)
 
     Both expose .id and .role — all existing router code works unchanged.
+
+    The DB session is opened lazily: user_service mode only opens it on a
+    cache miss; local mode always needs it for the JWT→DB lookup.
     """
     if settings.AUTH_MODE == "user_service":
-        return await _get_current_user_from_service(token, db)
+        return await _get_current_user_from_service(token, get_db)
     else:
-        return _get_current_user_local(db, token)
+        db = next(get_db())
+        try:
+            return _get_current_user_local(db, token)
+        finally:
+            db.close()
 
 
 async def get_current_user_id(
