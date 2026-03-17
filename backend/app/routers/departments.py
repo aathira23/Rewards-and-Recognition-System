@@ -7,7 +7,6 @@ from typing import List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models.users import User
 from app.utils.enums import UserRole
 from app.services.department_service import DepartmentService
 from app.schemas.departments import DepartmentCreate, DepartmentUpdate, DepartmentResponse
@@ -25,7 +24,7 @@ router = APIRouter()
 @router.get("/", response_model=List[DepartmentResponse])
 def list_departments(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """List all departments (All authenticated users)."""
     service = DepartmentService(db)
@@ -38,7 +37,7 @@ def list_departments(
 def create_department(
     dept: DepartmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Create a new department (HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
@@ -57,7 +56,7 @@ def update_department(
     dept_id: int,
     dept_in: DepartmentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Update a department (HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
@@ -77,7 +76,7 @@ def update_department(
 def delete_department(
     dept_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Delete a department (HR only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):

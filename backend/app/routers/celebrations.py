@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id, get_current_user
+from app.core.dependencies import get_current_user_id, get_current_user, oauth2_scheme
+from app.services.user_profiles_client import get_users_batch
 from app.schemas.celebrations import CelebrationResponse
 from app.services.celebration_service import CelebrationService
 from app.utils.response import success, paginated_success
@@ -36,16 +37,19 @@ def get_celebration_history(
     page: int = 1,
     per_page: int = DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get past celebrations."""
     service = CelebrationService(db)
     total, hist = service.get_celebration_history(page=page, per_page=per_page)
-    # Map to schema with user name
+    # Batch-fetch user names from User Service
+    _user_ids = [h.user_id for h in hist]
+    _users_map = {uid: p.name for uid, p in get_users_batch(_user_ids, token).items()} if _user_ids else {}
     data = []
     for h in hist:
         d = CelebrationResponse.model_validate(h)
-        d.user_name = h.user.name if h.user else "Unknown"
+        d.user_name = _users_map.get(h.user_id, "Unknown")
         data.append(d)
 
     return paginated_success(

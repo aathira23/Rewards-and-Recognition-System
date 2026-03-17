@@ -27,13 +27,4 @@ class User(Base):
     # Relationships
     department = relationship("Department", back_populates="users")
     manager = relationship("User", remote_side=[id], backref="subordinates")
-    wallets = relationship("Wallet", back_populates="user")
-    sent_ecards = relationship("ECard", foreign_keys="ECard.sender_id", back_populates="sender")
-    received_ecards = relationship("ECard", foreign_keys="ECard.receiver_id", back_populates="receiver")
-    nominations_made = relationship("Award", foreign_keys="Award.nominator_id", back_populates="nominator")
-    nominations_received = relationship("Award", foreign_keys="Award.nominee_id", back_populates="nominee")
-    celebrations = relationship("Celebration", back_populates="user")
-    redemptions = relationship("Redemption", back_populates="user")
-    conversions = relationship("PointsConversion", foreign_keys="PointsConversion.user_id", back_populates="user")
-    notifications = relationship("Notification", back_populates="user")
     email_notifications_enabled = Column(Boolean, nullable=False, default=True)

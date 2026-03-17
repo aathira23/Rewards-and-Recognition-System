@@ -13,8 +13,9 @@ from app.repository.wallets_repository import WalletsRepository
 class WalletsService:
     """Service for managing wallets and budget allocation."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = WalletsRepository(db)
         self.points_service = PointsService(db)
         self.recognition_service = RecognitionService(db)

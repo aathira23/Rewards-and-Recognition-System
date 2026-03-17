@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id, get_current_user
+from app.core.dependencies import get_current_user_id, get_current_user, oauth2_scheme
+from app.services.user_profiles_client import get_users_batch
 from app.services.store_service import StoreService
 from app.schemas.rewards import RewardResponse, RewardCreate, RewardUpdate
 from app.schemas.redemptions import RedemptionCreate, RedemptionResponse
@@ -120,7 +121,8 @@ def redeem_reward(
 @router.get("/history")
 def get_redemption_history(
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get history of all redemptions and conversion requests."""
     service = StoreService(db)
@@ -138,6 +140,8 @@ def get_redemption_history(
 
     # 2. Conversions (Payroll/CSR)
     conversions = service.get_conversion_history(current_user_id)
+    _uid_set = {c.user_id for c in conversions} | {c.approved_by for c in conversions if c.approved_by}
+    _users_map = {uid: p.name for uid, p in get_users_batch(list(_uid_set), token).items()} if _uid_set else {}
     conversion_data = []
     for c in conversions:
         conv_dict = {
@@ -145,12 +149,12 @@ def get_redemption_history(
             "points_converted": c.points_converted,
             "conversion_type": c.conversion_type,
             "user_id": c.user_id,
-            "user_name": c.user.name if c.user else None,
+            "user_name": _users_map.get(c.user_id),
             "cash_amount": c.cash_amount,
             "status": c.status,
             "requested_at": c.requested_at,
             "approved_by": c.approved_by,
-            "approved_by_name": c.approver.name if c.approver else None,
+            "approved_by_name": _users_map.get(c.approved_by) if c.approved_by else None,
             "approved_at": c.approved_at,
         }
         conversion_data.append(PointsConversionResponse.model_validate(conv_dict))

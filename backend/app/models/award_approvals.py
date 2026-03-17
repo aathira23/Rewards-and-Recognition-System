@@ -15,7 +15,7 @@ class AwardApproval(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)
     award_id = Column(BigInteger, ForeignKey("awards.id"), nullable=False)
-    approver_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    approver_id = Column(BigInteger, nullable=False)
     approval_level = Column(String, nullable=False)  # MANAGER, DEPT_HEAD, HR
     status = Column(String, nullable=False)  # APPROVED, REJECTED
     comments = Column(Text, nullable=True)
@@ -23,4 +23,3 @@ class AwardApproval(Base):
 
     # Relationships
     award = relationship("Award", back_populates="approvals")
-    approver = relationship("User")

@@ -72,7 +72,7 @@ class RecognitionRepository:
     def get_ecards_received(self, user_id: int) -> List[ECard]:
         return (
             self.db.query(ECard)
-            .options(joinedload(ECard.sender), joinedload(ECard.badge))
+            .options(joinedload(ECard.badge))
             .filter(ECard.receiver_id == user_id)
             .order_by(ECard.created_at.desc())
             .all()
@@ -81,7 +81,7 @@ class RecognitionRepository:
     def get_ecards_sent(self, user_id: int) -> List[ECard]:
         return (
             self.db.query(ECard)
-            .options(joinedload(ECard.receiver), joinedload(ECard.badge))
+            .options(joinedload(ECard.badge))
             .filter(ECard.sender_id == user_id)
             .order_by(ECard.created_at.desc())
             .all()
@@ -121,7 +121,6 @@ class RecognitionRepository:
     def get_feed_paginated(self, skip: int, limit: int) -> Tuple[int, List[RecognitionFeed]]:
         query = (
             self.db.query(RecognitionFeed)
-            .options(joinedload(RecognitionFeed.actor), joinedload(RecognitionFeed.receiver))
             .filter(RecognitionFeed.source_type != "MANAGER_REWARD")
         )
         total = query.count()
