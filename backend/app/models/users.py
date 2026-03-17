@@ -17,7 +17,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
     password = Column(String, nullable=False)
-    role = Column(String, nullable=False)  # EMPLOYEE, MANAGER, DEPT_HEAD, HR
+    role = Column(String, nullable=False, default="UNKNOWN")  # EMPLOYEE, MANAGER, DEPT_HEAD, HR
     department_id = Column(BigInteger, ForeignKey("departments.id"), nullable=True)
     manager_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     date_of_joining = Column(Date, nullable=True)

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id, get_current_user
+from app.core.dependencies import get_current_user_id, get_current_user, oauth2_scheme
 from app.models.users import User
 from app.schemas.ecards import ECardCreate, ECardResponse
 from app.schemas.recognition_feed import RecognitionFeedResponse
@@ -28,7 +28,8 @@ router = APIRouter()
 def send_recognition(
     ecard_in: ECardCreate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """Send an eCard recognition to a peer."""
     service = RecognitionService(db)
@@ -37,7 +38,8 @@ def send_recognition(
             sender_id=current_user_id,
             receiver_id=ecard_in.receiver_id,
             badge_id=ecard_in.badge_id,
-            message=ecard_in.message
+            message=ecard_in.message,
+            token=token
         )
         data = ECardResponse.model_validate(ecard)
         # Populate department names in nested user objects

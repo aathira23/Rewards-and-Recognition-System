@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.schemas.user_context import UserContext
 
 logger = logging.getLogger(__name__)
 
@@ -64,64 +65,15 @@ def _get_current_user_local(db: Session, token: str):
 
 # ─── User Service auth helpers (used when AUTH_MODE == "user_service") ─────
 
-def _upsert_user_from_context(db: Session, ctx) -> None:
-    """
-    Keep the local users (and departments) table in sync with User Service.
-
-    Called only on an actual User Service round-trip (cache miss on Cache 1).
-    This single upsert is the reason all existing ORM relationships — feed
-    actor names, leaderboard enrichment, eCard sender/receiver, report names —
-    continue to work without any changes to repositories or services.
-    """
-    from app.models.users import User
-    from app.models.departments import Department
-    import secrets
-    from app.core.security import get_password_hash
-
+def _upsert_user_from_context(db: Session, ctx: UserContext) -> None:
+    """Synchronize user data from external User Service into local DB."""
+    from app.services.user_sync_service import sync_user_data
     try:
-        # 1. Upsert department (creates it if the org/bu_id is new to R&R)
-        if ctx.department_id and ctx.department_name:
-            dept = db.query(Department).filter(Department.id == ctx.department_id).first()
-            if not dept:
-                db.add(Department(id=ctx.department_id, name=ctx.department_name))
-                db.flush()
-            elif dept.name != ctx.department_name:
-                dept.name = ctx.department_name
-
-        # 2. Parse birth date if provided
-        birth: Optional[_date] = None
-        if getattr(ctx, "dob", None):
-            try:
-                birth = _date.fromisoformat(str(ctx.dob)[:10])
-            except (ValueError, TypeError):
-                pass
-
-        # 3. Upsert user
-        user = db.query(User).filter(User.id == ctx.id).first()
-        if not user:
-            db.add(User(
-                id=ctx.id,
-                name=ctx.name,
-                email=ctx.email or f"user_{ctx.id}@ext.local",
-                # Unusable password — login goes through User Service only
-                password=get_password_hash(secrets.token_hex(32)),
-                role=ctx.role,
-                department_id=ctx.department_id,
-                birth_date=birth,
-            ))
-        else:
-            # Refresh mutable fields that User Service owns
-            user.name = ctx.name
-            user.role = ctx.role
-            user.department_id = ctx.department_id
-            if birth is not None:
-                user.birth_date = birth
-
+        sync_user_data(db, ctx)
         db.commit()
-
     except Exception:
         db.rollback()
-        logger.warning("Failed to upsert user %s from UserContext", ctx.id, exc_info=True)
+        logger.warning("Failed to sync user %s from external context", ctx.id, exc_info=True)
 
 
 async def _get_current_user_from_service(token: str, db_factory):

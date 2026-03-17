@@ -109,11 +109,17 @@ class RecognitionService:
         sender_id: int,
         receiver_id: int,
         badge_id: int,
-        message: Optional[str] = None
+        message: Optional[str] = None,
+        token: Optional[str] = None
     ) -> ECard:
         """Send an eCard recognition."""
         if sender_id == receiver_id:
             raise ValueError("You cannot send a recognition to yourself.")
+
+        # 0. Lazy sync recipient if missing (for User Service mode)
+        from app.core.config import settings
+        if settings.AUTH_MODE == "user_service" and token:
+            self._sync_recipient(receiver_id, token)
 
         # 1. Validate badge
         badge = self.get_badge_by_id(badge_id)
@@ -180,6 +186,24 @@ class RecognitionService:
         )
 
         return ecard
+
+    def _sync_recipient(self, user_id: int, token: str) -> None:
+        """Fetch user from User Service and upsert locally if missing."""
+        from app.models.users import User
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if user:
+            return
+
+        from app.services import user_profiles_client
+        from app.services.user_sync_service import sync_user_data
+        try:
+            profile = user_profiles_client.get_user_profile(user_id, token)
+            if profile:
+                sync_user_data(self.db, profile)
+        except Exception:
+            self.db.rollback()
+            import logging
+            logging.getLogger(__name__).warning("Failed to sync recipient %s", user_id, exc_info=True)
 
     def get_recognition_feed(self, page: int = 1, per_page: int = 20):
         """Get company-wide recognition feed. Returns (total, items)."""
