@@ -14,8 +14,9 @@ from app.repository.recognition_repository import RecognitionRepository
 class RecognitionService:
     """Service for managing recognitions and leaderboard."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = RecognitionRepository(db)
         self.points_service = PointsService(db)
         self.notification_service = NotificationService(db)
@@ -163,8 +164,16 @@ class RecognitionService:
         )
 
         # 6. Create notification for receiver
-        sender = self.repository.get_user_by_id(sender_id)
-        sender_name = sender.name if sender else "A colleague"
+        sender_name = "A colleague"
+        if self._token:
+            from app.services.user_profiles_client import get_user_profile
+            sender_profile = get_user_profile(sender_id, self._token)
+            if sender_profile:
+                sender_name = sender_profile.name
+        if sender_name == "A colleague":
+            sender = self.repository.get_user_by_id(sender_id)
+            if sender:
+                sender_name = sender.name
         self.notification_service.create_notification(
             user_id=receiver_id,
             message=f"{sender_name} appreciated you with a '{badge.name}' badge! {points} points earned.",

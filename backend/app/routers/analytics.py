@@ -9,7 +9,7 @@ from app.core.database import get_db
 
 from app.services.analytics_service import AnalyticsService
 from app.utils.response import success, client_error
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, oauth2_scheme
 from app.utils.enums import UserRole, Scope
 from app.utils.constants import SUCCESS_METRICS_RETRIEVED
 
@@ -22,7 +22,8 @@ def get_analytics(
     to_date: date = None,
     scope: str = None, # ORG, DEPARTMENT, TEAM
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """
     Get analytics dashboard data based on user role and permitted scope.
@@ -32,7 +33,7 @@ def get_analytics(
     # 1. Enforce Role-Based Scope
     resolved_scope = resolve_effective_scope(scope, current_user.role)
 
-    service = AnalyticsService(db)
+    service = AnalyticsService(db, token=token)
     metrics = service.get_dashboard_metrics(
         current_user=current_user,
         scope=resolved_scope,

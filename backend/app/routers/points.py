@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_current_user_id
+from app.core.dependencies import get_current_user, get_current_user_id, oauth2_scheme
+from app.services.user_profiles_client import get_users_batch
 from app.utils.enums import UserRole
 from app.utils.response import forbidden
 from app.schemas.points_conversion import (
@@ -81,7 +82,8 @@ def get_points_history(
 def convert_points_request(
     request: PointsConversionCreate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """Request points conversion to cash/payroll. (User Shortcut)"""
     if not is_feature_enabled(db, 'conversion_enabled'):
@@ -103,17 +105,19 @@ def convert_points_request(
             conversion_type=request.conversion_type,
             cash_amount=calculated_cash
         )
+        _uid_set = {conversion.user_id} | ({conversion.approved_by} if conversion.approved_by else set())
+        _users_map = {uid: p.name for uid, p in get_users_batch(list(_uid_set), token).items()} if _uid_set else {}
         conv_dict = {
             "id": conversion.id,
             "points_converted": conversion.points_converted,
             "conversion_type": conversion.conversion_type,
             "user_id": conversion.user_id,
-            "user_name": conversion.user.name if conversion.user else None,
+            "user_name": _users_map.get(conversion.user_id),
             "cash_amount": conversion.cash_amount,
             "status": conversion.status,
             "requested_at": conversion.requested_at,
             "approved_by": conversion.approved_by,
-            "approved_by_name": conversion.approver.name if conversion.approver else None,
+            "approved_by_name": _users_map.get(conversion.approved_by) if conversion.approved_by else None,
             "approved_at": conversion.approved_at,
         }
         data = PointsConversionResponse.model_validate(conv_dict)
@@ -126,7 +130,8 @@ def convert_points_request(
 def get_conversions(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get conversion requests: HR sees all requests; users see only their own."""
     if not is_feature_enabled(db, 'conversion_enabled'):
@@ -138,6 +143,8 @@ def get_conversions(
     else:
         conversions = service.get_conversion_history(current_user_id)
 
+    _uid_set = {c.user_id for c in conversions} | {c.approved_by for c in conversions if c.approved_by}
+    _users_map = {uid: p.name for uid, p in get_users_batch(list(_uid_set), token).items()} if _uid_set else {}
     data = []
     for c in conversions:
         conv_dict = {
@@ -145,12 +152,12 @@ def get_conversions(
             "points_converted": c.points_converted,
             "conversion_type": c.conversion_type,
             "user_id": c.user_id,
-            "user_name": c.user.name if c.user else None,
+            "user_name": _users_map.get(c.user_id),
             "cash_amount": c.cash_amount,
             "status": c.status,
             "requested_at": c.requested_at,
             "approved_by": c.approved_by,
-            "approved_by_name": c.approver.name if c.approver else None,
+            "approved_by_name": _users_map.get(c.approved_by) if c.approved_by else None,
             "approved_at": c.approved_at,
         }
         item = PointsConversionResponse.model_validate(conv_dict)
@@ -161,7 +168,8 @@ def get_conversions(
 @router.get("/conversions/pending", response_model=List[PointsConversionResponse])
 def get_pending_conversions(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get pending conversion requests (HR only)."""
     if not is_feature_enabled(db, 'conversion_enabled'):
@@ -171,6 +179,8 @@ def get_pending_conversions(
 
     service = StoreService(db)
     conversions = service.get_pending_conversions()
+    _uid_set = {c.user_id for c in conversions} | {c.approved_by for c in conversions if c.approved_by}
+    _users_map = {uid: p.name for uid, p in get_users_batch(list(_uid_set), token).items()} if _uid_set else {}
     data = []
     for c in conversions:
         conv_dict = {
@@ -178,12 +188,12 @@ def get_pending_conversions(
             "points_converted": c.points_converted,
             "conversion_type": c.conversion_type,
             "user_id": c.user_id,
-            "user_name": c.user.name if c.user else None,
+            "user_name": _users_map.get(c.user_id),
             "cash_amount": c.cash_amount,
             "status": c.status,
             "requested_at": c.requested_at,
             "approved_by": c.approved_by,
-            "approved_by_name": c.approver.name if c.approver else None,
+            "approved_by_name": _users_map.get(c.approved_by) if c.approved_by else None,
             "approved_at": c.approved_at,
         }
         item = PointsConversionResponse.model_validate(conv_dict)
@@ -197,7 +207,8 @@ def action_conversion(
     request: PointsConversionActionRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """Approve or reject a conversion request (Admin logic)."""
     if not is_feature_enabled(db, 'conversion_enabled'):
@@ -214,38 +225,26 @@ def action_conversion(
 
         if action == "APPROVE":
             result = service.approve_conversion(conversion_id, current_user_id)
-            conv_dict = {
-                "id": result.id,
-                "points_converted": result.points_converted,
-                "conversion_type": result.conversion_type,
-                "user_id": result.user_id,
-                "user_name": result.user.name if result.user else None,
-                "cash_amount": result.cash_amount,
-                "status": result.status,
-                "requested_at": result.requested_at,
-                "approved_by": result.approved_by,
-                "approved_by_name": result.approver.name if result.approver else None,
-                "approved_at": result.approved_at,
-            }
-            data = PointsConversionResponse.model_validate(conv_dict)
-            return success(data=data, message=SUCCESS_CONVERSION_APPROVED)
         else:
             result = service.reject_conversion(conversion_id, current_user_id)
-            conv_dict = {
-                "id": result.id,
-                "points_converted": result.points_converted,
-                "conversion_type": result.conversion_type,
-                "user_id": result.user_id,
-                "user_name": result.user.name if result.user else None,
-                "cash_amount": result.cash_amount,
-                "status": result.status,
-                "requested_at": result.requested_at,
-                "approved_by": result.approved_by,
-                "approved_by_name": result.approver.name if result.approver else None,
-                "approved_at": result.approved_at,
-            }
-            data = PointsConversionResponse.model_validate(conv_dict)
-            return success(data=data, message=SUCCESS_CONVERSION_REJECTED)
+        _uid_set = {result.user_id} | ({result.approved_by} if result.approved_by else set())
+        _users_map = {uid: p.name for uid, p in get_users_batch(list(_uid_set), token).items()} if _uid_set else {}
+        conv_dict = {
+            "id": result.id,
+            "points_converted": result.points_converted,
+            "conversion_type": result.conversion_type,
+            "user_id": result.user_id,
+            "user_name": _users_map.get(result.user_id),
+            "cash_amount": result.cash_amount,
+            "status": result.status,
+            "requested_at": result.requested_at,
+            "approved_by": result.approved_by,
+            "approved_by_name": _users_map.get(result.approved_by) if result.approved_by else None,
+            "approved_at": result.approved_at,
+        }
+        data = PointsConversionResponse.model_validate(conv_dict)
+        msg = SUCCESS_CONVERSION_APPROVED if action == "APPROVE" else SUCCESS_CONVERSION_REJECTED
+        return success(data=data, message=msg)
     except ValueError as e:
         return client_error(message=str(e))
 

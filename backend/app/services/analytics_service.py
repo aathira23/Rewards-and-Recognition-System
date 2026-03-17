@@ -9,9 +9,22 @@ from app.repository.analytics_repository import AnalyticsRepository
 class AnalyticsService:
     """Service for generating analytics and metrics."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = AnalyticsRepository(db)
+
+    def _get_user_names_batch(self, user_ids: set) -> dict:
+        """Batch-resolve user names via User Service, fallback to local DB."""
+        if not user_ids:
+            return {}
+        if self._token:
+            from app.services.user_profiles_client import get_users_batch
+            profiles = get_users_batch(list(user_ids), self._token)
+            return {uid: p.name for uid, p in profiles.items()}
+        from app.models.users import User as UserModel
+        rows = self.db.query(UserModel).filter(UserModel.id.in_(user_ids)).all()
+        return {u.id: u.name for u in rows}
 
     def get_recognition_report(
         self,
@@ -22,6 +35,10 @@ class AnalyticsService:
         """Get detailed recognition report."""
         results = self.repository.get_recognitions(from_date, to_date, department_id)
 
+        # Batch-load user names from User Service
+        uid_set = {r.actor_id for r in results} | {r.receiver_id for r in results if r.receiver_id}
+        users_map = self._get_user_names_batch(uid_set)
+
         report_data = []
         for r in results:
             points = self.repository.get_points_for_recognition(
@@ -30,8 +47,8 @@ class AnalyticsService:
 
             report_data.append({
                 "id": r.id,
-                "actor_name": r.actor.name if r.actor else "System",
-                "receiver_name": r.receiver.name if r.receiver else "Unknown",
+                "actor_name": users_map.get(r.actor_id) or f"User {r.actor_id}",
+                "receiver_name": users_map.get(r.receiver_id) or f"User {r.receiver_id}",
                 "source_type": r.source_type,
                 "points": points,
                 "message": r.message,
@@ -47,11 +64,14 @@ class AnalyticsService:
         """Get reward redemption report."""
         results = self.repository.get_redemptions(from_date, to_date)
 
+        uid_set = {r.user_id for r in results}
+        users_map = self._get_user_names_batch(uid_set)
+
         report_data = []
         for r in results:
             report_data.append({
                 "id": r.id,
-                "user_name": r.user.name,
+                "user_name": users_map.get(r.user_id) or f"User {r.user_id}",
                 "reward_name": r.reward.name,
                 "points_used": r.points_used,
                 "status": r.status,
@@ -85,10 +105,13 @@ class AnalyticsService:
         year, month = map(int, month_str.split("-"))
         results = self.repository.get_approved_conversions(year, month)
 
+        uid_set = {r.user_id for r in results}
+        users_map = self._get_user_names_batch(uid_set)
+
         report_data = []
         for r in results:
             report_data.append({
-                "user_name": r.user.name,
+                "user_name": users_map.get(r.user_id) or f"User {r.user_id}",
                 "employee_id": None,
                 "points_converted": r.points_converted,
                 "cash_amount": float(r.cash_amount),

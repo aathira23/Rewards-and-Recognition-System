@@ -155,7 +155,6 @@ class AwardsRepository:
             )
             .options(
                 joinedload(Award.award_type),
-                joinedload(Award.nominee),
                 joinedload(Award.approvals),
             )
             .all()
