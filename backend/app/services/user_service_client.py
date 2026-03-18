@@ -102,6 +102,12 @@ async def get_user_context(token: str) -> UserContext:
     return user_ctx
 
 
+def invalidate_auth_cache() -> None:
+    """Clear all authenticated user contexts from memory."""
+    _user_cache.clear()
+    logger.info("Cache 1 cleared (auth tokens)")
+
+
 def _safe_int(value) -> Optional[int]:
     """Convert to int if truthy, else None."""
     if value is None:

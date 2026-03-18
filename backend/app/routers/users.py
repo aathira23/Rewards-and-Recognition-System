@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_optional_current_user, oauth2_scheme
-from app.schemas.users import UserCreate, UserUpdate
+from app.schemas.users import UserCreate, UserUpdate, CacheFlushRequest
 from app.utils.response import success, client_error, created, forbidden, paginated_success
 from app.utils.enums import UserRole
 from app.services import users_service
@@ -163,4 +163,39 @@ async def debug_cache():
             "keys": list(_picker_cache.keys()),
         },
     }
+
+
+@router.post("/cache/flush")
+async def flush_cache(
+    payload: CacheFlushRequest,
+    current_user=Depends(get_current_user),
+):
+    """
+    Manually clear User Service caches (Admin/HR only).
+    Useful when external data is updated and needs to be reflected instantly.
+    """
+    if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
+       return forbidden(message="Only HR and Admin can flush the cache.")
+
+    from app.services.user_service_client import invalidate_auth_cache
+    from app.services.user_profiles_client import invalidate_all_profiles
+
+    scope = payload.scope.lower()
+    flushed = []
+
+    if scope in ("all", "auth"):
+        invalidate_auth_cache()
+        flushed.append("authentication tokens (Cache 1)")
+
+    if scope in ("all", "profiles"):
+        invalidate_all_profiles()
+        flushed.append("user profiles and pickers (Cache 2)")
+
+    if not flushed:
+        return client_error(message=f"Invalid flush scope: {payload.scope}. Use 'all', 'profiles', or 'auth'.")
+
+    return success(
+        data={"flushed": flushed},
+        message=f"Successfully flushed: {', '.join(flushed)}"
+    )
 

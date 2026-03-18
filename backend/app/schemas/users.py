@@ -81,3 +81,8 @@ class Token(BaseModel):
     """Schema for authentication token."""
     access_token: str
     token_type: str = "bearer"
+
+
+class CacheFlushRequest(BaseModel):
+    """Schema for manual cache flush request."""
+    scope: str = "all"  # "all", "profiles", "auth"

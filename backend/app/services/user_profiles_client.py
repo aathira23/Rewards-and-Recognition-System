@@ -210,6 +210,8 @@ def invalidate_user(user_id: int) -> None:
     _profile_cache.pop(user_id, None)
 
 
-def invalidate_picker_cache() -> None:
-    """Clear all Pattern C cached responses (e.g. after a bulk user change)."""
+def invalidate_all_profiles() -> None:
+    """Clear all user profiles and picker responses from memory."""
+    _profile_cache.clear()
     _picker_cache.clear()
+    logger.info("Cache 2 cleared (profiles and pickers)")
