@@ -19,7 +19,7 @@ class RecognitionService:
         self._token = token
         self.repository = RecognitionRepository(db)
         self.points_service = PointsService(db)
-        self.notification_service = NotificationService(db)
+        self.notification_service = NotificationService(db, token=self._token)
 
     # --- Badge Management ---
     def get_badges(self, active_only: bool = True):

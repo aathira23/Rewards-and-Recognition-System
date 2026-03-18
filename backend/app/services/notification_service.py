@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.models.notifications import Notification
 from app.jobs.email_worker import enqueue_email
 from app.repository.notification_repository import NotificationRepository
@@ -27,8 +28,9 @@ def _get_source_email_map() -> dict:
 class NotificationService:
     """Service for managing notifications."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = NotificationRepository(db)
 
     def create_notification(
@@ -54,6 +56,7 @@ class NotificationService:
                 event_type=evt,
                 recipient_user_id=user_id,
                 context=ctx,
+                token=self._token,
             )
 
         return notification
@@ -89,6 +92,7 @@ class NotificationService:
             event_type=EmailEventType.HR_CRITICAL,
             recipient_user_id=user_id,
             context={"short_reason": subject, "detailed_message": body},
+            token=self._token,
         )
 
     def send_expiry_reminders(self, days_before: int = 7) -> int:

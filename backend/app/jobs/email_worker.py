@@ -34,9 +34,10 @@ def enqueue_email(
     context: Dict[str, Any],
     *,
     force: bool = False,
+    token: Optional[str] = None,
 ) -> None:
     """Submit an email send job to the background thread pool."""
-    _pool.submit(_send_email_task, event_type, recipient_user_id, context, force)
+    _pool.submit(_send_email_task, event_type, recipient_user_id, context, force, token)
 
 
 def _send_email_task(
@@ -44,6 +45,7 @@ def _send_email_task(
     recipient_user_id: int,
     context: Dict[str, Any],
     force: bool,
+    token: Optional[str],
 ) -> None:
     """Executed inside a worker thread – opens its own DB session."""
     from app.core.database import SessionLocal
@@ -51,7 +53,7 @@ def _send_email_task(
 
     db = SessionLocal()
     try:
-        svc = EmailService(db)
+        svc = EmailService(db, token=token)
         log = svc.send(
             event_type=event_type,
             recipient_user_id=recipient_user_id,

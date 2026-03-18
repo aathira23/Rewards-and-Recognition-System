@@ -1,6 +1,7 @@
 """
 Application configuration using Pydantic settings.
 """
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     )
 
     APP_NAME: str = "Rewards & Recognition System"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_V1_STR: str = "/api/v1"
 
     # Database
@@ -54,9 +55,16 @@ class Settings(BaseSettings):
     # Cache 2 endpoints — fetch user profiles by id or in bulk
     GET_USERS_URL: str = "http://localhost:9102/python/api/v1/users"
     GET_USER_BATCH_URL: str = "http://localhost:9102/python/api/v1/users/batch"
+    # Set False in production only if User Service uses a self-signed cert
+    USER_SERVICE_VERIFY_SSL: bool = True
 
     # Auth mode: "user_service" (production) or "local" (dev/testing with local JWT)
     AUTH_MODE: str = "local"
+
+    # Optional service/system token used by background jobs (celebrations, pending-approvals)
+    # to call the User Service without a per-request Bearer token.
+    # Set this to a long-lived service account token in production.
+    SYSTEM_TOKEN: Optional[str] = None
 
 
 settings = Settings()

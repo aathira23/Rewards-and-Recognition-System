@@ -1,6 +1,7 @@
 """
 Celebration service - Production-ready unified celebration processing.
 """
+from typing import Optional
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 from typing import List, Dict, Any
@@ -14,12 +15,13 @@ from app.repository.celebration_repository import CelebrationRepository
 class CelebrationService:
     """Service for managing automated celebrations (birthdays and work anniversaries)."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = CelebrationRepository(db)
         self.points_service = PointsService(db)
-        self.recognition_service = RecognitionService(db)
-        self.notification_service = NotificationService(db)
+        self.recognition_service = RecognitionService(db, token=token)
+        self.notification_service = NotificationService(db, token=token)
 
     def get_upcoming_celebrations(self, days: int = 7) -> List[Dict[str, Any]]:
         """Get users with birthdays or anniversaries in the next N days."""

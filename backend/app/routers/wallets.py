@@ -10,7 +10,7 @@ from app.schemas.wallets import WalletResponse, WalletAllocateRequest, WalletRew
 from app.services.wallets_service import WalletsService
 from app.utils.response import success, created, client_error, forbidden
 from app.utils.enums import UserRole
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, oauth2_scheme
 from app.utils.constants import (
     ERROR_UNAUTHORIZED_WALLET_VIEW, SUCCESS_WALLET_RETRIEVED,
     ERROR_ONLY_HR_ADMIN_ALLOCATE_BUDGET, SUCCESS_ALLOCATED_POINTS_TO_MANAGER,
@@ -46,14 +46,15 @@ def get_manager_wallet(
 def allocate_manager_budget(
     request: WalletAllocateRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
 ):
     """HR allocates budget to manager wallet."""
     # HR/Admin only
     if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
         return forbidden(ERROR_ONLY_HR_ADMIN_ALLOCATE_BUDGET)
 
-    service = WalletsService(db)
+    service = WalletsService(db, token=token)
     try:
         funding = service.allocate_budget(
             manager_id=request.manager_id,
@@ -73,7 +74,8 @@ def allocate_manager_budget(
 def manager_reward_employee(
     request: WalletRewardRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
 ):
     """Manager rewards employee from their wallet."""
     # Only managers, dept heads, HR or Admin may reward employees
@@ -81,7 +83,7 @@ def manager_reward_employee(
     if getattr(current_user, "role", None) not in allowed_roles:
         return forbidden(ERROR_UNAUTHORIZED_REWARD)
 
-    service = WalletsService(db)
+    service = WalletsService(db, token=token)
     try:
         batch = service.manager_reward_employee(
             manager_id=current_user.id,

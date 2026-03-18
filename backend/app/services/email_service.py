@@ -88,8 +88,9 @@ EVENT_TEMPLATE_MAP: Dict[str, str] = {
 class EmailService:
     """Render file-based Jinja2 templates and dispatch via SMTP."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = EmailRepository(db)
 
     # ------------------------------------------------------------------
@@ -111,6 +112,33 @@ class EmailService:
 
         user = self.repository.get_user_by_id(recipient_user_id)
         if not user:
+            # Fallback: resolve via User Service when token is available
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                profile = get_user_profile(recipient_user_id, self._token)
+                if profile and profile.email:
+                    # User not stored locally — treat notifications as enabled
+                    ctx = {
+                        "user_name": profile.name,
+                        "org_name": settings.APP_NAME,
+                        "frontend_url": settings.FRONTEND_URL,
+                        "manage_prefs_url": f"{settings.FRONTEND_URL}/settings/notifications",
+                        "support_email": settings.SMTP_FROM_EMAIL,
+                        **context,
+                    }
+                    template_name = EVENT_TEMPLATE_MAP.get(event_type)
+                    if not template_name:
+                        logger.error("No template mapping for event_type=%s", event_type)
+                        return None
+                    subject, body_html, body_text = self._render_template(template_name, ctx)
+                    return self._dispatch(
+                        to_email=profile.email,
+                        user_id=recipient_user_id,
+                        template_name=template_name,
+                        subject=subject,
+                        body_html=body_html,
+                        body_text=body_text,
+                    )
             logger.warning("EmailService.send: user %s not found", recipient_user_id)
             return None
 

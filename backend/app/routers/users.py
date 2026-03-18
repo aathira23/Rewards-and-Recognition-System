@@ -141,8 +141,12 @@ async def update_user(
 
 
 @router.get("/debug/cache")
-async def debug_cache():
-    """Temporary debug endpoint — shows live cache contents from inside the running process."""
+async def debug_cache(
+    current_user=Depends(get_current_user),
+):
+    """Shows live cache stats — HR/Admin only."""
+    if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):
+        return forbidden(message="Only HR and Admin can view cache debug info.")
     from app.services.user_service_client import _user_cache
     from app.services.user_profiles_client import _profile_cache, _picker_cache
 

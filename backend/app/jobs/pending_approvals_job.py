@@ -19,6 +19,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app.core.database import SessionLocal
+from app.core.config import settings
 from app.jobs.email_worker import enqueue_email
 from app.models.awards import Award
 from app.models.award_approvals import AwardApproval
@@ -72,6 +73,7 @@ def send_pending_approval_reminders() -> int:
     db = SessionLocal()
     try:
         count = 0
+        token = settings.SYSTEM_TOKEN if settings.AUTH_MODE == "user_service" else None
 
         # ── 1. Pending award nominations (use approval chain) ────────────
         pending_awards = (
@@ -136,6 +138,7 @@ def send_pending_approval_reminders() -> int:
                     "pending_awards": award_count,
                     "pending_conversions": conv_count,
                 },
+                token=token,
             )
             count += 1
 

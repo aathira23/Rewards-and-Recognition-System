@@ -25,6 +25,7 @@ class UserContext(BaseModel):
     designation: Optional[str] = None
     img_path: Optional[str] = None
     dob: Optional[str] = None
+    date_of_joining: Optional[str] = None
 
     @property
     def name(self) -> str:

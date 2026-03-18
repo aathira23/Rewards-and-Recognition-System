@@ -83,6 +83,10 @@ class AnalyticsService:
         """Get manager wallet utilization report."""
         managers = self.repository.get_managers()
 
+        # Batch-resolve manager names from User Service
+        manager_ids = {m.id for m in managers}
+        names_map = self._get_user_names_batch(manager_ids)
+
         report_data = []
         for m in managers:
             wallet = self.repository.get_manager_wallet(m.id)
@@ -93,7 +97,7 @@ class AnalyticsService:
 
             report_data.append({
                 "manager_id": m.id,
-                "manager_name": m.name,
+                "manager_name": names_map.get(m.id) or m.name,
                 "total_allocated": total_allocated,
                 "total_spent": total_allocated - wallet.balance,
                 "remaining_balance": wallet.balance
@@ -232,19 +236,23 @@ class AnalyticsService:
                 u.manager_id for u in managers
                 if u.manager_id and u.manager_id != user.id
             })
+            # Batch-resolve manager names from User Service
+            names_map = self._get_user_names_batch(set(manager_ids))
             result = []
             for mgr_id in manager_ids:
-                mgr = self.repository.get_user_by_id(mgr_id)
-                if not mgr:
-                    continue
                 team_ids = self.repository.get_subordinate_ids(mgr_id)
                 if not team_ids:
                     continue
+                mgr_name = names_map.get(mgr_id)
+                if not mgr_name:
+                    # final fallback to local DB
+                    mgr = self.repository.get_user_by_id(mgr_id)
+                    mgr_name = mgr.name if mgr else f"User {mgr_id}"
                 rec_count = self.repository.count_recognitions_for_users(team_ids)
                 pts = self.repository.sum_points_for_users(team_ids)
                 engagement = self.get_engagement_rate(team_ids)
                 result.append({
-                    "name": f"{mgr.name}'s Team",
+                    "name": f"{mgr_name}'s Team",
                     "recognition_count": rec_count,
                     "points": int(pts),
                     "user_count": len(team_ids),
@@ -263,12 +271,16 @@ class AnalyticsService:
     def get_top_recognizers(self, user_ids: Optional[List[int]], limit: int = 5):
         """Find users who gave most recognitions."""
         results = self.repository.get_top_recognizers(user_ids, limit)
-        return [{"name": r.name, "count": r.count} for r in results]
+        id_set = {r.actor_id for r in results}
+        names = self._get_user_names_batch(id_set)
+        return [{"name": names.get(r.actor_id) or f"User {r.actor_id}", "count": r.count} for r in results]
 
     def get_top_recognized(self, user_ids: Optional[List[int]], limit: int = 5):
         """Find users who received most recognitions."""
         results = self.repository.get_top_recognized(user_ids, limit)
-        return [{"name": r.name, "count": r.count} for r in results]
+        id_set = {r.receiver_id for r in results}
+        names = self._get_user_names_batch(id_set)
+        return [{"name": names.get(r.receiver_id) or f"User {r.receiver_id}", "count": r.count} for r in results]
 
     def get_engagement_rate(self, user_ids: Optional[List[int]]) -> float:
         """Percentage of users that have participated in recognition."""

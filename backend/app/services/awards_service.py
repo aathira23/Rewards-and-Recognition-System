@@ -21,7 +21,7 @@ class AwardsService:
         self._token = token
         self.repository = AwardsRepository(db)
         self.points_service = PointsService(db)
-        self.notification_service = NotificationService(db)
+        self.notification_service = NotificationService(db, token=self._token)
         self.recognition_service = RecognitionService(db)
 
     def _get_user_name(self, user_id: int) -> str:

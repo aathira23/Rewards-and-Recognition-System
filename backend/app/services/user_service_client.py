@@ -30,7 +30,7 @@ _http_client: Optional[httpx.AsyncClient] = None
 def _get_http_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None or _http_client.is_closed:
-        _http_client = httpx.AsyncClient(timeout=30.0, verify=False)
+        _http_client = httpx.AsyncClient(timeout=30.0, verify=settings.USER_SERVICE_VERIFY_SSL)
     return _http_client
 
 
@@ -94,6 +94,7 @@ async def get_user_context(token: str) -> UserContext:
         designation=details.get("desig_name"),
         img_path=details.get("img_path"),
         dob=details.get("dob"),
+        date_of_joining=details.get("date_of_joining"),
     )
 
     # Cache it

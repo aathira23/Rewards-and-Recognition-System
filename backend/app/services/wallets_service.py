@@ -1,4 +1,5 @@
 from typing import Optional, List
+import logging
 from sqlalchemy.orm import Session
 
 from app.models.wallets import Wallet
@@ -8,6 +9,8 @@ from app.utils.enums import WalletType, TransactionType, ReferenceType, UserRole
 from app.services.points_service import PointsService
 from app.services.recognition_service import RecognitionService
 from app.repository.wallets_repository import WalletsRepository
+
+logger = logging.getLogger(__name__)
 
 
 class WalletsService:
@@ -20,6 +23,23 @@ class WalletsService:
         self.points_service = PointsService(db)
         self.recognition_service = RecognitionService(db)
 
+    def _get_user_with_sync(self, user_id: int):
+        """Look up user locally; if missing and token available, sync from User Service first."""
+        user = self.repository.get_user_by_id(user_id)
+        if user or not self._token:
+            return user
+        try:
+            from app.services.user_profiles_client import get_user_profile
+            from app.services.user_sync_service import sync_user_data
+            profile = get_user_profile(user_id, self._token)
+            if profile:
+                sync_user_data(self.db, profile)
+                self.db.commit()
+                return self.repository.get_user_by_id(user_id)
+        except Exception:
+            logger.warning("Failed to sync user %s from User Service", user_id, exc_info=True)
+        return None
+
     def get_or_create_wallet(self, user_id: int, wallet_type: WalletType) -> Wallet:
         """Get or create a wallet for a user."""
         return self.repository.get_or_create_wallet(user_id, wallet_type)
@@ -31,7 +51,7 @@ class WalletsService:
     def allocate_budget(self, manager_id: int, points: int, allocated_by: int) -> WalletFunding:
         """Allocate budget to manager wallet (HR only)."""
         # 1. Verify the target user is actually a manager or dept head
-        target_user = self.repository.get_user_by_id(manager_id)
+        target_user = self._get_user_with_sync(manager_id)
         if not target_user:
             raise ValueError(f"User with ID {manager_id} not found")
 
@@ -79,7 +99,7 @@ class WalletsService:
         """Manager rewards employee from their wallet."""
         # 0. Validate permission/hierarchy
         manager = self.repository.get_user_by_id(manager_id)
-        employee = self.repository.get_user_by_id(employee_id)
+        employee = self._get_user_with_sync(employee_id)
 
         if not manager or not employee:
             raise ValueError("Manager or Employee not found.")

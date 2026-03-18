@@ -56,7 +56,7 @@ class AnalyticsRepository:
     def get_redemptions(
         self, from_date: Optional[date] = None, to_date: Optional[date] = None
     ) -> List[Redemption]:
-        query = self.db.query(Redemption).join(Reward).join(User)
+        query = self.db.query(Redemption).join(Reward)
         if from_date:
             query = query.filter(Redemption.created_at >= from_date)
         if to_date:
@@ -80,9 +80,7 @@ class AnalyticsRepository:
 
     # --- Payroll ---
     def get_approved_conversions(self, year: int, month: int) -> List[PointsConversion]:
-        return self.db.query(PointsConversion).join(
-            User, PointsConversion.user_id == User.id
-        ).filter(
+        return self.db.query(PointsConversion).filter(
             PointsConversion.status == ConversionStatus.APPROVED.value,
             extract("year", PointsConversion.approved_at) == year,
             extract("month", PointsConversion.approved_at) == month,
@@ -161,22 +159,24 @@ class AnalyticsRepository:
         return query.group_by(func.date(RecognitionFeed.created_at)).order_by("date").all()
 
     def get_top_recognizers(self, user_ids: Optional[List[int]], limit: int = 5):
+        """Return (actor_id, count) – names resolved by caller via User Service."""
         query = self.db.query(
-            User.name,
+            RecognitionFeed.actor_id,
             func.count(RecognitionFeed.id).label("count"),
-        ).join(RecognitionFeed, User.id == RecognitionFeed.actor_id)
+        )
         if user_ids is not None:
-            query = query.filter(User.id.in_(user_ids))
-        return query.group_by(User.id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
+            query = query.filter(RecognitionFeed.actor_id.in_(user_ids))
+        return query.group_by(RecognitionFeed.actor_id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
 
     def get_top_recognized(self, user_ids: Optional[List[int]], limit: int = 5):
+        """Return (receiver_id, count) – names resolved by caller via User Service."""
         query = self.db.query(
-            User.name,
+            RecognitionFeed.receiver_id,
             func.count(RecognitionFeed.id).label("count"),
-        ).join(RecognitionFeed, User.id == RecognitionFeed.receiver_id)
+        )
         if user_ids is not None:
-            query = query.filter(User.id.in_(user_ids))
-        return query.group_by(User.id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
+            query = query.filter(RecognitionFeed.receiver_id.in_(user_ids))
+        return query.group_by(RecognitionFeed.receiver_id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
 
     def get_active_user_count(self, user_ids: Optional[List[int]]) -> int:
         query_received = self.db.query(RecognitionFeed.receiver_id.label("uid"))

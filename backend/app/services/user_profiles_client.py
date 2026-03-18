@@ -84,7 +84,7 @@ def get_user_profile(user_id: int, token: str) -> Optional[UserProfile]:
         return _profile_cache[user_id]
 
     try:
-        with httpx.Client(timeout=10.0, verify=False) as client:
+        with httpx.Client(timeout=10.0, verify=settings.USER_SERVICE_VERIFY_SSL) as client:
             resp = client.get(
                 settings.GET_USERS_URL,
                 params={"id": user_id},
@@ -132,7 +132,7 @@ def get_users_batch(user_ids: List[int], token: str) -> Dict[int, UserProfile]:
         return result
 
     try:
-        with httpx.Client(timeout=10.0, verify=False) as client:
+        with httpx.Client(timeout=10.0, verify=settings.USER_SERVICE_VERIFY_SSL) as client:
             resp = client.post(
                 settings.GET_USER_BATCH_URL,
                 json={"user_ids": miss_ids},
@@ -176,7 +176,7 @@ def get_users_list(token: str, skip: int = 0, limit: int = 10) -> Dict:
         return _picker_cache[cache_key]
 
     try:
-        with httpx.Client(timeout=10.0, verify=False) as client:
+        with httpx.Client(timeout=10.0, verify=settings.USER_SERVICE_VERIFY_SSL) as client:
             resp = client.get(
                 settings.GET_USERS_URL,
                 params={"skip": skip, "limit": limit},

@@ -55,7 +55,16 @@ def sync_user_data(db: Session, data: Union[UserContext, UserProfile]) -> User:
         except (ValueError, TypeError):
             pass
 
-    # 3. Sync User
+    # 3. Parse Date of Joining
+    joining: Optional[_date] = None
+    doj_str = getattr(data, "date_of_joining", None)
+    if doj_str:
+        try:
+            joining = _date.fromisoformat(str(doj_str)[:10])
+        except (ValueError, TypeError):
+            pass
+
+    # 4. Sync User
     user = db.query(User).filter(User.id == data.id).first()
     role = get_mapped_role(data.role)
 
@@ -68,6 +77,7 @@ def sync_user_data(db: Session, data: Union[UserContext, UserProfile]) -> User:
             role=role,
             department_id=data.department_id,
             birth_date=birth,
+            date_of_joining=joining,
         )
         db.add(user)
     else:
@@ -77,6 +87,8 @@ def sync_user_data(db: Session, data: Union[UserContext, UserProfile]) -> User:
         user.department_id = data.department_id
         if birth is not None:
             user.birth_date = birth
+        if joining is not None:
+            user.date_of_joining = joining
         if data.email:
             user.email = data.email
 
