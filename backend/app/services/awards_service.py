@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException
 
+from app.models.award_types import AwardType
 from app.repository.awards_repository import AwardsRepository
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
@@ -684,10 +685,47 @@ class AwardsService:
                 user_role.upper(),
                 ['PEER']
             )
-        return self.repository.get_award_types(
+        all_types = self.repository.get_award_types(
             active_only=active_only,
             eligibility_rules=eligibility_rules,
         )
+
+        if not user_role or user_role.upper() in (UserRole.HR.value, UserRole.ADMIN.value):
+            return all_types
+
+        return [t for t in all_types if self._is_user_eligible_to_nominate(user_role, t)]
+
+    def _is_user_eligible_to_nominate(self, user_role: str, award_type: AwardType) -> bool:
+        """
+        Check if the nominator's role is authorized to nominate this award type.
+        
+        Criteria:
+        1. Base eligibility check (PEER vs MANAGER_ONLY, etc.)
+        2. HR/ADMIN bypass further checks.
+        3. Employees can nominate anything matching their eligibility rules (usually PEER).
+        4. Management roles must be present in the approval_workflow for non-PEER awards.
+        """
+        user_role = user_role.upper()
+        
+        # 1. Base eligibility check
+        allowed_rules = self._ROLE_ELIGIBLE_RULES.get(user_role, ['PEER'])
+        if award_type.eligibility_rule not in allowed_rules:
+            return False
+            
+        # 2. Administrative Exception
+        if user_role in (UserRole.HR.value, UserRole.ADMIN.value):
+            return True
+            
+        # 3. Employee Exception: Employees initiate but never approve.
+        if user_role == UserRole.EMPLOYEE.value:
+            return True
+
+        # 4. Management Restriction: For non-PEER awards, check role in workflow
+        if award_type.eligibility_rule == 'PEER':
+            return True
+            
+        workflow = self._get_required_approval_levels(award_type)
+        return user_role in workflow
 
     def create_award_type(
         self,
