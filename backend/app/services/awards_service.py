@@ -109,6 +109,13 @@ class AwardsService:
 
         # HR may nominate anyone; Employees follow existing rules (no extra restriction)
 
+        # 1c. Role-based Authorization Check (Ensures consistency with the listing API)
+        if not self._is_user_eligible_to_nominate(nominator.role or "EMPLOYEE", award_type):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Your role ({nominator.role or 'EMPLOYEE'}) is not authorized to nominate for the '{award_type.name}' award."
+            )
+
         # 2. Create award record with PENDING status
         award = self.repository.create_award(
             nominee_id=nominee_id,
@@ -679,17 +686,33 @@ class AwardsService:
         user_role: Optional[str] = None
     ):
         """Get award types visible to the requesting user's role based on eligibility rules."""
-        eligibility_rules = None
-        if user_role:
-            eligibility_rules = self._ROLE_ELIGIBLE_RULES.get(
-                user_role.upper(),
-                ['PEER']
-            )
+        role_to_check = (user_role or "EMPLOYEE").upper()
+        
+        # Admin/HR see all
+        if role_to_check in (UserRole.HR.value, UserRole.ADMIN.value):
+            eligibility_rules = None
+        else:
+            eligibility_rules = self._ROLE_ELIGIBLE_RULES.get(role_to_check, ['PEER'])
         
         return self.repository.get_award_types(
             active_only=active_only,
             eligibility_rules=eligibility_rules,
         )
+
+    def _is_user_eligible_to_nominate(self, user_role: Optional[str], award_type: AwardType) -> bool:
+        """
+        Check if the nominator's role is authorized to nominate this award type.
+        Uses simplified eligibility rule checks (PEER, MANAGER_ONLY, etc.).
+        """
+        role_to_check = (user_role or "EMPLOYEE").upper()
+        
+        # 1. Administrative Exception
+        if role_to_check in (UserRole.HR.value, UserRole.ADMIN.value):
+            return True
+            
+        # 2. Rule-based check
+        allowed_rules = self._ROLE_ELIGIBLE_RULES.get(role_to_check, ['PEER'])
+        return award_type.eligibility_rule in allowed_rules
 
     def create_award_type(
         self,
