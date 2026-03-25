@@ -6,13 +6,15 @@ import 'package:rr_frontend/core/utils/responsive.dart';
 import 'package:rr_frontend/core/utils/leveling_utils.dart';
 import 'package:rr_frontend/injection_container.dart';
 import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_bloc.dart';
-import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_event.dart' as rec;
+import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_event.dart'
+    as rec;
 import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_state.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_bloc.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_event.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_state.dart';
 import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_bloc.dart';
-import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_event.dart' as nom;
+import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_event.dart'
+    as nom;
 import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_state.dart';
 import 'package:rr_frontend/features/nominations/presentation/widgets/nominate_employee_dialog.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
@@ -38,7 +40,8 @@ class RRDashboardPage extends StatelessWidget {
             ..add(rec.GetUsersRequested()),
         ),
         BlocProvider(
-          create: (context) => sl<PointsBloc>()..add(GetPointsSummaryRequested()),
+          create: (context) =>
+              sl<PointsBloc>()..add(GetPointsSummaryRequested()),
         ),
         BlocProvider(
           create: (context) => sl<NominationsBloc>()
@@ -189,11 +192,13 @@ class _RRDashboardView extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFFFCC00), size: 24),
+                            const Icon(Icons.star_rounded,
+                                color: Color(0xFFFFCC00), size: 24),
                             const SizedBox(width: 8),
                             Text(
                               'CURRENT STANDING',
-                              style: AppTextStyles.captionStrong(color: Colors.white.withOpacity(0.7)),
+                              style: AppTextStyles.captionStrong(
+                                  color: Colors.white.withOpacity(0.7)),
                             ),
                           ],
                         ),
@@ -217,7 +222,8 @@ class _RRDashboardView extends StatelessWidget {
                                   ),
                                   Text(
                                     level.toString(),
-                                    style: AppTextStyles.headline1(color: Colors.black.withOpacity(0.55)),
+                                    style: AppTextStyles.headline1(
+                                        color: Colors.black.withOpacity(0.55)),
                                   ),
                                 ],
                               ),
@@ -227,23 +233,28 @@ class _RRDashboardView extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Text(
                                       balance.toString(),
-                                      style: AppTextStyles.display(color: Colors.white),
+                                      style: AppTextStyles.display(
+                                          color: Colors.white),
                                     ),
                                     const SizedBox(width: 10),
                                     Text(
                                       'pts',
-                                      style: AppTextStyles.sectionTitle(color: Colors.white.withOpacity(0.85)),
+                                      style: AppTextStyles.sectionTitle(
+                                          color:
+                                              Colors.white.withOpacity(0.85)),
                                     ),
                                   ],
                                 ),
                                 Text(
                                   'Available Balance',
-                                  style: AppTextStyles.bodyLarge(color: Colors.white.withOpacity(0.7)),
+                                  style: AppTextStyles.bodyLarge(
+                                      color: Colors.white.withOpacity(0.7)),
                                 ),
                               ],
                             ),
@@ -253,10 +264,13 @@ class _RRDashboardView extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Level $level', style: AppTextStyles.smallBold(color: Colors.white)),
+                            Text('Level $level',
+                                style: AppTextStyles.smallBold(
+                                    color: Colors.white)),
                             if (pointsToNext != null)
                               Text('$pointsToNext pts to Level ${level + 1}',
-                                  style: AppTextStyles.smallMedium(color: Colors.white.withOpacity(0.9))),
+                                  style: AppTextStyles.smallMedium(
+                                      color: Colors.white.withOpacity(0.9))),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -265,7 +279,8 @@ class _RRDashboardView extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: progress,
                             backgroundColor: Colors.white.withOpacity(0.12),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFCC00)),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFFFFCC00)),
                             minHeight: 12,
                           ),
                         ),
@@ -281,7 +296,8 @@ class _RRDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatSmallCard(String label, String value, IconData icon, Color bgColor, Color iconColor) {
+  Widget _buildStatSmallCard(String label, String value, IconData icon,
+      Color bgColor, Color iconColor) {
     return Container(
       width: 140,
       clipBehavior: Clip.antiAlias,
@@ -313,9 +329,11 @@ class _RRDashboardView extends StatelessWidget {
                 child: Icon(icon, color: iconColor, size: 20),
               ),
               const SizedBox(height: 16),
-              Text(value, style: AppTextStyles.displayMedium(color: Colors.black87)),
+              Text(value,
+                  style: AppTextStyles.displayMedium(color: Colors.black87)),
               const SizedBox(height: 4),
-              Text(label, style: AppTextStyles.caption(color: Colors.grey[600])),
+              Text(label,
+                  style: AppTextStyles.caption(color: Colors.grey[600])),
             ],
           ),
         ],
@@ -339,7 +357,8 @@ class _RRDashboardView extends StatelessWidget {
           // Send an eCard
           BlocBuilder<RecognitionsBloc, RecognitionsState>(
             builder: (context, state) {
-              final bool canSend = state.status != RecognitionStatus.loading && state.badges.isNotEmpty;
+              final bool canSend = state.status != RecognitionStatus.loading &&
+                  state.badges.isNotEmpty;
               return SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -359,7 +378,8 @@ class _RRDashboardView extends StatelessWidget {
                     backgroundColor: const Color(0xFF2D2A70),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               );
@@ -376,9 +396,10 @@ class _RRDashboardView extends StatelessWidget {
 
               return BlocBuilder<NominationsBloc, NominationsState>(
                 builder: (context, state) {
-                  final bool canNominate = state.status != NominationsStatus.loading &&
-                      state.awardTypes.isNotEmpty &&
-                      currentUser != null;
+                  final bool canNominate =
+                      state.status != NominationsStatus.loading &&
+                          state.awardTypes.isNotEmpty &&
+                          currentUser != null;
 
                   return SizedBox(
                     width: double.infinity,
@@ -400,7 +421,8 @@ class _RRDashboardView extends StatelessWidget {
                         foregroundColor: Colors.black87,
                         side: BorderSide(color: Colors.grey.withOpacity(0.3)),
                         padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   );
@@ -426,18 +448,50 @@ class _RRDashboardView extends StatelessWidget {
               spacing: 16,
               runSpacing: 16,
               children: [
-                _buildDynamicModuleCard(context, 'Awards', 'Celebrate outstanding achievements!', Icons.emoji_events_outlined,
-                    const Color(0xFFFFF7ED), const Color(0xFFEA580C), constraints.maxWidth / 2 - 24, onTap: () {
+                _buildDynamicModuleCard(
+                    context,
+                    'Awards',
+                    'Celebrate outstanding achievements!',
+                    Icons.emoji_events_outlined,
+                    const Color(0xFFFFF7ED),
+                    const Color(0xFFEA580C),
+                    constraints.maxWidth / 2 - 24, onTap: () {
                   MainLayout.of(context)?.selectTabByTitle('Nominations');
                 }),
-                _buildDynamicModuleCard(context, 'eCards', 'Spread positivity & appreciate peers!', Icons.favorite_outline_rounded,
-                    const Color(0xFFF0F9FF), const Color(0xFF0284C7), constraints.maxWidth / 2 - 24),
-                _buildDynamicModuleCard(context, 'Leaderboard', 'Rise to the top & inspire others!', Icons.military_tech_outlined,
-                    const Color(0xFFFDF4FF), const Color(0xFFC026D3), constraints.maxWidth / 2 - 24),
-                _buildDynamicModuleCard(context, 'Redeem Rewards', 'Treat yourself to amazing gifts!', Icons.card_giftcard_rounded,
-                    const Color(0xFFF5F3FF), const Color(0xFF7C3AED), constraints.maxWidth / 2 - 24),
-                _buildDynamicModuleCard(context, 'My Activity', 'Track your journey of excellence!', Icons.history_rounded,
-                    const Color(0xFFECFDF5), const Color(0xFF059669), constraints.maxWidth / 2 - 24),
+                _buildDynamicModuleCard(
+                    context,
+                    'eCards',
+                    'Spread positivity & appreciate peers!',
+                    Icons.favorite_outline_rounded,
+                    const Color(0xFFF0F9FF),
+                    const Color(0xFF0284C7),
+                    constraints.maxWidth / 2 - 24),
+                _buildDynamicModuleCard(
+                    context,
+                    'Leaderboard',
+                    'Rise to the top & inspire others!',
+                    Icons.military_tech_outlined,
+                    const Color(0xFFFDF4FF),
+                    const Color(0xFFC026D3),
+                    constraints.maxWidth / 2 - 24),
+                _buildDynamicModuleCard(
+                    context,
+                    'Redeem Rewards',
+                    'Treat yourself to amazing gifts!',
+                    Icons.card_giftcard_rounded,
+                    const Color(0xFFF5F3FF),
+                    const Color(0xFF7C3AED),
+                    constraints.maxWidth / 2 - 24,
+                    onTap: () =>
+                        MainLayout.of(context)?.selectTabByTitle('Rewards')),
+                _buildDynamicModuleCard(
+                    context,
+                    'My Activity',
+                    'Track your journey of excellence!',
+                    Icons.history_rounded,
+                    const Color(0xFFECFDF5),
+                    const Color(0xFF059669),
+                    constraints.maxWidth / 2 - 24),
               ],
             );
           }
@@ -445,26 +499,53 @@ class _RRDashboardView extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                    child: _buildModuleCard(context, 'Awards', 'Celebrate outstanding achievements!',
-                        Icons.emoji_events_outlined, const Color(0xFFFFF7ED), const Color(0xFFEA580C), onTap: () {
+                    child: _buildModuleCard(
+                        context,
+                        'Awards',
+                        'Celebrate outstanding achievements!',
+                        Icons.emoji_events_outlined,
+                        const Color(0xFFFFF7ED),
+                        const Color(0xFFEA580C), onTap: () {
                   MainLayout.of(context)?.selectTabByTitle('Nominations');
                 })),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildModuleCard(context, 'eCards', 'Spread positivity & appreciate peers!',
-                        Icons.favorite_outline_rounded, const Color(0xFFF0F9FF), const Color(0xFF0284C7))),
+                    child: _buildModuleCard(
+                        context,
+                        'eCards',
+                        'Spread positivity & appreciate peers!',
+                        Icons.favorite_outline_rounded,
+                        const Color(0xFFF0F9FF),
+                        const Color(0xFF0284C7))),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildModuleCard(context, 'Leaderboard', 'Rise to the top & inspire others!',
-                        Icons.military_tech_outlined, const Color(0xFFFDF4FF), const Color(0xFFC026D3))),
+                    child: _buildModuleCard(
+                        context,
+                        'Leaderboard',
+                        'Rise to the top & inspire others!',
+                        Icons.military_tech_outlined,
+                        const Color(0xFFFDF4FF),
+                        const Color(0xFFC026D3))),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildModuleCard(context, 'Redeem Rewards', 'Treat yourself to amazing gifts!',
-                        Icons.card_giftcard_rounded, const Color(0xFFF5F3FF), const Color(0xFF7C3AED))),
+                    child: _buildModuleCard(
+                        context,
+                        'Redeem Rewards',
+                        'Treat yourself to amazing gifts!',
+                        Icons.card_giftcard_rounded,
+                        const Color(0xFFF5F3FF),
+                        const Color(0xFF7C3AED),
+                        onTap: () => MainLayout.of(context)
+                            ?.selectTabByTitle('Rewards'))),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildModuleCard(context, 'My Activity', 'Track your journey of excellence!',
-                        Icons.history_rounded, const Color(0xFFECFDF5), const Color(0xFF059669))),
+                    child: _buildModuleCard(
+                        context,
+                        'My Activity',
+                        'Track your journey of excellence!',
+                        Icons.history_rounded,
+                        const Color(0xFFECFDF5),
+                        const Color(0xFF059669))),
               ],
             ),
           );
@@ -473,8 +554,9 @@ class _RRDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildModuleCard(
-      BuildContext context, String title, String subtitle, IconData icon, Color bgColor, Color iconColor, {VoidCallback? onTap}) {
+  Widget _buildModuleCard(BuildContext context, String title, String subtitle,
+      IconData icon, Color bgColor, Color iconColor,
+      {VoidCallback? onTap}) {
     return _HoverableModuleCard(
       title: title,
       subtitle: subtitle,
@@ -485,11 +567,20 @@ class _RRDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildDynamicModuleCard(BuildContext context, String title, String subtitle, IconData icon, Color bgColor,
-      Color iconColor, double width, {VoidCallback? onTap}) {
+  Widget _buildDynamicModuleCard(
+      BuildContext context,
+      String title,
+      String subtitle,
+      IconData icon,
+      Color bgColor,
+      Color iconColor,
+      double width,
+      {VoidCallback? onTap}) {
     return SizedBox(
       width: width,
-      child: _buildModuleCard(context, title, subtitle, icon, bgColor, iconColor, onTap: onTap),
+      child: _buildModuleCard(
+          context, title, subtitle, icon, bgColor, iconColor,
+          onTap: onTap),
     );
   }
 
@@ -501,7 +592,8 @@ class _RRDashboardView extends StatelessWidget {
         const SizedBox(height: 24),
         BlocBuilder<RecognitionsBloc, RecognitionsState>(
           builder: (context, state) {
-            if (state.status == RecognitionStatus.loading && state.feed.isEmpty) {
+            if (state.status == RecognitionStatus.loading &&
+                state.feed.isEmpty) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state.feed.isEmpty) {
@@ -514,7 +606,8 @@ class _RRDashboardView extends StatelessWidget {
                   border: Border.all(color: Colors.grey.withOpacity(0.1)),
                 ),
                 child: Center(
-                    child: Text('No recent activity', style: AppTextStyles.body(color: Colors.grey[500]))),
+                    child: Text('No recent activity',
+                        style: AppTextStyles.body(color: Colors.grey[500]))),
               );
             }
             return Container(
