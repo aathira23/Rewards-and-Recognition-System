@@ -9,6 +9,7 @@ import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart' as nom;
 import '../bloc/nominations_state.dart';
 import '../widgets/nominate_employee_dialog.dart';
+import '../widgets/active_awards_dialog.dart';
 import '../widgets/trophy_card.dart';
 import '../../domain/entities/nomination_entity.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
@@ -193,7 +194,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
                         ? null
                         : () => showDialog(
                               context: context,
-                              builder: (_) => NominateEmployeeDialog(
+                              builder: (_) => ActiveAwardsDialog(
                                 awardTypes: state.awardTypes,
                                 users: state.users,
                                 bloc: context.read<NominationsBloc>(),
