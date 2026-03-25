@@ -329,7 +329,7 @@ class _RRDashboardView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,11 +433,15 @@ class _RRDashboardView extends StatelessWidget {
                 _buildDynamicModuleCard(context, 'eCards', 'Spread positivity & appreciate peers!', Icons.favorite_outline_rounded,
                     const Color(0xFFF0F9FF), const Color(0xFF0284C7), constraints.maxWidth / 2 - 24),
                 _buildDynamicModuleCard(context, 'Leaderboard', 'Rise to the top & inspire others!', Icons.military_tech_outlined,
-                    const Color(0xFFFDF4FF), const Color(0xFFC026D3), constraints.maxWidth / 2 - 24),
+                    const Color(0xFFFDF4FF), const Color(0xFFC026D3), constraints.maxWidth / 2 - 24, onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('Leaderboard');
+                }),
                 _buildDynamicModuleCard(context, 'Redeem Rewards', 'Treat yourself to amazing gifts!', Icons.card_giftcard_rounded,
                     const Color(0xFFF5F3FF), const Color(0xFF7C3AED), constraints.maxWidth / 2 - 24),
                 _buildDynamicModuleCard(context, 'My Activity', 'Track your journey of excellence!', Icons.history_rounded,
-                    const Color(0xFFECFDF5), const Color(0xFF059669), constraints.maxWidth / 2 - 24),
+                    const Color(0xFFECFDF5), const Color(0xFF059669), constraints.maxWidth / 2 - 24, onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('My Activity');
+                }),
               ],
             );
           }
@@ -456,7 +460,9 @@ class _RRDashboardView extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildModuleCard(context, 'Leaderboard', 'Rise to the top & inspire others!',
-                        Icons.military_tech_outlined, const Color(0xFFFDF4FF), const Color(0xFFC026D3))),
+                        Icons.military_tech_outlined, const Color(0xFFFDF4FF), const Color(0xFFC026D3), onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('Leaderboard');
+                })),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildModuleCard(context, 'Redeem Rewards', 'Treat yourself to amazing gifts!',
@@ -464,7 +470,9 @@ class _RRDashboardView extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildModuleCard(context, 'My Activity', 'Track your journey of excellence!',
-                        Icons.history_rounded, const Color(0xFFECFDF5), const Color(0xFF059669))),
+                        Icons.history_rounded, const Color(0xFFECFDF5), const Color(0xFF059669), onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('My Activity');
+                })),
               ],
             ),
           );
@@ -511,7 +519,7 @@ class _RRDashboardView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                 ),
                 child: Center(
                     child: Text('No recent activity', style: AppTextStyles.body(color: Colors.grey[500]))),
@@ -521,7 +529,7 @@ class _RRDashboardView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
               ),
               child: RecognitionFeedList(
                 feed: state.feed.take(5).toList(),

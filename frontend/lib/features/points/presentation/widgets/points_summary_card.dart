@@ -14,11 +14,15 @@ import '../../../../core/widgets/app_dialog.dart';
 class PointsSummaryCard extends StatefulWidget {
   final PointsSummaryEntity summary;
   final String userRole;
+  final String initialWallet;
+  final bool hideToggle;
 
   const PointsSummaryCard({
     super.key,
     required this.summary,
     this.userRole = 'EMPLOYEE',
+    this.initialWallet = 'EMPLOYEE',
+    this.hideToggle = false,
     this.onWalletTypeChanged,
     this.onActionCompleted,
   });
@@ -31,7 +35,25 @@ class PointsSummaryCard extends StatefulWidget {
 }
 
 class _PointsSummaryCardState extends State<PointsSummaryCard> {
-  bool _showManagerWallet = false;
+  late bool _showManagerWallet;
+
+  @override
+  void initState() {
+    super.initState();
+    _showManagerWallet = widget.initialWallet == 'MANAGER';
+    if (_showManagerWallet) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadManagerData();
+      });
+    }
+  }
+
+  void _loadManagerData() {
+    final bloc = context.read<BudgetBloc>();
+    bloc.add(LoadBudgetWallet());
+    bloc.add(LoadBudgetUsers());
+    bloc.add(LoadCurrentUser());
+  }
 
   bool get _canToggle {
     return UserRoleUtils.isManagerLike(widget.userRole);
@@ -133,7 +155,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
                       ],
                     ),
                   ),
-                  if (_canToggle) _buildToggle(isManager),
+                  if (_canToggle && !widget.hideToggle) _buildToggle(isManager),
                 ],
               ),
               const SizedBox(height: 18),

@@ -65,6 +65,7 @@ class PointsRepositoryImpl implements PointsRepository {
           .map((e) => LeaderboardEntryEntity(
                 userId: (e['user_id'] as num).toInt(),
                 name: e['name']?.toString() ?? 'Unknown',
+                departmentName: e['department_name']?.toString(),
                 rank: (e['rank'] as num).toInt(),
                 score: (e['score'] as num).toInt(),
               ))

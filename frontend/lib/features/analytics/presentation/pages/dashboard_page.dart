@@ -6,6 +6,8 @@ import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/rr_dashboard_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/points_page.dart';
+import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
+import 'package:rr_frontend/features/points/presentation/pages/leaderboard_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
 import 'package:rr_frontend/features/nominations/presentation/pages/employee_nominations_page.dart';
 import 'package:rr_frontend/features/nominations/presentation/pages/manager_approvals_page.dart';
@@ -102,6 +104,22 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
         ),
+        const NavDestination(
+          title: 'Leaderboard',
+          heading: 'Leaderboard',
+          subtitle: 'Rise to the top & inspire others!',
+          icon: Icons.military_tech_outlined,
+          page: LeaderboardPage(),
+          isHidden: true,
+        ),
+        NavDestination(
+          title: 'My Activity',
+          heading: 'My Activity',
+          subtitle: 'Track your point earnings, redemptions, and conversions',
+          icon: Icons.history_rounded,
+          page: MyActivityPage(userRole: r),
+          isHidden: true,
+        ),
       ];
     }
 
@@ -142,6 +160,22 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.analytics_rounded,
           page: AnalyticsPage(userRole: r),
         ),
+        const NavDestination(
+          title: 'Leaderboard',
+          heading: 'Leaderboard',
+          subtitle: 'Rise to the top & inspire others!',
+          icon: Icons.military_tech_outlined,
+          page: LeaderboardPage(),
+          isHidden: true,
+        ),
+        NavDestination(
+          title: 'My Activity',
+          heading: 'My Activity',
+          subtitle: 'Track your point earnings, redemptions, and conversions',
+          icon: Icons.history_rounded,
+          page: MyActivityPage(userRole: r),
+          isHidden: true,
+        ),
       ];
     }
 
@@ -173,6 +207,22 @@ class _DashboardPageState extends State<DashboardPage> {
         subtitle: 'Nominate a colleague or check your award status',
         icon: Icons.emoji_events_rounded,
         page: EmployeeNominationsPage(),
+      ),
+      const NavDestination(
+        title: 'Leaderboard',
+        heading: 'Leaderboard',
+        subtitle: 'Rise to the top & inspire others!',
+        icon: Icons.military_tech_outlined,
+        page: LeaderboardPage(),
+        isHidden: true,
+      ),
+      const NavDestination(
+        title: 'My Activity',
+        heading: 'My Activity',
+        subtitle: 'Track your point earnings, redemptions, and conversions',
+        icon: Icons.history_rounded,
+        page: MyActivityPage(),
+        isHidden: true,
       ),
     ];
   }
