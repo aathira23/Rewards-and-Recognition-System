@@ -702,17 +702,34 @@ class AwardsService:
     def _is_user_eligible_to_nominate(self, user_role: Optional[str], award_type: AwardType) -> bool:
         """
         Check if the nominator's role is authorized to nominate this award type.
-        Uses simplified eligibility rule checks (PEER, MANAGER_ONLY, etc.).
-        """
-        role_to_check = (user_role or "EMPLOYEE").upper()
         
-        # 1. Administrative Exception
-        if role_to_check in (UserRole.HR.value, UserRole.ADMIN.value):
+        Criteria:
+        1. Base eligibility check (PEER vs MANAGER_ONLY, etc.)
+        2. HR/ADMIN bypass further checks.
+        3. Employees can nominate anything matching their eligibility rules (usually PEER).
+        4. Management roles must be present in the approval_workflow for non-PEER awards.
+        """
+        user_role = user_role.upper()
+        
+        # 1. Base eligibility check
+        allowed_rules = self._ROLE_ELIGIBLE_RULES.get(user_role, ['PEER'])
+        if award_type.eligibility_rule not in allowed_rules:
+            return False
+            
+        # 2. Administrative Exception
+        if user_role in (UserRole.HR.value, UserRole.ADMIN.value):
             return True
             
-        # 2. Rule-based check
-        allowed_rules = self._ROLE_ELIGIBLE_RULES.get(role_to_check, ['PEER'])
-        return award_type.eligibility_rule in allowed_rules
+        # 3. Employee Exception: Employees initiate but never approve.
+        if user_role == UserRole.EMPLOYEE.value:
+            return True
+
+        # 4. Management Restriction: For non-PEER awards, check role in workflow
+        if award_type.eligibility_rule == 'PEER':
+            return True
+            
+        workflow = self._get_required_approval_levels(award_type)
+        return user_role in workflow
 
     def create_award_type(
         self,
