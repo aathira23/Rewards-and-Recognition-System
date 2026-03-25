@@ -347,7 +347,10 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                             size: 16, color: Colors.grey.shade400),
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _searchQuery = '');
+                          setState(() {
+                            _searchQuery = '';
+                            _selectedUser = null;
+                          });
                         },
                       )
                     : null,
@@ -369,11 +372,19 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
-              onChanged: (v) => setState(() => _searchQuery = v),
+              onChanged: (v) {
+                // If they start typing again, clear selection to show dropdown again
+                setState(() {
+                  _searchQuery = v;
+                  if (_selectedUser != null) {
+                    _selectedUser = null;
+                  }
+                });
+              },
             ),
           ),
           // User list
-          if (_searchQuery.isNotEmpty || _selectedUser != null)
+          if (_searchQuery.isNotEmpty && _selectedUser == null)
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200),
               child: _filteredUsers.isEmpty
@@ -390,7 +401,6 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                       ),
                     )
                   : ListView.separated(
-                      shrinkWrap: true,
                       itemCount: _filteredUsers.length,
                       separatorBuilder: (_, __) => Divider(
                           height: 1,
@@ -400,11 +410,13 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                         final user = _filteredUsers[i];
                         final isSel = _selectedUser?.id == user.id;
                         return InkWell(
-                          onTap: () => setState(() {
-                            _selectedUser = user;
-                            _searchController.text = user.name;
-                            _searchQuery = '';
-                          }),
+                          onTap: () {
+                            // Close dropdown (by setting selected user), keep text in field
+                            setState(() {
+                              _selectedUser = user;
+                              _searchController.text = user.name;
+                            });
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 10),
