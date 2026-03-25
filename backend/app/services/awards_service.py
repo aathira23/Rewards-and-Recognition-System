@@ -705,9 +705,10 @@ class AwardsService:
         
         Criteria:
         1. Base eligibility check (PEER vs MANAGER_ONLY, etc.)
-        2. HR/ADMIN bypass further checks.
-        3. Employees can nominate anything matching their eligibility rules (usually PEER).
-        4. Management roles must be present in the approval_workflow for non-PEER awards.
+        2. Employees can nominate anything matching their eligibility rules (usually PEER).
+        3. Management roles must be present in the approval_workflow for non-PEER awards.
+
+        Note: HR/ADMIN are handled in get_award_types() before this method is called.
         """
         user_role = user_role.upper()
         
@@ -716,15 +717,11 @@ class AwardsService:
         if award_type.eligibility_rule not in allowed_rules:
             return False
             
-        # 2. Administrative Exception
-        if user_role in (UserRole.HR.value, UserRole.ADMIN.value):
-            return True
-            
-        # 3. Employee Exception: Employees initiate but never approve.
+        # 2. Employee Exception: Employees initiate but never approve.
         if user_role == UserRole.EMPLOYEE.value:
             return True
 
-        # 4. Management Restriction: For non-PEER awards, check role in workflow
+        # 3. Management Restriction: For non-PEER awards, check role in workflow
         if award_type.eligibility_rule == 'PEER':
             return True
             
