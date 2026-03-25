@@ -116,14 +116,43 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // Balance Card
+                      // Page header — title + balance badge
                       BlocBuilder<PointsBloc, PointsState>(
-                        builder: (context, state) {
-                          final balance = state.summary?.balance ?? 0;
-                          return RewardsBalanceCard(balance: balance);
+                        builder: (context, pointsState) {
+                          final balance = pointsState.summary?.balance ?? 0;
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Rewards Store',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF1A1A2E),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Redeem your hard-earned points',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade500,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              RewardsBalanceCard.badge(balance: balance),
+                            ],
+                          );
                         },
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 28),
 
                       // Tab Navigation — only render once the feature flag is known
                       if (_conversionEnabled == null)
@@ -256,7 +285,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
 
   final _pointsController = TextEditingController();
   String _selectedConversionType = 'PAYROLL';
-  String _selectedCategory = 'All Categories';
+  String _selectedCategory = 'All';
 
   // Maps display labels → backend reward_type values
   static const _categoryMap = {
@@ -309,7 +338,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF4B79CA),
+                        color: Color(0xFF3B31A5),
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(20),
                           topRight: Radius.circular(20),
@@ -373,7 +402,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               filled: true,
                               fillColor: const Color(0xFFF7F8FD),
                               prefixIcon: const Icon(Icons.toll_rounded,
-                                  color: Color(0xFF4B79CA)),
+                                  color: Color(0xFF3B31A5)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide:
@@ -387,7 +416,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                    color: Color(0xFF4B79CA), width: 1.5),
+                                    color: Color(0xFF3B31A5), width: 1.5),
                               ),
                               suffixIcon: pts > 0
                                   ? IconButton(
@@ -415,12 +444,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isPayroll
-                                          ? const Color(0xFF4B79CA)
+                                          ? const Color(0xFF3B31A5)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isPayroll
-                                            ? const Color(0xFF4B79CA)
+                                            ? const Color(0xFF3B31A5)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -460,12 +489,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isPayroll
-                                          ? const Color(0xFF4B79CA)
+                                          ? const Color(0xFF3B31A5)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: !isPayroll
-                                            ? const Color(0xFF4B79CA)
+                                            ? const Color(0xFF3B31A5)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -554,7 +583,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             child: ElevatedButton(
                               onPressed: () => _handleSubmitConversion(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4B79CA),
+                                backgroundColor: const Color(0xFF3B31A5),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -686,114 +715,152 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 3, child: formCard),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          formCard,
+                          const SizedBox(height: 32),
+                          const Text(
+                            'Recent Requests',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1A1A2E),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRecentRequestsList(state),
+                        ],
+                      ),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(flex: 2, child: infoPanel),
                   ],
                 );
               }
-              return Column(
-                  children: [formCard, const SizedBox(height: 16), infoPanel]);
-            }),
-
-            const SizedBox(height: 32),
-            // ── Recent Requests ──
-            const Text(
-              'Recent Requests',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 12),
-            state.conversions.isEmpty
-                ? const EmptyStateView(
-                    icon: Icons.history_rounded,
-                    title: 'No conversion history',
-                    message: 'Your point conversion requests will appear here.',
-                    padding: 40,
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: state.conversions.length,
-                    itemBuilder: (context, index) {
-                      final req = state.conversions[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 13),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFEEEFF5)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(9),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF4B79CA)
-                                    .withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.sync_alt_rounded,
-                                  color: Color(0xFF4B79CA), size: 18),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${req.pointsConverted} pts → ${req.conversionType}',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1A1A2E),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    AppDateFormatter.short(req.createdAt),
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade500),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '₹${req.cashAmount.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF059669),
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                StatusBadge(status: req.status),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+              return Column(children: [
+                formCard,
+                const SizedBox(height: 16),
+                infoPanel,
+                const SizedBox(height: 32),
+                const Text(
+                  'Recent Requests',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
                   ),
+                ),
+                const SizedBox(height: 12),
+                _buildRecentRequestsList(state),
+              ]);
+            }),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildRecentRequestsList(CatalogState state) {
+    if (state.conversions.isEmpty) {
+      return const EmptyStateView(
+        icon: Icons.history_rounded,
+        title: 'No conversion history',
+        message: 'Your point conversion requests will appear here.',
+        padding: 40,
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEEEFF5)),
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: state.conversions.length,
+        separatorBuilder: (_, __) => const Divider(
+          height: 1,
+          indent: 16,
+          endIndent: 16,
+          color: Color(0xFFEEEFF5),
+        ),
+        itemBuilder: (context, index) {
+          final req = state.conversions[index];
+          final status = req.status.toLowerCase();
+          final statusColor = status == 'approved'
+              ? const Color(0xFF059669)
+              : status == 'pending'
+                  ? const Color(0xFFEA580C)
+                  : status == 'rejected'
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF757575);
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B31A5).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.sync_alt_rounded,
+                      color: Color(0xFF3B31A5), size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${req.pointsConverted} pts → ${req.conversionType}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        AppDateFormatter.short(req.createdAt),
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₹${req.cashAmount.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      req.status[0].toUpperCase() +
+                          req.status.substring(1).toLowerCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -907,8 +974,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
     return BlocBuilder<CatalogBloc, CatalogState>(
       builder: (context, state) {
         if (state.status == CatalogStatus.loading &&
-            state.redemptions.isEmpty &&
-            state.conversions.isEmpty) {
+            state.redemptions.isEmpty) {
           return const SliverFillRemaining(
             hasScrollBody: false,
             child: Center(child: CircularProgressIndicator()),
@@ -916,102 +982,173 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
         }
 
         final redemptions = state.redemptions;
-        final conversions = state.conversions;
 
-        if (redemptions.isEmpty && conversions.isEmpty) {
+        if (redemptions.isEmpty) {
           return const SliverToBoxAdapter(
             child: EmptyStateView(
               icon: Icons.history_edu_rounded,
-              title: 'No Activities Yet',
+              title: 'No Redemptions Yet',
               message:
-                  'Your redemption and conversion history will appear here once you perform actions.',
+                  'Your redemption history will appear here once you redeem a reward.',
             ),
           );
         }
 
-        // Merge and sort
-        final allActivities = [
-          ...redemptions.map((e) => _HistoryItem(
-                title: e.rewardName,
-                subtitle: e.rewardCategory,
-                points: e.pointsSpent,
-                date: e.createdAt,
-                status: e.status,
-                isConversion: false,
-              )),
-          ...conversions.map((e) => _HistoryItem(
-                title: '${e.pointsConverted} Points converted',
-                subtitle: 'To ${e.conversionType}',
-                points: e.pointsConverted,
-                date: e.createdAt,
-                status: e.status,
-                isConversion: true,
-                cashAmount: e.cashAmount,
-              )),
-        ];
-        allActivities.sort((a, b) => b.date.compareTo(a.date));
-
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final item = allActivities[index];
-              final isLast = index == allActivities.length - 1;
-              return Container(
-                margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: Theme.of(context)
-                          .dividerColor
-                          .withValues(alpha: 0.1)),
-                ),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: (item.isConversion
-                              ? Colors.green
-                              : Theme.of(context).colorScheme.primary)
-                          .withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      item.isConversion
-                          ? Icons.currency_exchange_rounded
-                          : Icons.shopping_bag_rounded,
-                      color: item.isConversion
-                          ? Colors.green
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  title: Text(item.title, style: AppTextStyles.bodyBold()),
-                  subtitle: Text(
-                    '${item.subtitle} • ${AppDateFormatter.short(item.date)}',
-                    style:
-                        AppTextStyles.small(color: Theme.of(context).hintColor),
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '-${item.points} pts',
-                        style: AppTextStyles.sectionTitle(
-                          color: item.isConversion
-                              ? Colors.green
-                              : Colors.redAccent,
-                        ),
+        return SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section header — outside the table card
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history_rounded,
+                        size: 18, color: Color(0xFF3B31A5)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Redemption History',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
                       ),
-                      StatusBadge(status: item.status),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
-            },
-            childCount: allActivities.length,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFEEEEEE)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Table header
+                    Container(
+                      color: const Color(0xFFFAFAFA),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      child: const Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              'Item',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Date Redeemed',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Points Spent',
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Status',
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                    // Table rows
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: redemptions.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                      itemBuilder: (context, index) {
+                        final r = redemptions[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  r.rewardName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1A1A2E),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  AppDateFormatter.short(r.createdAt),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF757575),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  '${r.pointsSpent}',
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1A1A2E),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 2,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: StatusBadge(status: r.status),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -1025,24 +1162,22 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
   }
 
   Widget _buildCatalogTabSliver(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocBuilder<CatalogBloc, CatalogState>(
       builder: (context, catalogState) {
-        // Normalize in case state holds a stale value no longer in the list
         const _validCategories = [
-          'All Categories',
+          'All',
           'Gift Cards',
-          'Merchandise'
+          'Merchandise',
         ];
         final effectiveCategory = _validCategories.contains(_selectedCategory)
             ? _selectedCategory
-            : 'All Categories';
+            : 'All';
 
         final items = catalogState.items.where((item) {
           final query = _searchController.text.toLowerCase();
           final matchesSearch = item.name.toLowerCase().contains(query) ||
               item.description.toLowerCase().contains(query);
-          final matchesCategory = effectiveCategory == 'All Categories' ||
+          final matchesCategory = effectiveCategory == 'All' ||
               item.category.toUpperCase() ==
                   (_categoryMap[effectiveCategory] ??
                       effectiveCategory.toUpperCase());
@@ -1053,84 +1188,105 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
 
         return SliverMainAxisGroup(
           slivers: [
+            // ── Category chips + search + filter — single row ──
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final narrow = constraints.maxWidth < 500;
-                    final searchField = TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search rewards...',
-                        prefixIcon: const Icon(Icons.search),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        fillColor: theme.colorScheme.surface,
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  children: [
+                    // Category chip pills on the left
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _validCategories.map((cat) {
+                            final isActive = effectiveCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selectedCategory = cat),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? const Color(0xFF3B31A5)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isActive
+                                          ? const Color(0xFF3B31A5)
+                                          : const Color(0xFFE0E0E0),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    cat,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isActive
+                                          ? Colors.white
+                                          : const Color(0xFF757575),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ),
-                    );
-                    Widget buildDropdown({required bool expanded}) =>
-                        DropdownMenu<String>(
-                          initialSelection: const [
-                            'All Categories',
-                            'Gift Cards',
-                            'Merchandise'
-                          ].contains(_selectedCategory)
-                              ? _selectedCategory
-                              : 'All Categories',
-                          expandedInsets: expanded ? EdgeInsets.zero : null,
-                          width: expanded ? null : 200,
-                          inputDecorationTheme: InputDecorationTheme(
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                  color: theme.dividerColor
-                                      .withValues(alpha: 0.1)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                  color: theme.dividerColor
-                                      .withValues(alpha: 0.1)),
-                            ),
-                            filled: true,
-                            fillColor: theme.colorScheme.surface,
+                    ),
+                    const SizedBox(width: 12),
+                    // Search field — fixed width on the right
+                    SizedBox(
+                      width: 200,
+                      height: 42,
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search rewards...',
+                          hintStyle: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 13),
+                          prefixIcon: Icon(Icons.search,
+                              color: Colors.grey.shade400, size: 18),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 0),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE0E0E0)),
                           ),
-                          textStyle: theme.textTheme.bodyMedium,
-                          dropdownMenuEntries: const [
-                            DropdownMenuEntry(
-                                value: 'All Categories',
-                                label: 'All Categories'),
-                            DropdownMenuEntry(
-                                value: 'Gift Cards', label: 'Gift Cards'),
-                            DropdownMenuEntry(
-                                value: 'Merchandise', label: 'Merchandise'),
-                          ],
-                          onSelected: (val) {
-                            if (val != null) {
-                              setState(() => _selectedCategory = val);
-                            }
-                          },
-                        );
-
-                    if (narrow) {
-                      return Column(
-                        children: [
-                          searchField,
-                          const SizedBox(height: 12),
-                          buildDropdown(expanded: true),
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: searchField),
-                        const SizedBox(width: 16),
-                        buildDropdown(expanded: false),
-                      ],
-                    );
-                  },
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE0E0E0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                                color: Color(0xFF3B31A5), width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Filter icon button
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE0E0E0)),
+                      ),
+                      child: const Icon(Icons.tune_rounded,
+                          color: Color(0xFF757575), size: 18),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1288,24 +1444,4 @@ class _ConversionStep extends StatelessWidget {
       ],
     );
   }
-}
-
-class _HistoryItem {
-  final String title;
-  final String subtitle;
-  final int points;
-  final DateTime date;
-  final String status;
-  final bool isConversion;
-  final double? cashAmount;
-
-  _HistoryItem({
-    required this.title,
-    required this.subtitle,
-    required this.points,
-    required this.date,
-    required this.status,
-    required this.isConversion,
-    this.cashAmount,
-  });
 }

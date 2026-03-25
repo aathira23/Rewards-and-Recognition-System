@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
 class CatalogTabNavigation extends StatelessWidget {
   final int selectedIndex;
@@ -15,82 +14,54 @@ class CatalogTabNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child:
-                _buildTabItem(context, 0, 'Catalog', Icons.grid_view_rounded),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _buildTabItem(context, 1, 'History', Icons.history_rounded),
-          ),
-          if (conversionEnabled) ...[
-            const SizedBox(width: 6),
-            Expanded(
-              child: _buildTabItem(
-                  context, 2, 'Convert', Icons.swap_horiz_rounded),
-            ),
-          ],
+    return Row(
+      children: [
+        _buildTabItem(context, 0, Icons.grid_view_rounded, 'Catalog'),
+        const SizedBox(width: 8),
+        _buildTabItem(context, 1, Icons.history_rounded, 'History'),
+        if (conversionEnabled) ...[
+          const SizedBox(width: 8),
+          _buildTabItem(context, 2, Icons.swap_horiz_rounded, 'Convert'),
         ],
-      ),
+      ],
     );
   }
 
   Widget _buildTabItem(
-      BuildContext context, int index, String label, IconData icon) {
+      BuildContext context, int index, IconData icon, String label) {
     final isSelected = selectedIndex == index;
-    final theme = Theme.of(context);
+    const primary = Color.fromARGB(255, 59, 49, 165);
 
-    return GestureDetector(
-      onTap: () => onTabSelected(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.07),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isSelected ? Colors.white : theme.hintColor,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTabSelected(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            color: isSelected ? primary : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? primary : const Color(0xFFE0E0E0),
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: isSelected
-                  ? AppTextStyles.tabSelected(color: Colors.white)
-                  : AppTextStyles.tabUnselected(color: theme.hintColor),
-            ),
-          ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 18,
+                  color: isSelected ? Colors.white : const Color(0xFF757575)),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : const Color(0xFF757575),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
