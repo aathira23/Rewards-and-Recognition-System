@@ -580,20 +580,18 @@ class AwardsService:
                 award.reviewer_level = None
                 if not ap:
                     continue
+                # Always set reviewer name and level from the latest approval record
+                award.reviewer_name = ap.approver.name if ap.approver else None
+                award.reviewer_level = ap.approval_level
                 c = ap.comments or ''
                 cl = c.lower()
-                # Skip system-generated scaffolding comments
+                # Only attach the comment if it is human-written (skip system scaffolding)
                 is_system = (
                     cl.startswith('auto-approved by')
                     or cl.startswith('approved by ')
                     or cl.startswith('rejected by ')
                 )
-                if is_system:
-                    continue
-                # Human action — attach reviewer info
-                award.reviewer_name = ap.approver.name if ap.approver else None
-                award.reviewer_level = ap.approval_level
-                if c:
+                if not is_system and c:
                     award.reviewer_comment = c
 
         return total, awards

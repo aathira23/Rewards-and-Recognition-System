@@ -4,7 +4,7 @@ import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
-import 'package:rr_frontend/features/recognitions/presentation/pages/employee_recognitions_page.dart';
+import 'package:rr_frontend/features/recognitions/presentation/pages/rr_dashboard_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/points_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
 import 'package:rr_frontend/features/nominations/presentation/pages/employee_nominations_page.dart';
@@ -108,12 +108,12 @@ class _DashboardPageState extends State<DashboardPage> {
     // ── MANAGER / DEPT_HEAD ───────────────────────────────────────
     if (r == 'MANAGER' || r == 'DEPT_HEAD') {
       return [
-        const NavDestination(
+        NavDestination(
           title: 'Recognitions',
-          heading: 'Recognitions Center',
-          subtitle: 'Appreciate and celebrate your colleagues',
+          heading: 'Rewards & Recognition',
+          subtitle: 'Celebrate, Earn, and Redeem!',
           icon: Icons.card_giftcard_rounded,
-          page: EmployeeRecognitionsPage(),
+          page: const RRDashboardPage(),
         ),
         NavDestination(
           title: 'Points',
@@ -147,12 +147,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
     // ── EMPLOYEE ──────────────────────────────────────────────────
     return [
-      const NavDestination(
+      NavDestination(
         title: 'Recognitions',
-        heading: 'Recognitions Center',
-        subtitle: 'Appreciate and celebrate your colleagues',
+        heading: 'Rewards & Recognition',
+        subtitle: 'Celebrate, Earn, and Redeem!',
         icon: Icons.card_giftcard_rounded,
-        page: EmployeeRecognitionsPage(),
+        page: const RRDashboardPage(),
       ),
       NavDestination(
         title: 'Points',
