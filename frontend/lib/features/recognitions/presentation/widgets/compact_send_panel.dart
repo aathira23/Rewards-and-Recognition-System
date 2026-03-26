@@ -29,7 +29,7 @@ class CompactSendPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sentCount = stats?.sentCount ?? 0;
-    const brandBlue = Color(0xFF1A60FF);
+    final brandColor = Theme.of(context).colorScheme.primary;
 
     // ── Limit / cooldown state ──────────────────────────────────
     final int? monthlyLimit = stats?.monthlyLimit;
@@ -100,7 +100,7 @@ class CompactSendPanel extends StatelessWidget {
                   limitReached: limitReached,
                   onCooldown: onCooldown,
                   nextAvailableAt: nextAvailableAt,
-                  brandBlue: brandBlue,
+                  brandColor: brandColor,
                 ),
                 const SizedBox(width: 8),
                 TextButton(
@@ -113,7 +113,7 @@ class CompactSendPanel extends StatelessWidget {
                   ),
                   child: Text(
                     'View all',
-                    style: AppTextStyles.bodyBold(color: brandBlue),
+                    style: AppTextStyles.bodyBold(color: brandColor),
                   ),
                 ),
               ],
@@ -130,9 +130,9 @@ class CompactSendPanel extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: brandBlue.withValues(alpha: 0.04),
+                color: brandColor.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: brandBlue.withValues(alpha: 0.1)),
+                border: Border.all(color: brandColor.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
@@ -144,11 +144,11 @@ class CompactSendPanel extends StatelessWidget {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: brandBlue.withValues(alpha: 0.12),
+                            color: brandColor.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.send_rounded,
-                              color: brandBlue, size: 22),
+                          child: Icon(Icons.send_rounded,
+                              color: brandColor, size: 22),
                         ),
                         const SizedBox(width: 14),
                         Column(
@@ -157,7 +157,7 @@ class CompactSendPanel extends StatelessWidget {
                             Text(
                               '$sentCount',
                               style:
-                                  AppTextStyles.sectionHeader(color: brandBlue)
+                                  AppTextStyles.sectionHeader(color: brandColor)
                                       .copyWith(fontSize: 26),
                             ),
                             Text(
@@ -176,7 +176,7 @@ class CompactSendPanel extends StatelessWidget {
                     Container(
                         width: 1,
                         height: 44,
-                        color: brandBlue.withValues(alpha: 0.12)),
+                        color: brandColor.withValues(alpha: 0.12)),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -325,7 +325,7 @@ class _StatusPills extends StatelessWidget {
   final bool limitReached;
   final bool onCooldown;
   final DateTime? nextAvailableAt;
-  final Color brandBlue;
+  final Color brandColor;
 
   const _StatusPills({
     required this.monthlyLimit,
@@ -333,7 +333,7 @@ class _StatusPills extends StatelessWidget {
     required this.limitReached,
     required this.onCooldown,
     required this.nextAvailableAt,
-    required this.brandBlue,
+    required this.brandColor,
   });
 
   @override
@@ -363,8 +363,8 @@ class _StatusPills extends StatelessWidget {
       fg = const Color(0xFFD97706);
       bg = const Color(0xFFD97706);
     } else {
-      fg = brandBlue;
-      bg = brandBlue;
+      fg = brandColor;
+      bg = brandColor;
     }
 
     final label = limitReached

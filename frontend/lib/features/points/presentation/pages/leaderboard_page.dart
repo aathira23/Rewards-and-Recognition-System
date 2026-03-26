@@ -152,7 +152,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B338A) : Colors.transparent, // Purple color similar to header
+          color: isSelected ? const Color(0xFF2D2A70) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -223,10 +223,10 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         const SizedBox(height: 8),
         CircleAvatar(
           radius: rank == 1 ? 36 : 28,
-          backgroundColor: rank == 1 ? const Color(0xFF3B338A) : Colors.blue.shade50,
+          backgroundColor: rank == 1 ? const Color(0xFF2D2A70) : Colors.indigo.shade50,
           child: Text(
             entry.name.isNotEmpty ? entry.name[0].toUpperCase() : '?',
-            style: AppTextStyles.headline1(color: rank == 1 ? Colors.white : const Color(0xFF3B338A)).copyWith(fontSize: rank == 1 ? 24 : 20),
+            style: AppTextStyles.headline1(color: rank == 1 ? Colors.white : const Color(0xFF2D2A70)).copyWith(fontSize: rank == 1 ? 24 : 20),
           ),
         ),
         const SizedBox(height: 12),
@@ -239,7 +239,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
               Icon(Icons.star, color: medalColor, size: 14),
               const SizedBox(width: 4),
             ],
-            Text('${entry.score} pts', style: AppTextStyles.bodyBold(color: const Color(0xFF3B338A))),
+            Text('${entry.score} pts', style: AppTextStyles.bodyBold(color: const Color(0xFF2D2A70))),
           ],
         ),
         const SizedBox(height: 16),
@@ -321,7 +321,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         const SizedBox(width: 16),
         CircleAvatar(
           radius: 20,
-          backgroundColor: const Color(0xFF3B338A),
+          backgroundColor: const Color(0xFF2D2A70),
           child: Text(
             entry.name.isNotEmpty ? entry.name[0].toUpperCase() : '?',
             style: AppTextStyles.bodyBold(color: Colors.white),
@@ -341,7 +341,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('${entry.score} pts', style: AppTextStyles.bodyBold(color: const Color(0xFF3B338A))),
+            Text('${entry.score} pts', style: AppTextStyles.bodyBold(color: const Color(0xFF2D2A70))),
             // Placeholder for up/down spots if supported
             // Row(children: [ Icon(Icons.trending_up, size: 12, color: Colors.green), Text(' Up 2 spots', style: AppTextStyles.small(color: Colors.green)) ])
           ],

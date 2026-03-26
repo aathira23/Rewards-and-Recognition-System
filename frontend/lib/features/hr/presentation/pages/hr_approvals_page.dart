@@ -556,18 +556,18 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-            color: isPending ? Colors.blue.shade100 : Colors.grey.shade200),
+            color: isPending ? Colors.indigo.shade100 : Colors.grey.shade200),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.indigo.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.swap_horiz_rounded,
-                color: Colors.blue.shade700, size: 20),
+                color: Colors.indigo.shade700, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(

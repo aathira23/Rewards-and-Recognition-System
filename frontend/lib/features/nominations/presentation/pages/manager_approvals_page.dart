@@ -500,7 +500,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         submissions.where((n) => n.status.toUpperCase() == 'REJECTED').length;
 
     final cards = [
-      _buildSummaryCard('Total Sent', total, Icons.send_outlined, Colors.blue),
+      _buildSummaryCard('Total Sent', total, Icons.send_outlined, Colors.indigo),
       _buildSummaryCard(
           'Pending', pending, Icons.hourglass_empty_rounded, Colors.orange),
       _buildSummaryCard(

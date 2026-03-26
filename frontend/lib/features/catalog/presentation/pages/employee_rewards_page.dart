@@ -325,7 +325,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   border: Border.all(color: const Color(0xFFE8EAF6)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1E56BD).withValues(alpha: 0.06),
+                      color: const Color(0xFF2D2A70).withValues(alpha: 0.06),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -444,12 +444,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isPayroll
-                                          ? const Color(0xFF3B31A5)
+                                          ? const Color(0xFF2D2A70)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isPayroll
-                                            ? const Color(0xFF3B31A5)
+                                            ? const Color(0xFF2D2A70)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -489,12 +489,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isPayroll
-                                          ? const Color(0xFF3B31A5)
+                                          ? const Color(0xFF2D2A70)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: !isPayroll
-                                            ? const Color(0xFF3B31A5)
+                                            ? const Color(0xFF2D2A70)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -583,7 +583,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             child: ElevatedButton(
                               onPressed: () => _handleSubmitConversion(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3B31A5),
+                                backgroundColor: const Color(0xFF2D2A70),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -635,7 +635,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       number: '1',
                       title: 'Enter amount',
                       subtitle: 'Minimum 500 pts per request',
-                      color: const Color(0xFF3B5BDB),
+                      color: const Color(0xFF2D2A70),
                     ),
                     const SizedBox(height: 12),
                     _ConversionStep(
@@ -671,7 +671,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color:
-                                const Color(0xFF3B5BDB).withValues(alpha: 0.08),
+                                const Color(0xFF2D2A70).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
