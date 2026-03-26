@@ -69,8 +69,6 @@ class _RRDashboardView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildBreadcrumbs(context),
-            const SizedBox(height: 24),
             _buildHeader(context),
             const SizedBox(height: 32),
             _buildSummaryRow(context),
@@ -84,20 +82,6 @@ class _RRDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildBreadcrumbs(BuildContext context) {
-    return Row(
-      children: [
-        Icon(Icons.arrow_back_rounded, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text('Apps', style: AppTextStyles.body(color: Colors.grey[600])),
-        const SizedBox(width: 8),
-        Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey[400]),
-        const SizedBox(width: 8),
-        Text('Rewards & Recognition',
-            style: AppTextStyles.bodyBold(color: Colors.black87)),
-      ],
-    );
-  }
 
   Widget _buildHeader(BuildContext context) {
     return Column(
@@ -456,7 +440,17 @@ class _RRDashboardView extends StatelessWidget {
                     const Color(0xFFFFF7ED),
                     const Color(0xFFEA580C),
                     constraints.maxWidth / 2 - 24, onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('Nominations');
+                  final authState = context.read<AuthBloc>().state;
+                  String targetTab = 'Nominations';
+                  if (authState is AuthAuthenticated) {
+                    final role = authState.auth.user?.role?.toUpperCase();
+                    if (role == 'MANAGER' || role == 'DEPT_HEAD') {
+                      targetTab = 'Approvals';
+                    } else if (role == 'HR' || role == 'ADMIN') {
+                      targetTab = 'Approvals & Allocation';
+                    }
+                  }
+                  MainLayout.of(context)?.selectTabByTitle(targetTab);
                 }),
                 _buildDynamicModuleCard(
                     context,
@@ -513,7 +507,17 @@ class _RRDashboardView extends StatelessWidget {
                         Icons.emoji_events_outlined,
                         const Color(0xFFFFF7ED),
                         const Color(0xFFEA580C), onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('Nominations');
+                  final authState = context.read<AuthBloc>().state;
+                  String targetTab = 'Nominations';
+                  if (authState is AuthAuthenticated) {
+                    final role = authState.auth.user?.role?.toUpperCase();
+                    if (role == 'MANAGER' || role == 'DEPT_HEAD') {
+                      targetTab = 'Approvals';
+                    } else if (role == 'HR' || role == 'ADMIN') {
+                      targetTab = 'Approvals & Allocation';
+                    }
+                  }
+                  MainLayout.of(context)?.selectTabByTitle(targetTab);
                 })),
                 const SizedBox(width: 16),
                 Expanded(

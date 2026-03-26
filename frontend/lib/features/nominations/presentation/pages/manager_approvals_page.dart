@@ -4,36 +4,51 @@ import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../injection_container.dart';
 import '../bloc/nominations_bloc.dart';
-import '../bloc/nominations_event.dart';
+import '../bloc/nominations_event.dart' as nom;
 import '../bloc/nominations_state.dart';
-import '../../../../core/widgets/action_buttons.dart';
+import '../widgets/active_awards_dialog.dart';
+import '../widgets/trophy_card.dart';
 import '../../../../core/widgets/status_badge.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../widgets/nominate_employee_dialog.dart';
-import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/nomination_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../profile/domain/entities/user_entity.dart';
+import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
+import 'package:rr_frontend/core/widgets/action_buttons.dart';
+import 'package:rr_frontend/core/widgets/app_dialog.dart';
+import '../../../recognitions/presentation/bloc/recognitions_bloc.dart';
+import '../../../recognitions/presentation/bloc/recognitions_event.dart' as rec;
+import '../../../recognitions/presentation/bloc/recognitions_state.dart';
+import '../../../recognitions/presentation/widgets/recognition_feed_list.dart';
 
 /// Approvals page for Managers and Department Heads.
 ///
-/// • Tab 1 – Pending: nominations waiting for THIS role to approve/reject
-/// • Tab 2 – My Nominations: nominations the current user submitted
-/// • Tab 3 – History: all visible nominations (approved + rejected)
+/// Refactored to match the EmployeeAwardsPage layout:
+/// • Tab 0 – My Awards: trophies received by the manager
+/// • Tab 1 – Nominations: nominations the manager submitted to others
+/// • Tab 2 – Approvals: pending actions and history for the team
 class ManagerApprovalsPage extends StatelessWidget {
   const ManagerApprovalsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<NominationsBloc>()
-        ..add(GetNominationsRequested())
-        ..add(GetAwardTypesRequested())
-        ..add(GetUsersRequested())
-        ..add(GetApprovalHistoryRequested()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => sl<NominationsBloc>()
+            ..add(nom.GetNominationsRequested())
+            ..add(nom.GetAwardTypesRequested())
+            ..add(nom.GetUsersRequested())
+            ..add(nom.GetApprovalHistoryRequested()),
+        ),
+        BlocProvider(
+          create: (_) => sl<RecognitionsBloc>()
+            ..add(rec.GetRecognitionFeedRequested()),
+        ),
+      ],
       child: const _ManagerApprovalsView(),
     );
   }
@@ -89,10 +104,10 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
   // ── build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isMobile = Responsive.isMobile(context);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFFF9FAFB),
       body: BlocListener<NominationsBloc, NominationsState>(
         listener: (context, state) {
           if (state.successMessage != null) {
@@ -109,228 +124,590 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
             ));
           }
         },
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(Responsive.pagePadding(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header ──────────────────────────────────────────
-              AppPageHeader(
-                action: BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, authState) {
-                    UserEntity? currentUser;
-                    if (authState is AuthAuthenticated) {
-                      currentUser = authState.auth.user;
-                    }
-
-                    return BlocBuilder<NominationsBloc, NominationsState>(
-                      builder: (context, state) {
-                        return ElevatedButton.icon(
-                          onPressed:
-                              (state.awardTypes.isEmpty || currentUser == null)
-                                  ? null
-                                  : () => showDialog(
-                                        context: context,
-                                        builder: (_) => NominateEmployeeDialog(
-                                          awardTypes: state.awardTypes,
-                                          users: state.users,
-                                          bloc: context.read<NominationsBloc>(),
-                                          currentUser: currentUser,
-                                        ),
-                                      ),
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Nominate'),
-                        );
-                      },
-                    );
-                  },
-                ),
+        child: Column(
+          children: [
+            _buildHeader(context),
+            _buildTabs(context),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Main Content
+                  Expanded(
+                    flex: 3,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildMyAwardsTab(context),
+                        _buildNominationsTab(context),
+                        _buildApprovalsTab(context),
+                      ],
+                    ),
+                  ),
+                  // Right Sidebar: Company Feed (Awards Only)
+                  if (!isMobile)
+                    Expanded(
+                      flex: 1,
+                      child: _buildCompanyFeed(context),
+                    ),
+                ],
               ),
-
-              // ── Tabs ────────────────────────────────────────────
-              BlocBuilder<NominationsBloc, NominationsState>(
-                builder: (context, state) {
-                  if (state.status == NominationsStatus.loading &&
-                      state.nominations.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(60.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  return BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, authState) {
-                      String userRole = 'MANAGER';
-                      int? myId;
-                      if (authState is AuthAuthenticated) {
-                        userRole = authState.auth.user?.role ?? 'MANAGER';
-                        myId = authState.auth.user?.id;
-                      }
-
-                      final all = state.nominations;
-
-                      // All active pending nominations in my circle
-                      final pendingForMe =
-                          all.where((n) => n.status == 'PENDING').toList();
-
-                      // Nominations I submitted
-                      final mySubmissions = myId == null
-                          ? <NominationEntity>[]
-                          : all.where((n) => n.nominatorId == myId).toList();
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ── Stats Strip ───────────────────────────────
-                          BlocBuilder<NominationsBloc, NominationsState>(
-                            builder: (context, hState) {
-                              final approved = hState.approvalHistory
-                                  .where((h) =>
-                                      h['my_action']?.toString() == 'APPROVED')
-                                  .length;
-                              final rejected = hState.approvalHistory
-                                  .where((h) =>
-                                      h['my_action']?.toString() == 'REJECTED')
-                                  .length;
-                              return _buildStatsStrip(
-                                theme,
-                                pendingForMe.length,
-                                mySubmissions.length,
-                                approved,
-                                rejected,
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // ── Tabs Container ────────────────────────────
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                    border: Border(
-                                      bottom: BorderSide(
-                                          color: Colors.grey.shade100,
-                                          width: 1),
-                                    ),
-                                  ),
-                                  child: TabBar(
-                                    controller: _tabController,
-                                    isScrollable: Responsive.isMobile(context),
-                                    tabAlignment: Responsive.isMobile(context)
-                                        ? TabAlignment.start
-                                        : TabAlignment.fill,
-                                    labelColor: theme.colorScheme.primary,
-                                    unselectedLabelColor: Colors.grey.shade500,
-                                    indicator: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border(
-                                        bottom: BorderSide(
-                                            color: theme.colorScheme.primary,
-                                            width: 2),
-                                      ),
-                                    ),
-                                    indicatorSize: TabBarIndicatorSize.tab,
-                                    dividerColor: Colors.transparent,
-                                    labelStyle: AppTextStyles.bodyBold(),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 8),
-                                    tabs: [
-                                      _buildTab('Pending', pendingForMe.length,
-                                          Icons.hourglass_top_rounded),
-                                      _buildTab(
-                                          'My Nominations',
-                                          mySubmissions.length,
-                                          Icons.send_rounded),
-                                      _buildTab(
-                                          'History', 0, Icons.history_rounded),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.6,
-                                  child: TabBarView(
-                                    controller: _tabController,
-                                    children: [
-                                      // Pending – with approve/reject
-                                      _buildList(
-                                        pendingForMe,
-                                        state.users,
-                                        'No pending nominations at the moment',
-                                        Icons.check_circle_outline,
-                                        showActions: true,
-                                        userRole: userRole,
-                                        myId: myId,
-                                      ),
-
-                                      // My Nominations (submitted by me)
-                                      _buildList(
-                                        mySubmissions,
-                                        state.users,
-                                        'You haven\'t nominated anyone yet',
-                                        Icons.outbox_rounded,
-                                        myId: myId,
-                                      ),
-
-                                      // History — nominations I personally acted on
-                                      _buildHistoryTab(),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Tab _buildTab(String label, int count, IconData icon) {
-    return Tab(
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 8),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Icon(icon, size: 15),
-          const SizedBox(width: 6),
-          Text(label),
-          if (count > 0) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: () => MainLayout.of(context)
+                    ?.selectTabByTitle('Recognitions'),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.arrow_back_rounded,
+                          size: 20, color: Colors.black87),
+                      const SizedBox(width: 8),
+                      Text('Back to Dashboard',
+                          style: AppTextStyles.bodyBold(color: Colors.black87)),
+                    ],
+                  ),
+                ),
               ),
-              child: Text(
-                '$count',
-                style:
-                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+              Text(
+                'Awards',
+                style: AppTextStyles.headline1(color: Colors.black87),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Celebrate achievements and recognize the people who make a difference.',
+                style: AppTextStyles.body(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              UserEntity? currentUser;
+              if (authState is AuthAuthenticated) {
+                currentUser = authState.auth.user;
+              }
+              return BlocBuilder<NominationsBloc, NominationsState>(
+                builder: (context, state) {
+                  return ElevatedButton.icon(
+                    onPressed: (state.awardTypes.isEmpty || currentUser == null)
+                        ? null
+                        : () => showDialog(
+                              context: context,
+                              builder: (_) => ActiveAwardsDialog(
+                                awardTypes: state.awardTypes,
+                                users: state.users,
+                                bloc: context.read<NominationsBloc>(),
+                                currentUser: currentUser!,
+                              ),
+                            ),
+                    icon: const Icon(Icons.emoji_events_rounded, size: 18),
+                    label: const Text('View & Nominate'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D2A70),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabs(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: BlocBuilder<NominationsBloc, NominationsState>(
+          builder: (context, state) {
+            final authState = context.read<AuthBloc>().state;
+            int nominationCount = 0;
+            int approvalCount = 0;
+
+            if (authState is AuthAuthenticated) {
+              final myId = authState.auth.user?.id;
+              nominationCount =
+                  state.nominations.where((n) => n.nominatorId == myId).length;
+              approvalCount = state.nominations
+                  .where((n) => n.status.toUpperCase() == 'PENDING')
+                  .length;
+            }
+
+            return TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 24),
+              indicatorColor: const Color(0xFF2D2A70),
+              indicatorWeight: 3,
+              labelColor: const Color(0xFF2D2A70),
+              unselectedLabelColor: Colors.grey[500],
+              labelStyle: AppTextStyles.bodyBold(),
+              unselectedLabelStyle: AppTextStyles.body(),
+              dividerColor: Colors.grey[200],
+              tabs: [
+                const Tab(
+                  child: Row(
+                    children: [
+                      Icon(Icons.workspace_premium_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Text('My Awards'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.send_rounded, size: 18),
+                      const SizedBox(width: 8),
+                      const Text('Nominations'),
+                      if (nominationCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '$nominationCount',
+                          style: AppTextStyles.small(color: Colors.grey[400]),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.how_to_reg_rounded, size: 18),
+                      const SizedBox(width: 8),
+                      const Text('Approvals'),
+                      if (approvalCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2D2A70).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$approvalCount',
+                            style: AppTextStyles.smallBold(
+                                color: const Color(0xFF2D2A70)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompanyFeed(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 24, right: 32, top: 32, bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Company Feed',
+              style: AppTextStyles.headline1(color: Colors.black87)),
+          const SizedBox(height: 24),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
+                builder: (context, state) {
+                  final awardsFeed = state.feed
+                      .where((r) =>
+                          (r.sourceType ?? '').toUpperCase() == 'AWARD')
+                      .toList();
+                  if (state.status == RecognitionStatus.loading &&
+                      state.feed.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (awardsFeed.isEmpty) {
+                    return Center(
+                        child: Text('No recent awards',
+                            style:
+                                AppTextStyles.body(color: Colors.grey[500])));
+                  }
+                  return RecognitionFeedList(
+                    feed: awardsFeed,
+                    shrinkWrap: true,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyAwardsTab(BuildContext context) {
+    return BlocBuilder<NominationsBloc, NominationsState>(
+      builder: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        if (authState is! AuthAuthenticated) return const SizedBox.shrink();
+
+        final myId = authState.auth.user?.id;
+        final myAwards = state.nominations
+            .where((n) => n.nomineeId == myId && n.status == 'APPROVED')
+            .toList();
+
+        if (state.status == NominationsStatus.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (myAwards.isEmpty) {
+          return const EmptyStateView(
+            icon: Icons.workspace_premium_rounded,
+            title: 'No awards received yet',
+            message: 'Keep contributing—your moment is coming!',
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Your Trophies',
+                  style: AppTextStyles.headline1(color: Colors.black87)),
+              const SizedBox(height: 24),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 320,
+                  crossAxisSpacing: 24,
+                  mainAxisSpacing: 24,
+                  childAspectRatio: 0.9,
+                ),
+                itemCount: myAwards.length,
+                itemBuilder: (context, index) {
+                  final award = myAwards[index];
+                  return TrophyCard(
+                    title: award.awardTypeName,
+                    points: '+${award.pointsAwarded ?? 0} pts',
+                    citation: award.citation.isNotEmpty
+                        ? award.citation
+                        : award.reviewerComment ?? 'Excellent performance',
+                    from: award.nominatorName,
+                    date: AppDateFormatter.format(award.createdAt),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNominationsTab(BuildContext context) {
+    return BlocBuilder<NominationsBloc, NominationsState>(
+      builder: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        if (authState is! AuthAuthenticated) return const SizedBox.shrink();
+
+        final myId = authState.auth.user?.id;
+        final mySubmissions =
+            state.nominations.where((n) => n.nominatorId == myId).toList();
+
+        if (state.status == NominationsStatus.loading &&
+            state.nominations.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (mySubmissions.isEmpty) {
+          return const EmptyStateView(
+            icon: Icons.send_rounded,
+            title: 'No nominations sent yet',
+            message: 'Tap "View & Nominate" to recognize a colleague!',
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSummaryCards(context, mySubmissions),
+              const SizedBox(height: 32),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: mySubmissions.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 24),
+                itemBuilder: (context, index) {
+                  return _buildNominationCard(mySubmissions[index]);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSummaryCards(
+      BuildContext context, List<NominationEntity> submissions) {
+    final total = submissions.length;
+    final pending =
+        submissions.where((n) => n.status.toUpperCase() == 'PENDING').length;
+    final approved =
+        submissions.where((n) => n.status.toUpperCase() == 'APPROVED').length;
+    final rejected =
+        submissions.where((n) => n.status.toUpperCase() == 'REJECTED').length;
+
+    final cards = [
+      _buildSummaryCard('Total Sent', total, Icons.send_outlined, Colors.blue),
+      _buildSummaryCard(
+          'Pending', pending, Icons.hourglass_empty_rounded, Colors.orange),
+      _buildSummaryCard(
+          'Approved', approved, Icons.check_circle_outline_rounded, Colors.green),
+      _buildSummaryCard('Rejected', rejected, Icons.cancel_outlined, Colors.red),
+    ];
+
+    if (Responsive.isMobile(context)) {
+      return Wrap(
+        spacing: 16,
+        runSpacing: 16,
+        children: cards
+            .map((c) => SizedBox(
+                width: (MediaQuery.of(context).size.width - 80) / 2, child: c))
+            .toList(),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: cards[0]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[1]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[2]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[3]),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCard(
+      String label, int value, IconData icon, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color.shade600, size: 20),
+          ),
+          const SizedBox(height: 16),
+          Text('$value', style: AppTextStyles.headline1(color: Colors.black87)),
+          const SizedBox(height: 4),
+          Text(label,
+              style: AppTextStyles.smallBold(color: Colors.grey.shade600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNominationCard(NominationEntity nom) {
+    final bool isApproved = nom.status.toUpperCase() == 'APPROVED';
+    final bool isRejected = nom.status.toUpperCase() == 'REJECTED';
+    final bool isPending = nom.status.toUpperCase() == 'PENDING';
+
+    String statusText = nom.status.toUpperCase();
+    if (isPending) {
+      statusText =
+          'PENDING ${nom.nextRequiredLevel ?? 'APPROVER'}'.toUpperCase();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.emoji_events_outlined,
+                        color: Colors.orange.shade700, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(nom.awardTypeName,
+                      style: AppTextStyles.sectionTitle(color: Colors.black87)),
+                ],
+              ),
+              if (isPending) _buildStatusPill(statusText, Colors.orange),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline,
+                            size: 14, color: Colors.grey.shade400),
+                        const SizedBox(width: 6),
+                        Text('Nominee',
+                            style: AppTextStyles.small(color: Colors.grey.shade500)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(nom.nomineeName,
+                        style: AppTextStyles.bodyBold(color: Colors.black87)),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline,
+                            size: 14, color: Colors.grey.shade400),
+                        const SizedBox(width: 6),
+                        Text('Nominated by',
+                            style: AppTextStyles.small(color: Colors.grey.shade500)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(nom.nominatorName,
+                        style: AppTextStyles.bodyBold(color: Colors.black87)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 14, color: Colors.grey.shade400),
+              const SizedBox(width: 6),
+              Text(AppDateFormatter.format(nom.createdAt),
+                  style: AppTextStyles.small(color: Colors.grey.shade500)),
+            ],
+          ),
+          if (isApproved || isRejected) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isApproved ? Colors.green.shade50 : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isApproved
+                            ? Icons.check_circle_outline
+                            : Icons.cancel_outlined,
+                        size: 16,
+                        color: isApproved
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isApproved ? 'Approved' : 'Rejected',
+                        style: AppTextStyles.smallBold(
+                            color: isApproved
+                                ? Colors.green.shade800
+                                : Colors.red.shade800),
+                      ),
+                    ],
+                  ),
+                  if (nom.reviewerName != null)
+                    Text(
+                      'by ${nom.reviewerName}',
+                      style: AppTextStyles.small(color: Colors.black54),
+                    ),
+                ],
               ),
             ),
           ],
@@ -339,67 +716,83 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     );
   }
 
-  Widget _buildStatsStrip(
-    ThemeData theme,
-    int pending,
-    int submitted,
-    int approved,
-    int rejected,
-  ) {
-    final tiles = [
-      _ManagerStatTile(
-        label: 'Awaiting Review',
-        value: '$pending',
-        icon: Icons.hourglass_top_rounded,
-        color: const Color(0xFFF59E0B),
-        theme: theme,
-      ),
-      _ManagerStatTile(
-        label: 'My Submissions',
-        value: '$submitted',
-        icon: Icons.send_rounded,
-        color: const Color(0xFF6366F1),
-        theme: theme,
-      ),
-      _ManagerStatTile(
-        label: 'Approved',
-        value: '$approved',
-        icon: Icons.check_circle_outline_rounded,
-        color: const Color(0xFF10B981),
-        theme: theme,
-      ),
-      _ManagerStatTile(
-        label: 'Rejected',
-        value: '$rejected',
-        icon: Icons.cancel_outlined,
-        color: const Color(0xFFEF4444),
-        theme: theme,
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 500;
-        if (isNarrow) {
-          return Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: tiles
-                .map((t) =>
-                    SizedBox(width: (constraints.maxWidth - 10) / 2, child: t))
-                .toList(),
-          );
+  Widget _buildApprovalsTab(BuildContext context) {
+    return BlocBuilder<NominationsBloc, NominationsState>(
+      builder: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        String userRole = 'MANAGER';
+        int? myId;
+        if (authState is AuthAuthenticated) {
+          userRole = authState.auth.user?.role ?? 'MANAGER';
+          myId = authState.auth.user?.id;
         }
-        return Row(
-          children: tiles
-              .map((t) => Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(right: t == tiles.last ? 0 : 12),
-                      child: t,
+
+        final pendingForMe =
+            state.nominations.where((n) => n.status == 'PENDING').toList();
+
+        return DefaultTabController(
+          length: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  indicatorColor: const Color(0xFF2D2A70),
+                  labelColor: const Color(0xFF2D2A70),
+                  unselectedLabelColor: Colors.grey[500],
+                  labelStyle: AppTextStyles.bodyBold(),
+                  tabs: [
+                    Tab(text: 'Pending (${pendingForMe.length})'),
+                    const Tab(text: 'History'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    // Pending Actions
+                    _buildList(
+                      pendingForMe,
+                      state.users,
+                      'No pending nominations at the moment',
+                      Icons.check_circle_outline_rounded,
+                      showActions: true,
+                      userRole: userRole,
+                      myId: myId,
                     ),
-                  ))
-              .toList(),
+                    // History
+                    _buildHistoryTab(),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _infoCell(IconData icon, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: Colors.grey.shade400),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(value, 
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      ],
     );
   }
 
@@ -898,31 +1291,14 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     );
   }
 
-  Widget _infoCell(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 13, color: Colors.grey.shade400),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade400,
-                      fontWeight: FontWeight.w500)),
-              const SizedBox(height: 1),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-            ],
-          ),
-        ),
-      ],
+  Widget _buildStatusPill(String text, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(text, style: AppTextStyles.smallBold(color: color.shade800)),
     );
   }
 
@@ -973,7 +1349,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     onPressed: () {
                       Navigator.of(dialogContext).pop();
                       context.read<NominationsBloc>().add(
-                          ApproveNominationRequested(
+                          nom.ApproveNominationRequested(
                               nominationId: nominationId,
                               comments: commentsController.text.trim()));
                     },
@@ -989,7 +1365,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                       }
                       Navigator.of(dialogContext).pop();
                       context.read<NominationsBloc>().add(
-                          RejectNominationRequested(
+                          nom.RejectNominationRequested(
                               nominationId: nominationId,
                               comments: commentsController.text.trim()));
                     },
@@ -997,52 +1373,6 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           ],
         );
       },
-    );
-  }
-}
-
-class _ManagerStatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final ThemeData theme;
-
-  const _ManagerStatTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(height: 10),
-          Text(value, style: AppTextStyles.headline2()),
-          const SizedBox(height: 3),
-          Text(label,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-        ],
-      ),
     );
   }
 }

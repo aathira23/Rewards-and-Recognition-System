@@ -298,7 +298,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
           return const EmptyStateView(
             icon: Icons.workspace_premium_rounded,
             title: 'No awards received yet',
-            message: 'Keep up the great work!',
+            message: 'Keep contributing—your moment is coming!',
           );
         }
 
