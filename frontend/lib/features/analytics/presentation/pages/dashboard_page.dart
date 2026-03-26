@@ -6,6 +6,7 @@ import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/rr_dashboard_page.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/employee_recognitions_page.dart';
+
 import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/leaderboard_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
@@ -185,6 +186,13 @@ class _DashboardPageState extends State<DashboardPage> {
         subtitle: 'Celebrate, Earn, and Redeem!',
         icon: Icons.card_giftcard_rounded,
         page: const RRDashboardPage(),
+      ),
+      const NavDestination(
+        title: 'eCards',
+        heading: 'eCards',
+        subtitle: 'Spread positivity & appreciate peers!',
+        icon: Icons.favorite_outline_rounded,
+        page: EmployeeRecognitionsPage(),
       ),
       NavDestination(
         title: 'Points',

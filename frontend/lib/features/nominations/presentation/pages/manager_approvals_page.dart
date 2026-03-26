@@ -9,7 +9,6 @@ import '../bloc/nominations_state.dart';
 import '../widgets/active_awards_dialog.dart';
 import '../widgets/trophy_card.dart';
 import '../../../../core/widgets/status_badge.dart';
-import '../widgets/nominate_employee_dialog.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/nomination_entity.dart';

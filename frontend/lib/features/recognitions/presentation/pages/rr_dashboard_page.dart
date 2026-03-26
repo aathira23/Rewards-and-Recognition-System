@@ -443,7 +443,7 @@ class _RRDashboardView extends StatelessWidget {
                   final authState = context.read<AuthBloc>().state;
                   String targetTab = 'Nominations';
                   if (authState is AuthAuthenticated) {
-                    final role = authState.auth.user?.role?.toUpperCase();
+                    final role = authState.auth.user?.role.toUpperCase();
                     if (role == 'MANAGER' || role == 'DEPT_HEAD') {
                       targetTab = 'Approvals';
                     } else if (role == 'HR' || role == 'ADMIN') {
@@ -512,7 +512,7 @@ class _RRDashboardView extends StatelessWidget {
                   final authState = context.read<AuthBloc>().state;
                   String targetTab = 'Nominations';
                   if (authState is AuthAuthenticated) {
-                    final role = authState.auth.user?.role?.toUpperCase();
+                    final role = authState.auth.user?.role.toUpperCase();
                     if (role == 'MANAGER' || role == 'DEPT_HEAD') {
                       targetTab = 'Approvals';
                     } else if (role == 'HR' || role == 'ADMIN') {
