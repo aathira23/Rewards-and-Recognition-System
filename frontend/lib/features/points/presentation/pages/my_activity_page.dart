@@ -306,7 +306,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: isBudget 
-                        ? _buildBudgetStatsRow(allocated, rewarded, balance, recognitionsState.stats?.sentCount ?? 0)
+                        ? _buildBudgetStatsRow(allocated, rewarded, balance)
                         : _buildStatsRow(summary, recognitionsState),
                     ),
                     Divider(color: Colors.white.withValues(alpha: 0.15), height: 1),
@@ -339,7 +339,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(28, 16, 28, 20),
                             child: isBudget 
-                              ? _buildBudgetStatsRow(allocated, rewarded, balance, recognitionsState.stats?.sentCount ?? 0)
+                              ? _buildBudgetStatsRow(allocated, rewarded, balance)
                               : _buildStatsRow(summary, recognitionsState),
                           ),
                         ],
@@ -465,14 +465,13 @@ class _MyActivityPageState extends State<MyActivityPage> {
     );
   }
 
-  Widget _buildBudgetStatsRow(int allocated, int rewarded, int balance, int teamRecognized) {
+  Widget _buildBudgetStatsRow(int allocated, int rewarded, int balance) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildStatItem(Icons.add_chart_rounded, 'TOTAL ALLOCATED', '$allocated'),
         _buildStatItem(Icons.celebration_rounded, 'TOTAL REWARDED', '$rewarded'),
         _buildStatItem(Icons.account_balance_rounded, 'AVAILABLE', '$balance'),
-        _buildStatItem(Icons.group_rounded, 'TEAM RECOGNIZED', '$teamRecognized'), 
       ],
     );
   }
