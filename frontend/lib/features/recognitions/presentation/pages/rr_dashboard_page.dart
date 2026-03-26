@@ -656,15 +656,17 @@ class _RRDashboardView extends StatelessWidget {
               );
             }
             return Container(
+              constraints: const BoxConstraints(maxHeight: 500),
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
               ),
               child: RecognitionFeedList(
-                feed: state.feed.take(5).toList(),
+                feed: state.feed,
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(),
               ),
             );
           },
