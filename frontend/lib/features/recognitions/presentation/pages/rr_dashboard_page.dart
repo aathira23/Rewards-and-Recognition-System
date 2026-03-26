@@ -82,7 +82,6 @@ class _RRDashboardView extends StatelessWidget {
     );
   }
 
-
   Widget _buildHeader(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,147 +131,177 @@ class _RRDashboardView extends StatelessWidget {
       builder: (context, recState) {
         return BlocBuilder<PointsBloc, PointsState>(
           builder: (context, ptsState) {
-            final balance = ptsState.summary?.balance ?? 0;
-            final level = LevelingUtils.getLevel(balance);
-            final pointsToNext = LevelingUtils.getPointsToNextLevel(balance);
-            final progress = LevelingUtils.getProgress(balance);
-            final awardsCount = recState.stats?.receivedCount ?? 0;
-            final ecardsCount = recState.stats?.sentCount ?? 0;
+            return BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                return BlocBuilder<NominationsBloc, NominationsState>(
+                  builder: (context, nomState) {
+                    final balance = ptsState.summary?.balance ?? 0;
+                    final level = LevelingUtils.getLevel(balance);
+                    final pointsToNext =
+                        LevelingUtils.getPointsToNextLevel(balance);
+                    final progress = LevelingUtils.getProgress(balance);
 
-            const bannerColor = Color(0xFF2D2A70);
+                    // Awards Won = approved nominations where current user is the nominee
+                    int currentUserId = -1;
+                    if (authState is AuthAuthenticated) {
+                      currentUserId = authState.auth.user?.id ?? -1;
+                    }
+                    final awardsCount = nomState.nominations
+                        .where((n) =>
+                            n.nomineeId == currentUserId &&
+                            n.status.toLowerCase() == 'approved')
+                        .length;
 
-            return Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: bannerColor,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStatSmallCard(
-                      'Awards Won',
-                      awardsCount.toString(),
-                      Icons.emoji_events_outlined,
-                      const Color(0xFFFFF7ED),
-                      const Color(0xFFEA580C),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatSmallCard(
-                      'eCards Earned',
-                      ecardsCount.toString(),
-                      Icons.favorite_outline_rounded,
-                      const Color(0xFFFFF1F2),
-                      const Color(0xFFE11D48),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.star_rounded,
-                                color: Color(0xFFFFCC00), size: 24),
-                            const SizedBox(width: 8),
-                            Text(
-                              'CURRENT STANDING',
-                              style: AppTextStyles.captionStrong(
-                                  color: Colors.white.withOpacity(0.7)),
+                    // eCards Earned = eCards received by the current user
+                    final ecardsCount = recState.stats?.receivedCount ?? 0;
+
+                    const bannerColor = Color(0xFF2D2A70);
+
+                    return Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: bannerColor,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatSmallCard(
+                              'Awards Won',
+                              awardsCount.toString(),
+                              Icons.emoji_events_outlined,
+                              const Color(0xFFFFF7ED),
+                              const Color(0xFFEA580C),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              width: 68,
-                              height: 68,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFCC00),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.shield_rounded,
-                                    size: 52,
-                                    color: Colors.black.withOpacity(0.12),
-                                  ),
-                                  Text(
-                                    level.toString(),
-                                    style: AppTextStyles.headline1(
-                                        color: Colors.black.withOpacity(0.55)),
-                                  ),
-                                ],
-                              ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildStatSmallCard(
+                              'eCards Earned',
+                              ecardsCount.toString(),
+                              Icons.favorite_outline_rounded,
+                              const Color(0xFFFFF1F2),
+                              const Color(0xFFE11D48),
                             ),
-                            const SizedBox(width: 24),
-                            Column(
+                          ),
+                          const SizedBox(width: 48),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
                                   children: [
+                                    const Icon(Icons.star_rounded,
+                                        color: Color(0xFFFFCC00), size: 24),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      balance.toString(),
-                                      style: AppTextStyles.display(
-                                          color: Colors.white),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      'pts',
-                                      style: AppTextStyles.sectionTitle(
-                                          color:
-                                              Colors.white.withOpacity(0.85)),
+                                      'CURRENT STANDING',
+                                      style: AppTextStyles.captionStrong(
+                                          color: Colors.white.withOpacity(0.7)),
                                     ),
                                   ],
                                 ),
-                                Text(
-                                  'Available Balance',
-                                  style: AppTextStyles.bodyLarge(
-                                      color: Colors.white.withOpacity(0.7)),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 68,
+                                      height: 68,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFCC00),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.shield_rounded,
+                                            size: 52,
+                                            color:
+                                                Colors.black.withOpacity(0.12),
+                                          ),
+                                          Text(
+                                            level.toString(),
+                                            style: AppTextStyles.headline1(
+                                                color: Colors.black
+                                                    .withOpacity(0.55)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 24),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.baseline,
+                                          textBaseline: TextBaseline.alphabetic,
+                                          children: [
+                                            Text(
+                                              balance.toString(),
+                                              style: AppTextStyles.display(
+                                                  color: Colors.white),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              'pts',
+                                              style: AppTextStyles.sectionTitle(
+                                                  color: Colors.white
+                                                      .withOpacity(0.85)),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          'Available Balance',
+                                          style: AppTextStyles.bodyLarge(
+                                              color: Colors.white
+                                                  .withOpacity(0.7)),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Level $level',
+                                        style: AppTextStyles.smallBold(
+                                            color: Colors.white)),
+                                    if (pointsToNext != null)
+                                      Text(
+                                          '$pointsToNext pts to Level ${level + 1}',
+                                          style: AppTextStyles.smallMedium(
+                                              color: Colors.white
+                                                  .withOpacity(0.9))),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: LinearProgressIndicator(
+                                    value: progress,
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.12),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                            Color(0xFFFFCC00)),
+                                    minHeight: 12,
+                                  ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Level $level',
-                                style: AppTextStyles.smallBold(
-                                    color: Colors.white)),
-                            if (pointsToNext != null)
-                              Text('$pointsToNext pts to Level ${level + 1}',
-                                  style: AppTextStyles.smallMedium(
-                                      color: Colors.white.withOpacity(0.9))),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.white.withOpacity(0.12),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFFFCC00)),
-                            minHeight: 12,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             );
           },
         );
@@ -469,10 +498,9 @@ class _RRDashboardView extends StatelessWidget {
                     Icons.military_tech_outlined,
                     const Color(0xFFFDF4FF),
                     const Color(0xFFC026D3),
-                    constraints.maxWidth / 2 - 24,
-                    onTap: () {
-                      MainLayout.of(context)?.selectTabByTitle('Leaderboard');
-                    }),
+                    constraints.maxWidth / 2 - 24, onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('Leaderboard');
+                }),
                 _buildDynamicModuleCard(
                     context,
                     'Redeem Rewards',
@@ -480,10 +508,9 @@ class _RRDashboardView extends StatelessWidget {
                     Icons.card_giftcard_rounded,
                     const Color(0xFFF5F3FF),
                     const Color(0xFF7C3AED),
-                    constraints.maxWidth / 2 - 24,
-                    onTap: () {
-                      MainLayout.of(context)?.selectTabByTitle('Rewards');
-                    }),
+                    constraints.maxWidth / 2 - 24, onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('Rewards');
+                }),
                 _buildDynamicModuleCard(
                     context,
                     'My Activity',
@@ -491,10 +518,9 @@ class _RRDashboardView extends StatelessWidget {
                     Icons.history_rounded,
                     const Color(0xFFECFDF5),
                     const Color(0xFF059669),
-                    constraints.maxWidth / 2 - 24,
-                    onTap: () {
-                      MainLayout.of(context)?.selectTabByTitle('My Activity');
-                    }),
+                    constraints.maxWidth / 2 - 24, onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('My Activity');
+                }),
               ],
             );
           }
@@ -540,10 +566,9 @@ class _RRDashboardView extends StatelessWidget {
                         'Rise to the top & inspire others!',
                         Icons.military_tech_outlined,
                         const Color(0xFFFDF4FF),
-                        const Color(0xFFC026D3),
-                        onTap: () {
-                          MainLayout.of(context)?.selectTabByTitle('Leaderboard');
-                        })),
+                        const Color(0xFFC026D3), onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('Leaderboard');
+                })),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildModuleCard(
@@ -552,10 +577,9 @@ class _RRDashboardView extends StatelessWidget {
                         'Treat yourself to amazing gifts!',
                         Icons.card_giftcard_rounded,
                         const Color(0xFFF5F3FF),
-                        const Color(0xFF7C3AED),
-                        onTap: () {
-                          MainLayout.of(context)?.selectTabByTitle('Rewards');
-                        })),
+                        const Color(0xFF7C3AED), onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('Rewards');
+                })),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildModuleCard(
@@ -564,10 +588,9 @@ class _RRDashboardView extends StatelessWidget {
                         'Track your journey of excellence!',
                         Icons.history_rounded,
                         const Color(0xFFECFDF5),
-                        const Color(0xFF059669),
-                        onTap: () {
-                          MainLayout.of(context)?.selectTabByTitle('My Activity');
-                        })),
+                        const Color(0xFF059669), onTap: () {
+                  MainLayout.of(context)?.selectTabByTitle('My Activity');
+                })),
               ],
             ),
           );
