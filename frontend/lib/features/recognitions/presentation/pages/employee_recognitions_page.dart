@@ -7,6 +7,8 @@ import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
 import '../bloc/recognitions_state.dart';
 import '../widgets/badge_summary_panel.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
+import '../../../../core/theme/app_text_styles.dart';
 
 class EmployeeRecognitionsPage extends StatelessWidget {
   const EmployeeRecognitionsPage({super.key});
@@ -74,19 +76,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Page header
-                          Text('eCards',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Send a quick thank-you and celebrate your teammates with personalized eCards.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: Colors.grey[600]),
-                          ),
+                          _buildPageHeader(context),
                           const SizedBox(height: 24),
                           // Two-column layout
                           Row(
@@ -138,19 +128,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('eCards',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Send a quick thank-you and celebrate your teammates with personalized eCards.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: Colors.grey[600]),
-                        ),
+                        _buildPageHeader(context),
                         const SizedBox(height: 24),
                         if (state.stats != null)
                           BadgesEarnedSummary(stats: state.stats!),
@@ -177,6 +155,43 @@ class EmployeeRecognitionsPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPageHeader(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => MainLayout.of(context)?.selectTabByTitle('Recognitions'),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_back_rounded,
+                    size: 20, color: Colors.black87),
+                const SizedBox(width: 8),
+                Text('Back to Dashboard',
+                    style: AppTextStyles.bodyBold(color: Colors.black87)),
+              ],
+            ),
+          ),
+        ),
+        Text('eCards',
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(
+          'Send a quick thank-you and celebrate your teammates with personalized eCards.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 

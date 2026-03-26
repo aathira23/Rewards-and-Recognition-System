@@ -18,6 +18,7 @@ import '../bloc/catalog_state.dart';
 import '../widgets/rewards_balance_card.dart';
 import '../widgets/catalog_tab_navigation.dart';
 import '../widgets/reward_item_card.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 
 class EmployeeRewardsPage extends StatefulWidget {
   const EmployeeRewardsPage({super.key});
@@ -112,7 +113,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 SliverPadding(
                   padding: EdgeInsets.symmetric(
                     horizontal: Responsive.pagePadding(context),
-                    vertical: Responsive.pagePadding(context) + 8,
+                    vertical: Responsive.pagePadding(context),
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
@@ -127,6 +128,26 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    GestureDetector(
+                                      onTap: () => MainLayout.of(context)
+                                          ?.selectTabByTitle('Recognitions'),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12.0),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.arrow_back_rounded,
+                                                size: 20,
+                                                color: Colors.black87),
+                                            const SizedBox(width: 8),
+                                            Text('Back to Dashboard',
+                                                style: AppTextStyles.bodyBold(
+                                                    color: Colors.black87)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                     const Text(
                                       'Rewards Store',
                                       style: TextStyle(
