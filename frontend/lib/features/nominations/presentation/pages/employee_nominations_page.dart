@@ -8,7 +8,6 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart' as nom;
 import '../bloc/nominations_state.dart';
-import '../widgets/nominate_employee_dialog.dart';
 import '../widgets/active_awards_dialog.dart';
 import '../widgets/trophy_card.dart';
 import '../../domain/entities/nomination_entity.dart';
@@ -20,8 +19,6 @@ import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../recognitions/presentation/bloc/recognitions_bloc.dart';
 import '../../../recognitions/presentation/bloc/recognitions_event.dart' as rec;
-import '../../../recognitions/presentation/bloc/recognitions_state.dart';
-import '../../../recognitions/presentation/widgets/recognition_feed_list.dart';
 
 class EmployeeNominationsPage extends StatelessWidget {
   const EmployeeNominationsPage({super.key});
@@ -37,8 +34,8 @@ class EmployeeNominationsPage extends StatelessWidget {
             ..add(nom.GetUsersRequested()),
         ),
         BlocProvider(
-          create: (_) => sl<RecognitionsBloc>()
-            ..add(rec.GetRecognitionFeedRequested()),
+          create: (_) =>
+              sl<RecognitionsBloc>()..add(rec.GetRecognitionFeedRequested()),
         ),
       ],
       child: const _EmployeeNominationsView(),
@@ -50,10 +47,12 @@ class _EmployeeNominationsView extends StatefulWidget {
   const _EmployeeNominationsView();
 
   @override
-  State<_EmployeeNominationsView> createState() => _EmployeeNominationsViewState();
+  State<_EmployeeNominationsView> createState() =>
+      _EmployeeNominationsViewState();
 }
 
-class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with SingleTickerProviderStateMixin {
+class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -70,8 +69,6 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = Responsive.isMobile(context);
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BlocListener<NominationsBloc, NominationsState>(
@@ -84,71 +81,111 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
             AppSnackbar.error(context, state.errorMessage!);
           }
         },
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(Responsive.pagePadding(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: () => MainLayout.of(context)?.selectTabByTitle('Recognitions'),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(Responsive.pagePadding(context)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => MainLayout.of(context)
+                        ?.selectTabByTitle('Recognitions'),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.arrow_back_rounded,
+                              size: 20, color: Colors.black87),
+                          const SizedBox(width: 8),
+                          Text('Back to Dashboard',
+                              style: AppTextStyles.bodyBold(
+                                  color: Colors.black87)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.arrow_back_rounded, size: 20, color: Colors.black87),
-                      const SizedBox(width: 8),
-                      Text('Back to Dashboard', style: AppTextStyles.bodyBold(color: Colors.black87)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Awards',
+                              style: AppTextStyles.headline1(
+                                  color: Colors.black87),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Celebrate achievements and recognize the people who make a difference.',
+                              style:
+                                  AppTextStyles.body(color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, authState) {
+                          UserEntity? currentUser;
+                          if (authState is AuthAuthenticated) {
+                            currentUser = authState.auth.user;
+                          }
+                          return BlocBuilder<NominationsBloc, NominationsState>(
+                            builder: (context, state) {
+                              return ElevatedButton.icon(
+                                onPressed: (state.awardTypes.isEmpty ||
+                                        currentUser == null)
+                                    ? null
+                                    : () => showDialog(
+                                          context: context,
+                                          builder: (_) => ActiveAwardsDialog(
+                                            awardTypes: state.awardTypes,
+                                            users: state.users,
+                                            bloc:
+                                                context.read<NominationsBloc>(),
+                                            currentUser: currentUser!,
+                                          ),
+                                        ),
+                                icon: const Icon(Icons.emoji_events_rounded,
+                                    size: 18),
+                                label: const Text('View & Nominate'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2D2A70),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ],
                   ),
-                ),
+                ],
               ),
-              Text(
-                'Awards',
-                style: AppTextStyles.headline1(color: Colors.black87),
+            ),
+            _buildTabs(context),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildMyAwardsTab(context),
+                  _buildNominationsTab(context),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Celebrate achievements and recognize the people who make a difference.',
-                style: AppTextStyles.body(color: Colors.grey[600]),
-              ),
-            ],
-          ),
-          BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, authState) {
-              UserEntity? currentUser;
-              if (authState is AuthAuthenticated) {
-                currentUser = authState.auth.user;
-              }
-              return BlocBuilder<NominationsBloc, NominationsState>(
-                builder: (context, state) {
-                  return ElevatedButton.icon(
-                    onPressed: (state.awardTypes.isEmpty || currentUser == null)
-                        ? null
-                        : () => showDialog(
-                              context: context,
-                              builder: (_) => ActiveAwardsDialog(
-                                awardTypes: state.awardTypes,
-                                users: state.users,
-                                bloc: context.read<NominationsBloc>(),
-                                currentUser: currentUser!,
-                              ),
-                            ),
-                    icon: const Icon(Icons.emoji_events_rounded, size: 18),
-                    label: const Text('View & Nominate'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2D2A70),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -165,7 +202,8 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
             final authState = context.read<AuthBloc>().state;
             if (authState is AuthAuthenticated) {
               final myId = authState.auth.user?.id;
-              nominationCount = state.nominations.where((n) => n.nominatorId == myId).length;
+              nominationCount =
+                  state.nominations.where((n) => n.nominatorId == myId).length;
             }
 
             return TabBar(
@@ -219,9 +257,11 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
       builder: (context, state) {
         final authState = context.read<AuthBloc>().state;
         if (authState is! AuthAuthenticated) return const SizedBox.shrink();
-        
+
         final myId = authState.auth.user?.id;
-        final myAwards = state.nominations.where((n) => n.nomineeId == myId && n.status == 'APPROVED').toList();
+        final myAwards = state.nominations
+            .where((n) => n.nomineeId == myId && n.status == 'APPROVED')
+            .toList();
 
         if (state.status == NominationsStatus.loading) {
           return const Center(child: CircularProgressIndicator());
@@ -240,7 +280,8 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your Trophies', style: AppTextStyles.headline1(color: Colors.black87)),
+              Text('Your Trophies',
+                  style: AppTextStyles.headline1(color: Colors.black87)),
               const SizedBox(height: 24),
               GridView.builder(
                 shrinkWrap: true,
@@ -257,7 +298,9 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
                   return TrophyCard(
                     title: award.awardTypeName,
                     points: '+${award.pointsAwarded ?? 0} pts',
-                    citation: award.citation.isNotEmpty ? award.citation : award.reviewerComment ?? 'Excellent performance',
+                    citation: award.citation.isNotEmpty
+                        ? award.citation
+                        : award.reviewerComment ?? 'Excellent performance',
                     from: award.nominatorName,
                     date: AppDateFormatter.format(award.createdAt),
                   );
@@ -277,9 +320,11 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
         if (authState is! AuthAuthenticated) return const SizedBox.shrink();
 
         final myId = authState.auth.user?.id;
-        final mySubmissions = state.nominations.where((n) => n.nominatorId == myId).toList();
+        final mySubmissions =
+            state.nominations.where((n) => n.nominatorId == myId).toList();
 
-        if (state.status == NominationsStatus.loading && state.nominations.isEmpty) {
+        if (state.status == NominationsStatus.loading &&
+            state.nominations.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -314,24 +359,34 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
     );
   }
 
-  Widget _buildSummaryCards(BuildContext context, List<NominationEntity> submissions) {
+  Widget _buildSummaryCards(
+      BuildContext context, List<NominationEntity> submissions) {
     final total = submissions.length;
-    final pending = submissions.where((n) => n.status.toUpperCase() == 'PENDING').length;
-    final approved = submissions.where((n) => n.status.toUpperCase() == 'APPROVED').length;
-    final rejected = submissions.where((n) => n.status.toUpperCase() == 'REJECTED').length;
+    final pending =
+        submissions.where((n) => n.status.toUpperCase() == 'PENDING').length;
+    final approved =
+        submissions.where((n) => n.status.toUpperCase() == 'APPROVED').length;
+    final rejected =
+        submissions.where((n) => n.status.toUpperCase() == 'REJECTED').length;
 
     final cards = [
       _buildSummaryCard('Total Sent', total, Icons.send_outlined, Colors.blue),
-      _buildSummaryCard('Pending', pending, Icons.hourglass_empty_rounded, Colors.orange),
-      _buildSummaryCard('Approved', approved, Icons.check_circle_outline_rounded, Colors.green),
-      _buildSummaryCard('Rejected', rejected, Icons.cancel_outlined, Colors.red),
+      _buildSummaryCard(
+          'Pending', pending, Icons.hourglass_empty_rounded, Colors.orange),
+      _buildSummaryCard('Approved', approved,
+          Icons.check_circle_outline_rounded, Colors.green),
+      _buildSummaryCard(
+          'Rejected', rejected, Icons.cancel_outlined, Colors.red),
     ];
 
     if (Responsive.isMobile(context)) {
       return Wrap(
         spacing: 16,
         runSpacing: 16,
-        children: cards.map((c) => SizedBox(width: (MediaQuery.of(context).size.width - 80) / 2, child: c)).toList(),
+        children: cards
+            .map((c) => SizedBox(
+                width: (MediaQuery.of(context).size.width - 80) / 2, child: c))
+            .toList(),
       );
     }
     return Row(
@@ -347,7 +402,8 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
     );
   }
 
-  Widget _buildSummaryCard(String label, int value, IconData icon, MaterialColor color) {
+  Widget _buildSummaryCard(
+      String label, int value, IconData icon, MaterialColor color) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -376,7 +432,8 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
           const SizedBox(height: 16),
           Text('$value', style: AppTextStyles.headline1(color: Colors.black87)),
           const SizedBox(height: 4),
-          Text(label, style: AppTextStyles.smallBold(color: Colors.grey.shade600)),
+          Text(label,
+              style: AppTextStyles.smallBold(color: Colors.grey.shade600)),
         ],
       ),
     );
@@ -386,10 +443,11 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
     final bool isApproved = nom.status.toUpperCase() == 'APPROVED';
     final bool isRejected = nom.status.toUpperCase() == 'REJECTED';
     final bool isPending = nom.status.toUpperCase() == 'PENDING';
-    
+
     String statusText = nom.status.toUpperCase();
     if (isPending) {
-      statusText = 'PENDING ${nom.nextRequiredLevel ?? 'APPROVER'}'.toUpperCase();
+      statusText =
+          'PENDING ${nom.nextRequiredLevel ?? 'APPROVER'}'.toUpperCase();
     }
 
     return Container(
@@ -399,7 +457,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-           BoxShadow(
+          BoxShadow(
             color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -420,10 +478,12 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
                       color: Colors.orange.shade50,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.emoji_events_outlined, color: Colors.orange.shade700, size: 20),
+                    child: Icon(Icons.emoji_events_outlined,
+                        color: Colors.orange.shade700, size: 20),
                   ),
                   const SizedBox(width: 16),
-                  Text(nom.awardTypeName, style: AppTextStyles.sectionTitle(color: Colors.black87)),
+                  Text(nom.awardTypeName,
+                      style: AppTextStyles.sectionTitle(color: Colors.black87)),
                 ],
               ),
               if (isPending) _buildStatusPill(statusText, Colors.orange),
@@ -438,13 +498,17 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.person_outline, size: 14, color: Colors.grey.shade400),
+                        Icon(Icons.person_outline,
+                            size: 14, color: Colors.grey.shade400),
                         const SizedBox(width: 6),
-                        Text('Nominee', style: AppTextStyles.small(color: Colors.grey.shade500)),
+                        Text('Nominee',
+                            style: AppTextStyles.small(
+                                color: Colors.grey.shade500)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(nom.nomineeName, style: AppTextStyles.bodyBold(color: Colors.black87)),
+                    Text(nom.nomineeName,
+                        style: AppTextStyles.bodyBold(color: Colors.black87)),
                   ],
                 ),
               ),
@@ -454,13 +518,17 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.person_outline, size: 14, color: Colors.grey.shade400),
+                        Icon(Icons.person_outline,
+                            size: 14, color: Colors.grey.shade400),
                         const SizedBox(width: 6),
-                        Text('Nominated by', style: AppTextStyles.small(color: Colors.grey.shade500)),
+                        Text('Nominated by',
+                            style: AppTextStyles.small(
+                                color: Colors.grey.shade500)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(nom.nominatorName, style: AppTextStyles.bodyBold(color: Colors.black87)),
+                    Text(nom.nominatorName,
+                        style: AppTextStyles.bodyBold(color: Colors.black87)),
                   ],
                 ),
               ),
@@ -471,7 +539,8 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
             children: [
               Icon(Icons.access_time, size: 14, color: Colors.grey.shade400),
               const SizedBox(width: 6),
-              Text(AppDateFormatter.format(nom.createdAt), style: AppTextStyles.small(color: Colors.grey.shade500)),
+              Text(AppDateFormatter.format(nom.createdAt),
+                  style: AppTextStyles.small(color: Colors.grey.shade500)),
             ],
           ),
           if (isApproved || isRejected) ...[
@@ -488,35 +557,49 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView> with
                   Row(
                     children: [
                       Icon(
-                        isApproved ? Icons.check_circle_outline : Icons.cancel_outlined,
+                        isApproved
+                            ? Icons.check_circle_outline
+                            : Icons.cancel_outlined,
                         size: 16,
-                        color: isApproved ? Colors.green.shade700 : Colors.red.shade700,
+                        color: isApproved
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         isApproved ? 'Approved by' : 'Rejected by',
-                        style: AppTextStyles.smallBold(color: isApproved ? Colors.green.shade800 : Colors.red.shade800),
+                        style: AppTextStyles.smallBold(
+                            color: isApproved
+                                ? Colors.green.shade800
+                                : Colors.red.shade800),
                       ),
                       if (nom.reviewerName != null) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text('-', style: AppTextStyles.small(color: Colors.black54)),
+                          child: Text('-',
+                              style:
+                                  AppTextStyles.small(color: Colors.black54)),
                         ),
-                        Text(nom.reviewerName!, style: AppTextStyles.smallBold(color: Colors.black87)),
+                        Text(nom.reviewerName!,
+                            style:
+                                AppTextStyles.smallBold(color: Colors.black87)),
                       ],
                     ],
                   ),
                   Row(
                     children: [
-                      Icon(
-                        isApproved ? Icons.check : Icons.close, 
-                        size: 16, 
-                        color: isApproved ? Colors.green.shade700 : Colors.red.shade700
-                      ),
+                      Icon(isApproved ? Icons.check : Icons.close,
+                          size: 16,
+                          color: isApproved
+                              ? Colors.green.shade700
+                              : Colors.red.shade700),
                       const SizedBox(width: 4),
                       Text(
                         isApproved ? 'Approved' : 'Rejected',
-                        style: AppTextStyles.smallBold(color: isApproved ? Colors.green.shade700 : Colors.red.shade700),
+                        style: AppTextStyles.smallBold(
+                            color: isApproved
+                                ? Colors.green.shade700
+                                : Colors.red.shade700),
                       ),
                     ],
                   ),
