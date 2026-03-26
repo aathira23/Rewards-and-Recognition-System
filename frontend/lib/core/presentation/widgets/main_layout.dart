@@ -22,11 +22,15 @@ class MainLayout extends StatefulWidget {
     this.onLogout,
   });
 
+  static MainLayoutState? of(BuildContext context) {
+    return context.findAncestorStateOfType<MainLayoutState>();
+  }
+
   @override
-  State<MainLayout> createState() => _MainLayoutState();
+  State<MainLayout> createState() => MainLayoutState();
 }
 
-class _MainLayoutState extends State<MainLayout> {
+class MainLayoutState extends State<MainLayout> {
   late int _selectedIndex;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -54,12 +58,17 @@ class _MainLayoutState extends State<MainLayout> {
     super.dispose();
   }
 
-  void _selectIndex(int index) {
+  void selectIndex(int index) {
     setState(() => _selectedIndex = index);
     _removeProfileOverlay();
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
     }
+  }
+
+  void selectTabByTitle(String title) {
+    final idx = widget.destinations.indexWhere((d) => d.title == title);
+    if (idx != -1) selectIndex(idx);
   }
 
   // ── Profile overlay ────────────────────────────────────────────────
@@ -172,7 +181,7 @@ class _MainLayoutState extends State<MainLayout> {
           message: dest.title,
           preferBelow: false,
           child: InkWell(
-            onTap: () => _selectIndex(index),
+            onTap: () => selectIndex(index),
             splashColor: Colors.white.withValues(alpha: 0.1),
             highlightColor: Colors.white.withValues(alpha: 0.06),
             child: Padding(
@@ -237,7 +246,7 @@ class _MainLayoutState extends State<MainLayout> {
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _selectIndex(index),
+            onTap: () => selectIndex(index),
             borderRadius: BorderRadius.circular(8),
             splashColor: Colors.white.withValues(alpha: 0.1),
             child: Container(

@@ -281,7 +281,7 @@ class CompactSendPanel extends StatelessWidget {
   void _showBadgePicker(BuildContext outerContext) {
     showDialog(
       context: outerContext,
-      builder: (dialogCtx) => _BadgePickerDialog(
+      builder: (dialogCtx) => BadgePickerDialog(
         badges: badges,
         users: users,
         outerContext: outerContext,
@@ -488,22 +488,23 @@ class _StatusPills extends StatelessWidget {
   }
 }
 
-class _BadgePickerDialog extends StatefulWidget {
+class BadgePickerDialog extends StatefulWidget {
   final List<BadgeEntity> badges;
   final List<UserEntity> users;
   final BuildContext outerContext;
 
-  const _BadgePickerDialog({
+  const BadgePickerDialog({
+    super.key,
     required this.badges,
     required this.users,
     required this.outerContext,
   });
 
   @override
-  State<_BadgePickerDialog> createState() => _BadgePickerDialogState();
+  State<BadgePickerDialog> createState() => _BadgePickerDialogState();
 }
 
-class _BadgePickerDialogState extends State<_BadgePickerDialog> {
+class _BadgePickerDialogState extends State<BadgePickerDialog> {
   BadgeEntity? _selected;
 
   @override

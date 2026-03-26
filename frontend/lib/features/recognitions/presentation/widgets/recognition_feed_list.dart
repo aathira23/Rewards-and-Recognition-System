@@ -7,8 +7,15 @@ import '../../../../core/widgets/empty_state_view.dart';
 
 class RecognitionFeedList extends StatelessWidget {
   final List<RecognitionEntity> feed;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
-  const RecognitionFeedList({super.key, required this.feed});
+  const RecognitionFeedList({
+    super.key,
+    required this.feed,
+    this.shrinkWrap = false,
+    this.physics,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +30,8 @@ class RecognitionFeedList extends StatelessWidget {
 
     return ListView.builder(
       itemCount: feed.length,
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       itemBuilder: (context, index) {
         final r = feed[index];
         final type = (r.sourceType ?? 'ECARD').toUpperCase();

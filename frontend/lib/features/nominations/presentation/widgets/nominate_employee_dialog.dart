@@ -9,15 +9,19 @@ import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/utils/user_role_utils.dart';
 import '../../../../core/utils/award_utils.dart';
 
-/// Two-step dialog for nominating an employee for an award.
+/// Single-page nomination form with three numbered sections:
+/// 1. Choose Award Type  (2-column grid)
+/// 2. Select Nominee     (search + scrollable list)
+/// 3. Citation           (textarea)
 ///
-/// Step 1 — Pick an Award Type (card grid like badge selection).
-/// Step 2 — Search & select the nominee + write citation.
+/// Pass [initialAwardType] to pre-select an award and jump straight
+/// to section 2 when launched from [ActiveAwardsDialog].
 class NominateEmployeeDialog extends StatefulWidget {
   final List<AwardTypeEntity> awardTypes;
   final List<UserEntity> users;
   final NominationsBloc bloc;
   final UserEntity? currentUser;
+  final AwardTypeEntity? initialAwardType;
 
   const NominateEmployeeDialog({
     super.key,
@@ -25,15 +29,15 @@ class NominateEmployeeDialog extends StatefulWidget {
     required this.users,
     required this.bloc,
     this.currentUser,
+    this.initialAwardType,
   });
 
   @override
-  State<NominateEmployeeDialog> createState() => _NominateEmployeeDialogState();
+  State<NominateEmployeeDialog> createState() =>
+      _NominateEmployeeDialogState();
 }
 
 class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
-  int _step = 0; // 0 = award type, 1 = nominee + citation
-
   AwardTypeEntity? _selectedAwardType;
   UserEntity? _selectedUser;
 
@@ -44,59 +48,50 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   String _searchQuery = '';
 
   @override
+  void initState() {
+    super.initState();
+    _selectedAwardType = widget.initialAwardType;
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _citationController.dispose();
     super.dispose();
   }
 
+  // ── Eligibility ──────────────────────────────────────────────────────
   List<AwardTypeEntity> get _allowedAwardTypes {
-    if (widget.currentUser == null) return [];
+    if (widget.currentUser == null) return widget.awardTypes;
     return widget.awardTypes.where((type) {
       final rule = type.eligibilityRule;
       final role = widget.currentUser!.role;
-
       if (rule == 'PEER') return true;
-
-      if (rule == 'MANAGER_ONLY') {
-        return UserRoleUtils.isManagerLike(role);
-      }
-
-      if (rule == 'SENIOR_MGMT') {
-        return UserRoleUtils.isHR(
-            role); // SENIOR_MGMT in this app context maps to HR/ADMIN or Dept Head?
-        // Original logic: role == 'DEPT_HEAD' || role == 'HR' || role == 'ADMIN'
-      }
-
+      if (rule == 'MANAGER_ONLY') return UserRoleUtils.isManagerLike(role);
+      if (rule == 'SENIOR_MGMT') return UserRoleUtils.isHR(role);
       return true;
     }).toList();
   }
 
+  // ── User filtering ───────────────────────────────────────────────────
   List<UserEntity> get _filteredUsers {
     if (widget.currentUser == null) return [];
-
     final myId = widget.currentUser!.id;
     final myRole = widget.currentUser!.role;
     final myDeptId = widget.currentUser!.departmentId;
 
-    // 1. Filter based on role/eligibility
     Iterable<UserEntity> list = widget.users.where((u) => u.id != myId);
 
     if (UserRoleUtils.isManager(myRole)) {
-      // Managers can only nominate direct reports
       list = list.where((u) => u.managerId == myId);
     } else if (UserRoleUtils.isDepartmentHead(myRole)) {
-      // Dept Heads can only nominate employees within their department
       if (myDeptId != null) {
         list = list.where((u) => u.departmentId == myDeptId);
       }
     } else if (UserRoleUtils.isEmployee(myRole)) {
-      // Employees can only nominate other Employees (true Peer-to-Peer)
       list = list.where((u) => UserRoleUtils.isEmployee(u.role));
     }
-    // HR and ADMIN can nominate anyone (except self)
 
-    // 2. Filter by search query
     if (_searchQuery.isEmpty) return list.toList();
     return list
         .where((u) =>
@@ -105,128 +100,97 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         .toList();
   }
 
+  // ── UI ───────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AppDialog(
       title: 'Nominate an Employee',
       showCloseButton: false,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Step indicator ──
-          _buildStepIndicator(theme),
-          const SizedBox(height: 24),
-          // ── Body ──
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: _step == 0 ? _buildStep1(theme) : _buildStep2(theme),
-          ),
-        ],
-      ),
-      actions: _buildFooterActions(theme),
-    );
-  }
-
-  // ─── Header ─────────────────────────────────────────────────
-
-  // ─── Step indicator ─────────────────────────────────────────
-  Widget _buildStepIndicator(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 0),
-      child: Row(
-        children: [
-          _stepDot(theme, 0, 'Award Type'),
-          Expanded(
-            child: Container(
-              height: 2,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: _step >= 1
-                    ? theme.colorScheme.primary
-                    : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-          ),
-          _stepDot(theme, 1, 'Nominee'),
-        ],
-      ),
-    );
-  }
-
-  Widget _stepDot(ThemeData theme, int step, String label) {
-    final active = _step == step;
-    final done = _step > step;
-    return Column(
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: done || active
-                ? theme.colorScheme.primary
-                : Colors.grey.shade200,
-          ),
-          child: Center(
-            child: done
-                ? const Icon(Icons.check, color: Colors.white, size: 14)
-                : Text(
-                    '${step + 1}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: active ? Colors.white : Colors.grey.shade500,
-                    ),
-                  ),
-          ),
+      maxWidth: 640,
+      content: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _sectionLabel('1. Choose Award Type'),
+            const SizedBox(height: 12),
+            _buildAwardGrid(context),
+            const SizedBox(height: 24),
+            _sectionLabel('2. Select Nominee'),
+            const SizedBox(height: 12),
+            _buildNomineeSearch(context),
+            const SizedBox(height: 24),
+            _sectionLabel('3. Citation'),
+            const SizedBox(height: 12),
+            _buildCitationField(),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-            color: active ? theme.colorScheme.primary : Colors.grey.shade400,
+      ),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton.icon(
+          onPressed: _onSubmit,
+          icon: const Icon(Icons.send_rounded, size: 16),
+          label: const Text('Submit Nomination'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: (_selectedAwardType != null && _selectedUser != null)
+                ? const Color(0xFF2D2A70)
+                : Colors.grey.shade300,
+            foregroundColor: Colors.white,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            elevation: 0,
           ),
         ),
       ],
     );
   }
 
-  // ─── Step 1: Award Type grid ─────────────────────────────────
-  Widget _buildStep1(ThemeData theme) {
-    if (widget.awardTypes.isEmpty) {
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: AppTextStyles.bodyBold(color: Colors.black87),
+    );
+  }
+
+  // ── Section 1: Award Grid ────────────────────────────────────────────
+  Widget _buildAwardGrid(BuildContext context) {
+    final allowed = _allowedAwardTypes;
+    if (allowed.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
+        padding: EdgeInsets.symmetric(vertical: 32),
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    return Column(
-      key: const ValueKey('step1'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Text(
-          'Choose the award type',
-          style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 12),
-        ..._allowedAwardTypes
-            .map((type) => _buildAwardTypeCard(theme, type))
-            .toList(),
-      ],
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.55,
+      ),
+      itemCount: allowed.length,
+      itemBuilder: (_, i) => _buildAwardCard(context, allowed[i]),
     );
   }
 
-  Widget _buildAwardTypeCard(ThemeData theme, AwardTypeEntity type) {
+  Widget _buildAwardCard(BuildContext context, AwardTypeEntity type) {
+    final theme = Theme.of(context);
     final isSelected = _selectedAwardType?.id == type.id;
     final color = AwardUtils.getColor(type.awardKey);
 
@@ -234,84 +198,92 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
       onTap: () => setState(() => _selectedAwardType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withOpacity(0.06)
-              : Colors.grey.shade50,
+              ? theme.colorScheme.primary.withValues(alpha: 0.05)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color:
-                isSelected ? theme.colorScheme.primary : Colors.grey.shade200,
+            color: isSelected
+                ? theme.colorScheme.primary
+                : Colors.grey.shade200,
             width: isSelected ? 1.5 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Award icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(AwardUtils.getIcon(type.awardKey),
-                  color: color, size: 22),
-            ),
-            const SizedBox(width: 14),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    type.name,
-                    style: AppTextStyles.cardTitle(),
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  if (type.description != null &&
-                      type.description!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      type.description!,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _chip(
-                        icon: Icons.toll_rounded,
-                        label: '${type.points} pts',
-                        color: Colors.amber.shade700,
-                      ),
-                      const SizedBox(width: 6),
-                      _chip(
-                        icon: Icons.schedule_rounded,
-                        label: type.frequency,
-                        color: Colors.blueGrey,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                  child: Icon(AwardUtils.getIcon(type.awardKey),
+                      color: color, size: 16),
+                ),
+                const Spacer(),
+                // Radio indicator
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 150),
+                  child: isSelected
+                      ? Icon(Icons.radio_button_checked,
+                          key: const ValueKey('on'),
+                          color: theme.colorScheme.primary,
+                          size: 18)
+                      : Icon(Icons.radio_button_unchecked,
+                          key: const ValueKey('off'),
+                          color: Colors.grey.shade300,
+                          size: 18),
+                ),
+              ],
             ),
-            // Selection indicator
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              child: isSelected
-                  ? Icon(Icons.check_circle_rounded,
-                      key: const ValueKey('check'),
-                      color: theme.colorScheme.primary,
-                      size: 22)
-                  : Icon(Icons.radio_button_unchecked_rounded,
-                      key: const ValueKey('uncheck'),
-                      color: Colors.grey.shade300,
-                      size: 22),
+            const SizedBox(height: 8),
+            Text(
+              type.name,
+              style: AppTextStyles.cardTitle(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (type.description != null && type.description!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Expanded(
+                child: Text(
+                  type.description!,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ] else
+              const Spacer(),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _chip(
+                  label: '${type.points} pts',
+                  color: Colors.amber.shade700,
+                  bgColor: Colors.amber.shade50,
+                ),
+                const SizedBox(width: 6),
+                _chip(
+                  icon: Icons.schedule_rounded,
+                  label: type.frequency.toUpperCase(),
+                  color: Colors.grey.shade600,
+                  bgColor: Colors.grey.shade100,
+                ),
+              ],
             ),
           ],
         ),
@@ -319,288 +291,220 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     );
   }
 
-  Widget _chip(
-      {required IconData icon, required String label, required Color color}) {
+  Widget _chip({
+    IconData? icon,
+    required String label,
+    required Color color,
+    required Color bgColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 3),
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: color),
+            const SizedBox(width: 3),
+          ],
           Text(label,
               style: TextStyle(
-                  fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
-  // ─── Step 2: Employee search + citation ─────────────────
-  Widget _buildStep2(ThemeData theme) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        key: const ValueKey('step2'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          // Selected award summary pill
-          if (_selectedAwardType != null) _buildAwardSummaryPill(theme),
-          const SizedBox(height: 16),
-          // Employee search
-          Text(
-            'Select nominee',
-            style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search by name or email…',
-              prefixIcon: const Icon(Icons.search, size: 18),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 16),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v),
-          ),
-          const SizedBox(height: 6),
-          // User list
-          Container(
-            constraints: const BoxConstraints(maxHeight: 180),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: _filteredUsers.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Center(
-                      child: Text(
-                        _searchQuery.isEmpty
-                            ? 'No employees found'
-                            : 'No results for "$_searchQuery"',
-                        style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade400),
-                      ),
-                    ),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _filteredUsers.length,
-                    separatorBuilder: (_, __) => Divider(
-                        height: 1, thickness: 0.5, color: Colors.grey.shade100),
-                    itemBuilder: (ctx, i) {
-                      final user = _filteredUsers[i];
-                      final isSelected = _selectedUser?.id == user.id;
-                      return InkWell(
-                        onTap: () => setState(() {
-                          _selectedUser = user;
-                          _searchController.text = user.name;
-                          _searchQuery = '';
-                        }),
-                        borderRadius: i == 0
-                            ? const BorderRadius.vertical(
-                                top: Radius.circular(10))
-                            : i == _filteredUsers.length - 1
-                                ? const BorderRadius.vertical(
-                                    bottom: Radius.circular(10))
-                                : BorderRadius.zero,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          color: isSelected
-                              ? theme.colorScheme.primary.withOpacity(0.06)
-                              : Colors.transparent,
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 14,
-                                backgroundColor:
-                                    theme.colorScheme.primary.withOpacity(0.12),
-                                child: Text(
-                                  user.name.isNotEmpty
-                                      ? user.name[0].toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.primary),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(user.name,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500)),
-                                    Text(user.email,
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey.shade500)),
-                                  ],
-                                ),
-                              ),
-                              if (isSelected)
-                                Icon(Icons.check_circle_rounded,
-                                    color: theme.colorScheme.primary, size: 16),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          const SizedBox(height: 16),
-          // Citation
-          Text(
-            'Citation',
-            style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _citationController,
-            decoration: InputDecoration(
-              hintText: 'Describe why this person deserves this award…',
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              contentPadding: const EdgeInsets.all(14),
-            ),
-            maxLines: 4,
-            validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'Please provide a citation'
-                : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAwardSummaryPill(ThemeData theme) {
-    final type = _selectedAwardType!;
-    final color = AwardUtils.getColor(type.awardKey);
+  // ── Section 2: Nominee Search ────────────────────────────────────────
+  Widget _buildNomineeSearch(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(AwardUtils.getIcon(type.awardKey), color: color, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              type.name,
-              style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: color),
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by name or email...',
+                hintStyle:
+                    TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                prefixIcon:
+                    Icon(Icons.search, size: 18, color: Colors.grey.shade400),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear,
+                            size: 16, color: Colors.grey.shade400),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                            _selectedUser = null;
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                      color: theme.colorScheme.primary, width: 1.5),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              onChanged: (v) {
+                // If they start typing again, clear selection to show dropdown again
+                setState(() {
+                  _searchQuery = v;
+                  if (_selectedUser != null) {
+                    _selectedUser = null;
+                  }
+                });
+              },
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.amber.shade200),
+          // User list
+          if (_searchQuery.isNotEmpty && _selectedUser == null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: _filteredUsers.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                      child: Center(
+                        child: Text(
+                          _searchQuery.isEmpty
+                              ? 'No employees found'
+                              : 'No results for "$_searchQuery"',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey.shade400),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: _filteredUsers.length,
+                      separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          thickness: 0.5,
+                          color: Colors.grey.shade200),
+                      itemBuilder: (ctx, i) {
+                        final user = _filteredUsers[i];
+                        final isSel = _selectedUser?.id == user.id;
+                        return InkWell(
+                          onTap: () {
+                            // Close dropdown (by setting selected user), keep text in field
+                            setState(() {
+                              _selectedUser = user;
+                              _searchController.text = user.name;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            color: isSel
+                                ? theme.colorScheme.primary
+                                    .withValues(alpha: 0.06)
+                                : Colors.transparent,
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 15,
+                                  backgroundColor: theme.colorScheme.primary
+                                      .withValues(alpha: 0.12),
+                                  child: Text(
+                                    user.name.isNotEmpty
+                                        ? user.name[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.primary),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(user.name,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500)),
+                                ),
+                                if (isSel)
+                                  Icon(Icons.check_circle_rounded,
+                                      color: theme.colorScheme.primary,
+                                      size: 16),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
-            child: Text(
-              '${type.points} pts',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade700),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => setState(() {
-              _selectedAwardType = null;
-              _step = 0;
-            }),
-            child: Icon(Icons.edit_outlined,
-                size: 14, color: Colors.grey.shade400),
-          ),
         ],
       ),
     );
   }
 
-  // ─── Footer ──────────────────────────────────────────────────
-  List<Widget> _buildFooterActions(ThemeData theme) {
-    return [
-      if (_step == 1)
-        TextButton.icon(
-          onPressed: () => setState(() => _step = 0),
-          icon: const Icon(Icons.arrow_back, size: 16),
-          label: const Text('Back'),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey.shade600,
-          ),
+  // ── Section 3: Citation ──────────────────────────────────────────────
+  Widget _buildCitationField() {
+    return TextFormField(
+      controller: _citationController,
+      decoration: InputDecoration(
+        hintText: 'Describe why this person deserves this award...',
+        hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
-      OutlinedButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide:
+              BorderSide(color: const Color(0xFF2D2A70), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.all(14),
       ),
-      if (_step == 0)
-        ElevatedButton.icon(
-          onPressed: _selectedAwardType == null
-              ? null
-              : () => setState(() => _step = 1),
-          icon: const Icon(Icons.arrow_forward, size: 16),
-          label: const Text('Next'),
-        )
-      else
-        ElevatedButton.icon(
-          onPressed: _onSubmit,
-          icon: const Icon(Icons.send_rounded, size: 16),
-          label: const Text('Submit'),
-        ),
-    ];
+      maxLines: 4,
+      validator: (v) =>
+          (v == null || v.trim().isEmpty) ? 'Please provide a citation' : null,
+    );
   }
 
-  // ─── Submit ──────────────────────────────────────────────────
+  // ── Submit ───────────────────────────────────────────────────────────
   void _onSubmit() {
+    if (_selectedAwardType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an award type'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     if (_selectedUser == null) {
       AppSnackbar.warning(context, 'Please select a nominee');
       return;
