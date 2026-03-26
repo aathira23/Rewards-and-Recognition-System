@@ -195,10 +195,10 @@ class _DashboardPageState extends State<DashboardPage> {
         page: EmployeeRecognitionsPage(),
       ),
       NavDestination(
-        title: 'Points',
+        title: 'My Activity',
         heading: 'Points Overview',
         subtitle: 'Track your earnings and influence',
-        icon: Icons.account_balance_wallet_rounded,
+        icon: Icons.history_rounded,
         page: MyActivityPage(userRole: r),
       ),
       const NavDestination(
