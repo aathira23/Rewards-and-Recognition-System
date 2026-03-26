@@ -1,872 +1,368 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
-import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
+import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/recognition_entity.dart';
+import '../../../profile/domain/entities/user_entity.dart';
+import '../bloc/recognitions_bloc.dart';
+import '../bloc/recognitions_event.dart';
 
-/// Right-column panel for the recognitions page.
-/// Top: badge grid showing every badge the user has received with a count bubble.
-/// Bottom: scrollable received-recognitions feed (filterable by badge click).
-class BadgeSummaryPanel extends StatefulWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+//  Badges Earned Summary — horizontal badge icons with counts
+// ─────────────────────────────────────────────────────────────────────────────
+class BadgesEarnedSummary extends StatelessWidget {
   final AppreciationStatsEntity stats;
-
-  const BadgeSummaryPanel({super.key, required this.stats});
-
-  @override
-  State<BadgeSummaryPanel> createState() => _BadgeSummaryPanelState();
-}
-
-class _BadgeSummaryPanelState extends State<BadgeSummaryPanel> {
-  /// When non-null, the feed shows only recognitions for this badge name.
-  String? _filterBadge;
+  const BadgesEarnedSummary({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
-    final stats = widget.stats;
-    final badgeCounts = stats.badgeCounts; // Map<String, int>
-    final badgeIcons = stats.badgeIcons; // Map<String, String?>
+    final badgeCounts = stats.badgeCounts;
+    final badgeIcons = stats.badgeIcons;
+    final totalBadges = stats.receivedCount;
     final received = stats.receivedRecognitions ?? [];
-    final filtered = _filterBadge == null
-        ? received
-        : received.where((r) => r.badge?.name == _filterBadge).toList();
+    final totalPoints =
+        received.fold<int>(0, (sum, r) => sum + r.pointsAwarded);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ──────────────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    'Appreciations Received',
-                    style: AppTextStyles.pageTitle(),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (stats.receivedCount > 0) ...[
-                  const SizedBox(width: 8),
-                  _pill(
-                    context,
-                    '${stats.receivedCount} Total',
-                    Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.1),
-                    Theme.of(context).colorScheme.primary,
-                  ),
-                ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Badges Earned Summary',
+                    style: AppTextStyles.pageTitle()),
+              ),
+              if (totalBadges > 0) ...[
+                _pill('$totalBadges Total', const Color(0xFFEEF2FF),
+                    const Color(0xFF4636A6)),
+                const SizedBox(width: 8),
+                _pill('\u2605 +$totalPoints pts', const Color(0xFFFEF9C3),
+                    const Color(0xFFCA8A04)),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your badges and recognitions from colleagues',
-              style: AppTextStyles.body(color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-
-            // ── Badge grid ──────────────────────────────────────────
-            if (badgeCounts.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: Colors.grey.withValues(alpha: 0.08)),
-                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (badgeCounts.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
                     Icon(Icons.emoji_events_outlined,
                         size: 48, color: Colors.grey[300]),
                     const SizedBox(height: 8),
-                    Text(
-                      'No badges yet',
-                      style: AppTextStyles.small(color: Colors.grey[400]),
-                    ),
+                    Text('No badges earned yet',
+                        style: AppTextStyles.body(color: Colors.grey[400])),
                   ],
                 ),
-              )
-            else
-              Builder(builder: (context) {
-                // 1. Convert to entries and sort by name for stability
-                final sortedEntries = badgeCounts.entries.toList()
-                  ..sort((a, b) => a.key.compareTo(b.key));
-
-                // 2. Interleave to avoid same-colored badges being adjacent
-                final displayItems =
-                    BadgeUtils.interleaveByColor<MapEntry<String, int>>(
-                  sortedEntries,
-                  (e) => e.key,
-                );
-
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: displayItems.map((entry) {
-                    final name = entry.key;
-                    final count = entry.value;
-                    final iconUrl = badgeIcons[name];
-                    final selected = _filterBadge == name;
-                    return _BadgeCountChip(
-                      badgeName: name,
-                      count: count,
-                      iconUrl: iconUrl,
-                      isSelected: selected,
-                      onTap: () =>
-                          setState(() => _filterBadge = selected ? null : name),
-                    );
-                  }).toList(),
-                );
-              }),
-
-            const SizedBox(height: 20),
-            Divider(color: Colors.grey.shade100),
-            const SizedBox(height: 12),
-
-            // ── Feed header ─────────────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _filterBadge == null
-                        ? 'Received from colleagues'
-                        : 'Received — $_filterBadge',
-                    style: AppTextStyles.sectionTitle(),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (_filterBadge != null) ...[
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () => setState(() => _filterBadge = null),
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: badgeCounts.entries.map((entry) {
+                  final name = entry.key;
+                  final count = entry.value;
+                  final iconUrl = badgeIcons[name];
+                  final info = BadgeUtils.getDisplayInfo(name);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
                     child: Container(
+                      width: 130,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          vertical: 14, horizontal: 10),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border:
+                            Border.all(color: Colors.grey.shade200, width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Column(
                         children: [
-                          const Icon(Icons.close, size: 12, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text('Clear filter',
-                              style:
-                                  AppTextStyles.small(color: Colors.grey[600])),
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: info.color.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _badgeIcon(info, iconUrl, 26),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(name,
+                              style: AppTextStyles.smallMedium(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center),
+                          if (count > 0) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text('$count Received',
+                                  style: AppTextStyles.captionBold(
+                                      color: const Color(0xFF4636A6))),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ],
+                  );
+                }).toList(),
+              ),
             ),
-            const SizedBox(height: 12),
-
-            // ── Received feed (fixed height) ─────────────────────────
-            SizedBox(
-              height: 500,
-              child: filtered.isEmpty
-                  ? Center(
-                      child: EmptyStateView(
-                        icon: Icons.inbox_outlined,
-                        title: _filterBadge == null
-                            ? 'No recognitions yet'
-                            : 'No recognitions for this badge',
-                        padding: 32,
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: filtered.length,
-                      itemBuilder: (ctx, i) =>
-                          _ReceivedItem(recognition: filtered[i]),
-                    ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _pill(BuildContext context, String label, Color bg, Color textColor) {
+  Widget _pill(String label, Color bg, Color textColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyBold(color: textColor),
-      ),
-    );
-  }
-}
-
-/// A badge chip with a count bubble in the top-right corner.
-class _BadgeCountChip extends StatefulWidget {
-  final String badgeName;
-  final int count;
-  final String? iconUrl;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _BadgeCountChip({
-    required this.badgeName,
-    required this.count,
-    required this.iconUrl,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  State<_BadgeCountChip> createState() => _BadgeCountChipState();
-}
-
-class _BadgeCountChipState extends State<_BadgeCountChip> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final info = BadgeUtils.getDisplayInfo(widget.badgeName);
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 200),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: widget.isSelected
-                  ? info.color.withValues(alpha: 0.12)
-                  : (_hovered
-                      ? info.color.withValues(alpha: 0.06)
-                      : Colors.grey.shade50),
-              border: Border.all(
-                color: widget.isSelected
-                    ? info.color.withValues(alpha: 0.5)
-                    : (_hovered
-                        ? info.color.withValues(alpha: 0.3)
-                        : Colors.grey.shade200),
-                width: widget.isSelected ? 1.5 : 1,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Badge icon
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: info.color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(child: _badgeIcon(info, widget.iconUrl, 20)),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.badgeName,
-                      style: AppTextStyles.smallMedium(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      '${widget.count}×',
-                      style: AppTextStyles.captionBold(color: info.color),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(label, style: AppTextStyles.captionBold(color: textColor)),
     );
   }
 
   Widget _badgeIcon(BadgeDisplayInfo info, String? iconUrl, double size) {
     if (iconUrl != null) {
-      return Image.network(
-        iconUrl,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => info.hasEmoji
-            ? Text(info.emoji!, style: AppTextStyles.emoji())
-            : Icon(info.icon, color: info.color, size: size),
-      );
+      return Image.network(iconUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => _fallbackIcon(info, size));
     }
+    return _fallbackIcon(info, size);
+  }
+
+  Widget _fallbackIcon(BadgeDisplayInfo info, double size) {
     return info.hasEmoji
-        ? Text(info.emoji!, style: AppTextStyles.emoji())
+        ? Text(info.emoji!, style: TextStyle(fontSize: size * 0.7))
         : Icon(info.icon, color: info.color, size: size);
   }
 }
 
-/// A single received-recognition feed row — tappable to open the full ecard.
-class _ReceivedItem extends StatefulWidget {
-  final RecognitionEntity recognition;
-  const _ReceivedItem({required this.recognition});
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  My eCards Panel — carousel of received eCards
+// ─────────────────────────────────────────────────────────────────────────────
+class MyEcardsPanel extends StatefulWidget {
+  final AppreciationStatsEntity stats;
+  const MyEcardsPanel({super.key, required this.stats});
   @override
-  State<_ReceivedItem> createState() => _ReceivedItemState();
+  State<MyEcardsPanel> createState() => _MyEcardsPanelState();
 }
 
-class _ReceivedItemState extends State<_ReceivedItem> {
-  bool _hovered = false;
+class _MyEcardsPanelState extends State<MyEcardsPanel> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final recognition = widget.recognition;
+    final received = widget.stats.receivedRecognitions ?? [];
+    final cardCount = received.length;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: _cardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('My eCards', style: AppTextStyles.pageTitle()),
+          const SizedBox(height: 16),
+          if (received.isEmpty)
+            SizedBox(
+              height: 200,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.mail_outline_rounded,
+                        size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                    Text('No eCards received yet',
+                        style: AppTextStyles.body(color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+            )
+          else ...[
+            SizedBox(
+              height: 270,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: cardCount,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemBuilder: (context, index) =>
+                    _EcardPreviewCard(recognition: received[index]),
+              ),
+            ),
+            if (cardCount > 1) ...[
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  cardCount,
+                  (i) => Container(
+                    width: _currentPage == i ? 10 : 8,
+                    height: _currentPage == i ? 10 : 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: _currentPage == i
+                          ? const Color(0xFF4636A6)
+                          : Colors.grey[300],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EcardPreviewCard extends StatelessWidget {
+  final RecognitionEntity recognition;
+  const _EcardPreviewCard({required this.recognition});
+
+  @override
+  Widget build(BuildContext context) {
     final badgeName = recognition.badge?.name ?? 'Badge';
     final info = BadgeUtils.getDisplayInfo(badgeName);
-    final pillStyle = BadgeUtils.getPillStyle(badgeName);
+    final receiverName = recognition.receiverName ?? 'You';
     final senderName = recognition.senderName ?? 'Someone';
     final message = recognition.message;
     final timeAgo = _timeAgo(recognition.createdAt);
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: () => _showEcardDialog(context, recognition),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _hovered
-                ? info.color.withValues(alpha: 0.07)
-                : info.color.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: _hovered
-                  ? info.color.withValues(alpha: 0.3)
-                  : info.color.withValues(alpha: 0.12),
-            ),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: info.color.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    )
-                  ]
-                : [],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top row: sender avatar + name + badge pill
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: info.color.withValues(alpha: 0.15),
-                    child: Text(
-                      senderName.substring(0, 1).toUpperCase(),
-                      style: TextStyle(
-                        color: info.color,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: AppTextStyles.label(color: Colors.black87),
-                        children: [
-                          TextSpan(
-                              text: senderName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700)),
-                          TextSpan(
-                              text: ' appreciated you',
-                              style: TextStyle(color: Colors.grey[500])),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Badge pill
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 140),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: pillStyle.backgroundColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          recognition.badge?.iconUrl != null
-                              ? Image.network(
-                                  recognition.badge!.iconUrl!,
-                                  width: 12,
-                                  height: 12,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => Icon(
-                                      pillStyle.icon,
-                                      size: 12,
-                                      color: pillStyle.textColor),
-                                )
-                              : Icon(pillStyle.icon,
-                                  size: 12, color: pillStyle.textColor),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              badgeName.toUpperCase(),
-                              style: AppTextStyles.captionBold(
-                                  color: pillStyle.textColor),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              // Message
-              if (message != null && message.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '"$message"',
-                  style: AppTextStyles.small(color: Colors.grey[600])
-                      .copyWith(fontStyle: FontStyle.italic),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              const SizedBox(height: 6),
-              // Bottom row: time + points + tap hint
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 11, color: Colors.grey[400]),
-                  const SizedBox(width: 4),
-                  Text(timeAgo,
-                      style: AppTextStyles.small(color: Colors.grey[400])),
-                  if (recognition.pointsAwarded > 0) ...[
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: info.color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '+${recognition.pointsAwarded} pts',
-                        style: AppTextStyles.small(color: info.color)
-                            .copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+    final badgeColor = info.color;
 
-  void _showEcardDialog(BuildContext context, RecognitionEntity recognition) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (_) => _EcardModal(recognition: recognition),
-    );
-  }
-
-  String _timeAgo(DateTime date) {
-    final diff = DateTime.now().difference(date);
-    if (diff.inDays >= 7) return DateFormat.yMMMd().format(date);
-    if (diff.inDays >= 2) return '${diff.inDays} days ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inHours >= 1) return '${diff.inHours}h ago';
-    if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
-    return 'Just now';
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Full-screen ecard modal shown when a received recognition is tapped.
-// ─────────────────────────────────────────────────────────────────────────────
-class _EcardModal extends StatelessWidget {
-  final RecognitionEntity recognition;
-
-  const _EcardModal({required this.recognition});
-
-  @override
-  Widget build(BuildContext context) {
-    final badgeName = recognition.badge?.name ?? 'Badge';
-    final info = BadgeUtils.getDisplayInfo(badgeName);
-    final senderName = recognition.senderName ?? 'Someone';
-    final receiverName = recognition.receiverName ?? 'You';
-    final message = recognition.message;
-    final date = DateFormat('MMM d, yyyy').format(recognition.createdAt);
-    final points = recognition.pointsAwarded;
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 40,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── Top gradient banner with badge ─────────────────────
-              _CardBanner(
-                  info: info,
-                  badgeName: badgeName,
-                  iconUrl: recognition.badge?.iconUrl),
-
-              // ── Card body ─────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
-                child: Column(
-                  children: [
-                    // Recipient
-                    Text(
-                      receiverName,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF111827),
-                        letterSpacing: -0.3,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'has been recognised for',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w400,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Badge name pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: info.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                            color: info.color.withValues(alpha: 0.25)),
-                      ),
-                      child: Text(
-                        badgeName,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: info.color,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ),
-
-                    // Citation / message
-                    if (message != null && message.isNotEmpty) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: Colors.grey.withValues(alpha: 0.12)),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.format_quote_rounded,
-                                color: info.color, size: 22),
-                            const SizedBox(height: 6),
-                            Text(
-                              message,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF374151),
-                                height: 1.55,
-                                fontStyle: FontStyle.italic,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 20),
-                    Divider(color: Colors.grey.shade100),
-                    const SizedBox(height: 14),
-
-                    // ── Footer: from / date / points ────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // From
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'FROM',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.grey[400],
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor:
-                                        info.color.withValues(alpha: 0.15),
-                                    child: Text(
-                                      senderName.substring(0, 1).toUpperCase(),
-                                      style: TextStyle(
-                                        color: info.color,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      senderName,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF111827),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Date + Points stacked on right
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'DATE',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.grey[400],
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              date,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                            if (points > 0) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 5),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      info.color.withValues(alpha: 0.9),
-                                      info.color,
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '+$points pts',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Gradient top banner of the ecard — holds the large badge icon.
-class _CardBanner extends StatelessWidget {
-  final BadgeDisplayInfo info;
-  final String badgeName;
-  final String? iconUrl;
-
-  const _CardBanner({
-    required this.info,
-    required this.badgeName,
-    required this.iconUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      height: 160,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            info.color.withValues(alpha: 0.15),
-            info.color.withValues(alpha: 0.05),
-          ],
-        ),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.25)),
       ),
-      child: Stack(
+      child: Column(
         children: [
-          // Decorative circles
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: info.color.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -30,
-            left: -10,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: info.color.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          // Close button
-          Positioned(
-            top: 10,
-            right: 10,
-            child: IconButton(
-              icon:
-                  Icon(Icons.close_rounded, color: Colors.grey[500], size: 20),
-              onPressed: () => Navigator.of(context).pop(),
-              tooltip: 'Close',
-            ),
-          ),
-          // Badge icon in the centre
-          Center(
-            child: Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: info.color.withValues(alpha: 0.25),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
+          // ── Section 1: Badge color background ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            color: badgeColor.withValues(alpha: 0.08),
+            child: Column(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
                   ),
+                  child: Center(
+                    child: recognition.badge?.iconUrl != null
+                        ? Image.network(recognition.badge!.iconUrl!,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => _fallbackIcon(info))
+                        : _fallbackIcon(info),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text('${badgeName.toUpperCase()} !!!',
+                    style: AppTextStyles.captionBold(color: badgeColor)
+                        .copyWith(fontSize: 13, letterSpacing: 0.3),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          // ── Section 2: White background — TO, name, underline, message ──
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  Text('TO',
+                      style: AppTextStyles.caption(color: Colors.grey[400])
+                          .copyWith(fontSize: 11, letterSpacing: 1)),
+                  const SizedBox(height: 2),
+                  Text(receiverName,
+                      style: AppTextStyles.bodyBold().copyWith(fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 10),
+                  Divider(height: 1, thickness: 1, color: Colors.grey[200]),
+                  if (message != null && message.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text('"$message"',
+                        style: AppTextStyles.small(color: Colors.grey[600])
+                            .copyWith(fontStyle: FontStyle.italic, height: 1.4),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center),
+                  ],
+                  const Spacer(),
                 ],
               ),
-              child: Center(
-                child: iconUrl != null
-                    ? Image.network(
-                        iconUrl!,
-                        width: 52,
-                        height: 52,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => _fallbackIcon(),
-                      )
-                    : _fallbackIcon(),
-              ),
+            ),
+          ),
+          // ── Section 3: #F9FAFB background — sender & date ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            color: const Color(0xFFF9FAFB),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text('By - $senderName',
+                      style: AppTextStyles.small(color: Colors.grey[500]),
+                      overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: 8),
+                Text(timeAgo,
+                    style: AppTextStyles.small(color: Colors.grey[400])),
+              ],
             ),
           ),
         ],
@@ -874,9 +370,830 @@ class _CardBanner extends StatelessWidget {
     );
   }
 
-  Widget _fallbackIcon() {
+  Widget _fallbackIcon(BadgeDisplayInfo info) {
     return info.hasEmoji
-        ? Text(info.emoji!, style: const TextStyle(fontSize: 40))
-        : Icon(info.icon, color: info.color, size: 48);
+        ? Text(info.emoji!, style: const TextStyle(fontSize: 22))
+        : Icon(info.icon, color: info.color, size: 26);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feed Panel — compact activity feed
+// ─────────────────────────────────────────────────────────────────────────────
+class EcardFeedPanel extends StatelessWidget {
+  final List<RecognitionEntity> feed;
+  const EcardFeedPanel({super.key, required this.feed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: _cardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Feed', style: AppTextStyles.pageTitle()),
+          const SizedBox(height: 16),
+          if (feed.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text('No recent activity',
+                    style: AppTextStyles.body(color: Colors.grey[400])),
+              ),
+            )
+          else
+            SizedBox(
+              height: 230,
+              child: ListView.separated(
+                clipBehavior: Clip.hardEdge,
+                itemCount: feed.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (_, i) => _FeedItem(recognition: feed[i]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedItem extends StatelessWidget {
+  final RecognitionEntity recognition;
+  const _FeedItem({required this.recognition});
+
+  @override
+  Widget build(BuildContext context) {
+    final senderName = recognition.senderName ?? 'Someone';
+    final receiverName = recognition.receiverName ?? 'Someone';
+    final badgeName = recognition.badge?.name ?? 'Badge';
+    final info = BadgeUtils.getDisplayInfo(badgeName);
+    final timeAgo = _timeAgo(recognition.createdAt);
+    final points = recognition.pointsAwarded;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Avatar with points badge overlay
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: info.color.withValues(alpha: 0.12),
+                child: Text(senderName.substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                        color: info.color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14)),
+              ),
+              if (points > 0)
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: info.color,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Text('$points',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: AppTextStyles.small(color: Colors.black87)
+                        .copyWith(height: 1.4),
+                    children: [
+                      TextSpan(
+                          text: senderName,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      const TextSpan(text: ' sent a '),
+                      TextSpan(
+                          text: '$badgeName !!!',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, color: info.color)),
+                      const TextSpan(text: ' to '),
+                      TextSpan(
+                          text: receiverName,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(timeAgo,
+                    style: AppTextStyles.caption(color: Colors.grey[400])),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Send an eCard — badge grid panel
+// ─────────────────────────────────────────────────────────────────────────────
+class SendEcardPanel extends StatelessWidget {
+  final AppreciationStatsEntity? stats;
+  final List<BadgeEntity> badges;
+  final List<UserEntity> users;
+
+  const SendEcardPanel({
+    super.key,
+    required this.stats,
+    required this.badges,
+    required this.users,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sentCount = stats?.sentCount ?? 0;
+
+    final sortedBadges = List<BadgeEntity>.from(badges)
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final displayBadges = BadgeUtils.interleaveByColor<BadgeEntity>(
+      sortedBadges,
+      (b) => b.name,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: _cardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Send an eCard', style: AppTextStyles.pageTitle()),
+                    const SizedBox(height: 8),
+                    Text('Select a badge to start creating your eCard',
+                        style: AppTextStyles.body(color: Colors.grey[500])),
+                  ],
+                ),
+              ),
+              Text('$sentCount eCards Sent',
+                  style:
+                      AppTextStyles.bodyBold(color: const Color(0xFF4636A6))),
+            ],
+          ),
+          const SizedBox(height: 40),
+          // Badge grid
+          if (badges.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text('No badges available',
+                    style: AppTextStyles.body(color: Colors.grey[400])),
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 150,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 0.78,
+              ),
+              itemCount: displayBadges.length,
+              itemBuilder: (ctx, i) {
+                final badge = displayBadges[i];
+                return _SendBadgeCard(
+                  badge: badge,
+                  onTap: () => _openSendDialog(context, badge),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _openSendDialog(BuildContext context, BadgeEntity badge) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => _SendFormDialog(
+        badge: badge,
+        users: users,
+        outerContext: context,
+      ),
+    );
+  }
+}
+
+class _SendBadgeCard extends StatefulWidget {
+  final BadgeEntity badge;
+  final VoidCallback onTap;
+  const _SendBadgeCard({required this.badge, required this.onTap});
+  @override
+  State<_SendBadgeCard> createState() => _SendBadgeCardState();
+}
+
+class _SendBadgeCardState extends State<_SendBadgeCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final info = BadgeUtils.getDisplayInfo(widget.badge.name);
+    final pts = widget.badge.points;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          decoration: BoxDecoration(
+            color: _hovered ? info.color.withValues(alpha: 0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _hovered
+                  ? info.color.withValues(alpha: 0.4)
+                  : Colors.grey.shade200,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: info.color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: widget.badge.iconUrl != null
+                      ? Image.network(widget.badge.iconUrl!,
+                          width: 24,
+                          height: 24,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => _fallback(info))
+                      : _fallback(info),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text('${widget.badge.name} !!!',
+                  style: AppTextStyles.small(color: Colors.grey[800]),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 6),
+              if (pts != null && pts > 0)
+                Text('$pts pts',
+                    style: AppTextStyles.caption(color: Colors.grey[500])),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallback(BadgeDisplayInfo info) {
+    return info.hasEmoji
+        ? Text(info.emoji!, style: const TextStyle(fontSize: 18))
+        : Icon(info.icon, color: info.color, size: 22);
+  }
+}
+
+class _SendFormDialog extends StatefulWidget {
+  final BadgeEntity badge;
+  final List<UserEntity> users;
+  final BuildContext outerContext;
+  const _SendFormDialog({
+    required this.badge,
+    required this.users,
+    required this.outerContext,
+  });
+  @override
+  State<_SendFormDialog> createState() => _SendFormDialogState();
+}
+
+class _SendFormDialogState extends State<_SendFormDialog> {
+  int? _receiverId;
+  String? _message;
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = widget.badge;
+    final info = BadgeUtils.getDisplayInfo(badge.name);
+
+    return AppDialog(
+      title: 'Send Appreciation',
+      maxWidth: 500,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Selected badge banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: info.color.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: info.color.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: info.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: badge.iconUrl != null
+                        ? Image.network(badge.iconUrl!,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) =>
+                                Icon(info.icon, color: info.color, size: 24))
+                        : (info.hasEmoji
+                            ? Text(info.emoji!,
+                                style: const TextStyle(fontSize: 20))
+                            : Icon(info.icon, color: info.color, size: 24)),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(badge.name,
+                        style: AppTextStyles.sectionHeader(color: info.color)),
+                    if (badge.points != null && badge.points! > 0)
+                      Text('+${badge.points} pts',
+                          style: AppTextStyles.caption(color: info.color)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Recipient
+          Text('Recipient', style: AppTextStyles.sectionTitle()),
+          const SizedBox(height: 8),
+          DropdownMenu<int>(
+            expandedInsets: EdgeInsets.zero,
+            menuHeight: 250,
+            inputDecorationTheme: InputDecorationTheme(
+              hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            hintText: 'Search employee name...',
+            dropdownMenuEntries: widget.users.map((u) {
+              return DropdownMenuEntry<int>(value: u.id, label: u.name);
+            }).toList(),
+            onSelected: (v) => _receiverId = v,
+            textStyle: AppTextStyles.body(),
+          ),
+          const SizedBox(height: 20),
+          // Message
+          Text('Message (optional)', style: AppTextStyles.sectionTitle()),
+          const SizedBox(height: 8),
+          TextField(
+            style: AppTextStyles.body(),
+            decoration: InputDecoration(
+              hintText: 'Tell them why they deserve this recognition…',
+              hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+            maxLines: 4,
+            onChanged: (v) => _message = v,
+          ),
+        ],
+      ),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            if (_receiverId == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please select a recipient.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+            widget.outerContext
+                .read<RecognitionsBloc>()
+                .add(SendRecognitionRequested(
+                  receiverId: _receiverId!,
+                  badgeId: widget.badge.id,
+                  message: _message,
+                ));
+            Navigator.pop(context);
+          },
+          icon: const Icon(Icons.send_rounded, size: 16),
+          label: const Text('Send Recognition'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  eCard History Table — All / Received / Sent tabs
+// ─────────────────────────────────────────────────────────────────────────────
+class EcardHistoryTable extends StatefulWidget {
+  final AppreciationStatsEntity stats;
+  const EcardHistoryTable({super.key, required this.stats});
+  @override
+  State<EcardHistoryTable> createState() => _EcardHistoryTableState();
+}
+
+class _EcardHistoryTableState extends State<EcardHistoryTable> {
+  int _selectedTab = 0; // 0=All, 1=Received, 2=Sent
+  int _page = 1;
+  static const _perPage = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    final received = (widget.stats.receivedRecognitions ?? [])
+        .map((r) => _HistoryEntry(type: 'RECEIVED', recognition: r))
+        .toList();
+    final sent = (widget.stats.sentRecognitions ?? [])
+        .map((r) => _HistoryEntry(type: 'SENT', recognition: r))
+        .toList();
+
+    List<_HistoryEntry> allItems;
+    switch (_selectedTab) {
+      case 1:
+        allItems = received;
+        break;
+      case 2:
+        allItems = sent;
+        break;
+      default:
+        allItems = [...received, ...sent]..sort((a, b) =>
+            b.recognition.createdAt.compareTo(a.recognition.createdAt));
+    }
+
+    final total = allItems.length;
+    final startIndex = (_page - 1) * _perPage;
+    final endIndex = (startIndex + _perPage).clamp(0, total);
+    final pageItems =
+        total > 0 ? allItems.sublist(startIndex, endIndex) : <_HistoryEntry>[];
+    final hasPrev = _page > 1;
+    final hasNext = endIndex < total;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: _cardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with tabs
+          Row(
+            children: [
+              Text('eCard History', style: AppTextStyles.pageTitle()),
+              const Spacer(),
+              _tabBtn('All', 0),
+              const SizedBox(width: 4),
+              _tabBtn('Received', 1),
+              const SizedBox(width: 4),
+              _tabBtn('Sent', 2),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Table header
+          _headerRow(),
+          const SizedBox(height: 4),
+          if (pageItems.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                  child: Text('No eCards yet',
+                      style: AppTextStyles.body(color: Colors.grey[400]))),
+            )
+          else
+            ...pageItems.map(_buildRow),
+          // Pagination footer
+          if (total > _perPage) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey.shade100)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Showing ${startIndex + 1}\u2013$endIndex of $total records',
+                    style: AppTextStyles.caption(color: Colors.grey[500]),
+                  ),
+                  const Spacer(),
+                  _PageBtn(
+                    icon: Icons.chevron_left,
+                    enabled: hasPrev,
+                    onTap: hasPrev ? () => setState(() => _page--) : null,
+                  ),
+                  const SizedBox(width: 6),
+                  _PageBtn(
+                    icon: Icons.chevron_right,
+                    enabled: hasNext,
+                    onTap: hasNext ? () => setState(() => _page++) : null,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _tabBtn(String label, int index) {
+    final selected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _selectedTab = index;
+        _page = 1;
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF4F46E5) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: selected ? const Color(0xFF4F46E5) : Colors.grey.shade300),
+        ),
+        child: Text(label,
+            style: AppTextStyles.smallMedium(
+                color: selected ? Colors.white : Colors.grey[600])),
+      ),
+    );
+  }
+
+  Widget _headerRow() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                  width: w * 0.10, child: Text('TYPE', style: _headerStyle())),
+              SizedBox(
+                  width: w * 0.28,
+                  child: Text('BADGE (ECARD)', style: _headerStyle())),
+              SizedBox(
+                  width: w * 0.28,
+                  child: Text('PERSON', style: _headerStyle())),
+              SizedBox(
+                  width: w * 0.18, child: Text('DATE', style: _headerStyle())),
+              SizedBox(
+                  width: w * 0.10,
+                  child: Text('POINTS',
+                      style: _headerStyle(), textAlign: TextAlign.right)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRow(_HistoryEntry item) {
+    final r = item.recognition;
+    final badgeName = r.badge?.name ?? 'Badge';
+    final info = BadgeUtils.getDisplayInfo(badgeName);
+    final pillStyle = BadgeUtils.getPillStyle(badgeName);
+    final isReceived = item.type == 'RECEIVED';
+    final personLabel = isReceived
+        ? 'From:${r.senderName ?? "Someone"}'
+        : 'To:${r.receiverName ?? "Someone"}';
+    final date = DateFormat('MMM d, yyyy').format(r.createdAt);
+    final points = r.pointsAwarded;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+          ),
+          child: Row(
+            children: [
+              // Type pill
+              SizedBox(
+                width: w * 0.10,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isReceived
+                          ? const Color(0xFFDCFCE7)
+                          : const Color(0xFFDBEAFE),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      item.type,
+                      style: AppTextStyles.captionBold(
+                          color: isReceived
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFF2563EB)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+              // Badge
+              SizedBox(
+                width: w * 0.28,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: info.color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: r.badge?.iconUrl != null
+                            ? Image.network(r.badge!.iconUrl!,
+                                width: 16,
+                                height: 16,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Icon(
+                                    pillStyle.icon,
+                                    size: 14,
+                                    color: info.color))
+                            : Icon(pillStyle.icon, size: 14, color: info.color),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(badgeName,
+                          style: AppTextStyles.smallMedium(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ),
+              // Person
+              SizedBox(
+                width: w * 0.28,
+                child: Text(personLabel,
+                    style: AppTextStyles.small(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              // Date
+              SizedBox(
+                  width: w * 0.18,
+                  child: Text(date,
+                      style: AppTextStyles.small(color: Colors.grey[600]))),
+              // Points
+              SizedBox(
+                width: w * 0.10,
+                child: Text(
+                  isReceived && points > 0 ? '+$points' : '-',
+                  style: AppTextStyles.smallMedium(
+                      color: isReceived && points > 0
+                          ? const Color(0xFF16A34A)
+                          : Colors.grey[400]),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  TextStyle _headerStyle() => AppTextStyles.captionBold(color: Colors.grey[500])
+      .copyWith(letterSpacing: 0.5);
+}
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onTap;
+  const _PageBtn({required this.icon, required this.enabled, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(icon,
+            size: 18,
+            color: enabled ? Colors.grey.shade700 : Colors.grey.shade300),
+      ),
+    );
+  }
+}
+
+class _HistoryEntry {
+  final String type;
+  final RecognitionEntity recognition;
+  _HistoryEntry({required this.type, required this.recognition});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared helpers
+// ─────────────────────────────────────────────────────────────────────────────
+BoxDecoration _cardDecoration(BuildContext context) => BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.03),
+          blurRadius: 15,
+          offset: const Offset(0, 5),
+        ),
+      ],
+    );
+
+String _timeAgo(DateTime date) {
+  final diff = DateTime.now().difference(date);
+  if (diff.inDays >= 7) return DateFormat.yMMMd().format(date);
+  if (diff.inDays >= 2) return '${diff.inDays} days ago';
+  if (diff.inDays == 1) return 'Yesterday';
+  if (diff.inHours >= 1) return '${diff.inHours}h ago';
+  if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
+  return 'Just now';
 }

@@ -8,7 +8,6 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart' as nom;
 import '../bloc/nominations_state.dart';
-import '../widgets/nominate_employee_dialog.dart';
 import '../widgets/active_awards_dialog.dart';
 import '../widgets/trophy_card.dart';
 import '../../domain/entities/nomination_entity.dart';

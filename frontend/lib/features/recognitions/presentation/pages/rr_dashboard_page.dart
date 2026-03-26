@@ -459,7 +459,9 @@ class _RRDashboardView extends StatelessWidget {
                     Icons.favorite_outline_rounded,
                     const Color(0xFFF0F9FF),
                     const Color(0xFF0284C7),
-                    constraints.maxWidth / 2 - 24),
+                    constraints.maxWidth / 2 - 24,
+                    onTap: () =>
+                        MainLayout.of(context)?.selectTabByTitle('eCards')),
                 _buildDynamicModuleCard(
                     context,
                     'Leaderboard',
@@ -527,7 +529,9 @@ class _RRDashboardView extends StatelessWidget {
                         'Spread positivity & appreciate peers!',
                         Icons.favorite_outline_rounded,
                         const Color(0xFFF0F9FF),
-                        const Color(0xFF0284C7))),
+                        const Color(0xFF0284C7),
+                        onTap: () => MainLayout.of(context)
+                            ?.selectTabByTitle('eCards'))),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildModuleCard(

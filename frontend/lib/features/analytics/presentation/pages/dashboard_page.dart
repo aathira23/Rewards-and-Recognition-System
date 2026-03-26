@@ -5,8 +5,7 @@ import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/rr_dashboard_page.dart';
-import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
-import 'package:rr_frontend/features/points/presentation/pages/leaderboard_page.dart';
+import 'package:rr_frontend/features/points/presentation/pages/points_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
 import 'package:rr_frontend/features/nominations/presentation/pages/employee_nominations_page.dart';
 import 'package:rr_frontend/features/nominations/presentation/pages/manager_approvals_page.dart';
@@ -131,6 +130,13 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.card_giftcard_rounded,
           page: const RRDashboardPage(),
         ),
+        const NavDestination(
+          title: 'eCards',
+          heading: 'eCards',
+          subtitle: 'Spread positivity & appreciate peers!',
+          icon: Icons.favorite_outline_rounded,
+          page: EmployeeRecognitionsPage(),
+        ),
         NavDestination(
           title: 'My Activity',
           heading: 'My Activity',
@@ -178,12 +184,12 @@ class _DashboardPageState extends State<DashboardPage> {
         icon: Icons.card_giftcard_rounded,
         page: const RRDashboardPage(),
       ),
-      const NavDestination(
-        title: 'My Activity',
-        heading: 'My Activity',
-        subtitle: 'Track your point earnings, redemptions, and conversions',
-        icon: Icons.history_rounded,
-        page: MyActivityPage(),
+      NavDestination(
+        title: 'Points',
+        heading: 'Points Overview',
+        subtitle: 'Track your earnings and influence',
+        icon: Icons.account_balance_wallet_rounded,
+        page: PointsPage(userRole: r),
       ),
       const NavDestination(
         title: 'Rewards',
