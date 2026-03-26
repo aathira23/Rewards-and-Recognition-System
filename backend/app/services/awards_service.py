@@ -609,7 +609,7 @@ class AwardsService:
                 if not ap:
                     continue
                 # Always set reviewer name and level from the latest approval record
-                award.reviewer_name = ap.approver.name if ap.approver else None
+                award.reviewer_name = _approvers_map.get(ap.approver_id) if ap.approver_id else None
                 award.reviewer_level = ap.approval_level
                 c = ap.comments or ''
                 cl = c.lower()

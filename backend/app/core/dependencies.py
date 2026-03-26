@@ -16,7 +16,7 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -57,7 +57,15 @@ def _get_current_user_local(db: Session, token: str):
     from app.models.users import User
 
     user_id = _get_current_user_id_local(token)
-    user = db.query(User).filter(User.id == user_id).first()
+    user = (
+        db.query(User)
+        .options(
+            joinedload(User.department),
+            joinedload(User.manager),
+        )
+        .filter(User.id == user_id)
+        .first()
+    )
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -141,13 +149,12 @@ async def get_current_user_id(
 
 async def get_optional_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
 ):
     """
     Attempt to return current user; return None if token is missing or invalid.
     Used by endpoints that allow unauthenticated access (e.g. first user creation).
     """
     try:
-        return await get_current_user(token=token, db=db)
+        return await get_current_user(token=token)
     except HTTPException:
         return None
