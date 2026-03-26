@@ -104,20 +104,19 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
         ),
-        const NavDestination(
-          title: 'Leaderboard',
-          heading: 'Leaderboard',
-          subtitle: 'Rise to the top & inspire others!',
-          icon: Icons.military_tech_outlined,
-          page: LeaderboardPage(),
-          isHidden: true,
-        ),
         NavDestination(
           title: 'My Activity',
           heading: 'My Activity',
           subtitle: 'Track your point earnings, redemptions, and conversions',
           icon: Icons.history_rounded,
           page: MyActivityPage(userRole: r),
+        ),
+        const NavDestination(
+          title: 'Leaderboard',
+          heading: 'Leaderboard',
+          subtitle: 'Rise to the top & inspire others!',
+          icon: Icons.military_tech_outlined,
+          page: LeaderboardPage(),
           isHidden: true,
         ),
       ];
@@ -134,11 +133,11 @@ class _DashboardPageState extends State<DashboardPage> {
           page: const RRDashboardPage(),
         ),
         NavDestination(
-          title: 'Points',
-          heading: 'Points Overview',
-          subtitle: 'Track your earnings and influence',
-          icon: Icons.account_balance_wallet_rounded,
-          page: PointsPage(userRole: r),
+          title: 'My Activity',
+          heading: 'My Activity',
+          subtitle: 'Track your point earnings, redemptions, and conversions',
+          icon: Icons.history_rounded,
+          page: MyActivityPage(userRole: r),
         ),
         const NavDestination(
           title: 'Rewards',
@@ -168,14 +167,6 @@ class _DashboardPageState extends State<DashboardPage> {
           page: LeaderboardPage(),
           isHidden: true,
         ),
-        NavDestination(
-          title: 'My Activity',
-          heading: 'My Activity',
-          subtitle: 'Track your point earnings, redemptions, and conversions',
-          icon: Icons.history_rounded,
-          page: MyActivityPage(userRole: r),
-          isHidden: true,
-        ),
       ];
     }
 
@@ -188,12 +179,12 @@ class _DashboardPageState extends State<DashboardPage> {
         icon: Icons.card_giftcard_rounded,
         page: const RRDashboardPage(),
       ),
-      NavDestination(
-        title: 'Points',
-        heading: 'Points Overview',
-        subtitle: 'Track your earnings and influence',
-        icon: Icons.account_balance_wallet_rounded,
-        page: PointsPage(userRole: r),
+      const NavDestination(
+        title: 'My Activity',
+        heading: 'My Activity',
+        subtitle: 'Track your point earnings, redemptions, and conversions',
+        icon: Icons.history_rounded,
+        page: MyActivityPage(),
       ),
       const NavDestination(
         title: 'Rewards',
@@ -214,14 +205,6 @@ class _DashboardPageState extends State<DashboardPage> {
         subtitle: 'Rise to the top & inspire others!',
         icon: Icons.military_tech_outlined,
         page: LeaderboardPage(),
-        isHidden: true,
-      ),
-      const NavDestination(
-        title: 'My Activity',
-        heading: 'My Activity',
-        subtitle: 'Track your point earnings, redemptions, and conversions',
-        icon: Icons.history_rounded,
-        page: MyActivityPage(),
         isHidden: true,
       ),
     ];
