@@ -6,7 +6,6 @@ import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/rr_dashboard_page.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/employee_recognitions_page.dart';
-import 'package:rr_frontend/features/points/presentation/pages/points_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/leaderboard_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
@@ -192,7 +191,7 @@ class _DashboardPageState extends State<DashboardPage> {
         heading: 'Points Overview',
         subtitle: 'Track your earnings and influence',
         icon: Icons.account_balance_wallet_rounded,
-        page: PointsPage(userRole: r),
+        page: MyActivityPage(userRole: r),
       ),
       const NavDestination(
         title: 'Rewards',
