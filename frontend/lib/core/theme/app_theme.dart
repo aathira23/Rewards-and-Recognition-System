@@ -6,8 +6,8 @@ import 'app_text_styles.dart';
 
 class AppTheme {
   // Brand Colors
-  static const Color brandBlue = Color(0xFF1E56BD);
-  static const Color brandSecondary = Color(0xFF15439D);
+  static const Color brandBlue = Color(0xFF2D2A70);
+  static const Color brandSecondary = Color(0xFF1A1845);
 
   // Surface Colors - Light
   static const Color surfaceWhite = Color(0xFFFFFFFF);

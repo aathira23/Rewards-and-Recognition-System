@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/app_snackbar.dart';
@@ -9,8 +8,8 @@ import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
 import '../bloc/recognitions_state.dart';
 import '../widgets/badge_summary_panel.dart';
-import '../widgets/compact_send_panel.dart';
-import '../widgets/recognition_feed_list.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
+import '../../../../core/theme/app_text_styles.dart';
 
 class EmployeeRecognitionsPage extends StatelessWidget {
   const EmployeeRecognitionsPage({super.key});
@@ -63,73 +62,81 @@ class EmployeeRecognitionsPage extends StatelessWidget {
                   builder: (context, constraints) {
                     final isWide = constraints.maxWidth >= 768;
 
-                    // ── Left column ───────────────────────────────────
-                    // 1. Compact send panel (collapsed — badges hidden)
-                    // 2. Org-wide recognition feed
-                    final leftColumn = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CompactSendPanel(
-                          stats: state.stats,
-                          badges: state.badges,
-                          users: state.users,
-                        ),
-                        const SizedBox(height: 24),
-                        _OrgFeedPanel(
-                          feed: state.feed,
-                          isLoading:
-                              state.status == RecognitionStatus.loading &&
-                                  state.feed.isEmpty,
-                          height: isWide
-                              ? MediaQuery.of(context).size.height * 0.56
-                              : 400,
-                        ),
-                      ],
-                    );
-
-                    // ── Right column ──────────────────────────────────
-                    // 1. Badge grid with per-badge count overlays
-                    // 2. Personal received recognitions feed (filterable)
-                    final rightColumn = state.stats != null
-                        ? BadgeSummaryPanel(stats: state.stats!)
-                        : _loadingCard(context);
-
                     if (isWide) {
-                      return Row(
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Left: send + org feed  (35 %)
-                          Expanded(flex: 50, child: leftColumn),
-                          const SizedBox(width: 24),
-                          // Right: badge grid + received feed  (50 %)
-                          Expanded(flex: 50, child: rightColumn),
+                          // Page header
+                          _buildPageHeader(context),
+                          const SizedBox(height: 24),
+                          // Two-column layout
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left column
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  children: [
+                                    if (state.stats != null)
+                                      BadgesEarnedSummary(stats: state.stats!)
+                                    else
+                                      _loadingCard(context),
+                                    const SizedBox(height: 24),
+                                    SendEcardPanel(
+                                      stats: state.stats,
+                                      badges: state.badges,
+                                      users: state.users,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    if (state.stats != null)
+                                      EcardHistoryTable(stats: state.stats!),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              // Right column
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  children: [
+                                    if (state.stats != null)
+                                      MyEcardsPanel(stats: state.stats!)
+                                    else
+                                      _loadingCard(context),
+                                    const SizedBox(height: 24),
+                                    EcardFeedPanel(feed: state.feed),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       );
                     }
 
-                    // Narrow / mobile – stack vertically
+                    // Narrow / mobile — stack vertically
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Send panel on top
-                        CompactSendPanel(
+                        _buildPageHeader(context),
+                        const SizedBox(height: 24),
+                        if (state.stats != null)
+                          BadgesEarnedSummary(stats: state.stats!),
+                        const SizedBox(height: 24),
+                        if (state.stats != null)
+                          MyEcardsPanel(stats: state.stats!),
+                        const SizedBox(height: 24),
+                        SendEcardPanel(
                           stats: state.stats,
                           badges: state.badges,
                           users: state.users,
                         ),
                         const SizedBox(height: 24),
-                        // Badge grid + received feed
-                        if (state.stats != null)
-                          BadgeSummaryPanel(stats: state.stats!),
+                        EcardFeedPanel(feed: state.feed),
                         const SizedBox(height: 24),
-                        // Org feed at the bottom
-                        _OrgFeedPanel(
-                          feed: state.feed,
-                          isLoading:
-                              state.status == RecognitionStatus.loading &&
-                                  state.feed.isEmpty,
-                          height: 400,
-                        ),
+                        if (state.stats != null)
+                          EcardHistoryTable(stats: state.stats!),
                       ],
                     );
                   },
@@ -139,6 +146,43 @@ class EmployeeRecognitionsPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPageHeader(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => MainLayout.of(context)?.selectTabByTitle('Recognitions'),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_back_rounded,
+                    size: 20, color: Colors.black87),
+                const SizedBox(width: 8),
+                Text('Back to Dashboard',
+                    style: AppTextStyles.bodyBold(color: Colors.black87)),
+              ],
+            ),
+          ),
+        ),
+        Text('eCards',
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(
+          'Send a quick thank-you and celebrate your teammates with personalized eCards.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 
@@ -152,65 +196,6 @@ class EmployeeRecognitionsPage extends StatelessWidget {
       child: const SizedBox(
         height: 200,
         child: Center(child: CircularProgressIndicator()),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Org-wide recognition feed panel
-// ─────────────────────────────────────────────────────────────────────────────
-class _OrgFeedPanel extends StatelessWidget {
-  final List feed;
-  final bool isLoading;
-  final double height;
-
-  const _OrgFeedPanel({
-    required this.feed,
-    required this.isLoading,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Recognition Feed',
-            style: AppTextStyles.sectionHeader(),
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Latest appreciations across the organisation',
-            style: AppTextStyles.body(color: Colors.grey),
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : RecognitionFeedList(
-                    feed: feed.cast(),
-                  ),
-          ),
-        ],
       ),
     );
   }

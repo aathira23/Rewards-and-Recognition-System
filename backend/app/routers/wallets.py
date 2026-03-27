@@ -38,6 +38,15 @@ def get_manager_wallet(
         from app.utils.enums import WalletType
         wallet = service.get_or_create_wallet(current_user.id, WalletType.MANAGER)
 
+    from sqlalchemy.sql import func
+    from app.models.wallet_funding import WalletFunding
+    allocated = db.query(func.sum(WalletFunding.points)).filter(
+        WalletFunding.manager_wallet_id == wallet.id
+    ).scalar() or 0
+    
+    wallet.total_allocated = allocated
+    wallet.total_rewarded = allocated - wallet.balance
+
     data = WalletResponse.model_validate(wallet)
     return success(data=data, message=SUCCESS_WALLET_RETRIEVED)
 

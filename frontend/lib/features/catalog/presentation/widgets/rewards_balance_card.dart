@@ -90,14 +90,14 @@ class RewardsBalanceCard extends StatelessWidget {
                   theme.colorScheme.secondary.withValues(alpha: 0.7),
                 ]
               : [
-                  const Color(0xFF1E56BD),
-                  const Color(0xFF3B7BF2),
+                  const Color(0xFF2D2A70),
+                  const Color(0xFF4C49A2),
                 ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : theme.colorScheme.primary)
+            color: (isDark ? Colors.black : const Color(0xFF2D2A70))
                 .withValues(alpha: 0.25),
             blurRadius: 25,
             offset: const Offset(0, 12),

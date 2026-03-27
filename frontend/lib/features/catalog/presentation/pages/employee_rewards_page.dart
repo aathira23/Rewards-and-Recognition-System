@@ -19,6 +19,7 @@ import '../bloc/catalog_state.dart';
 import '../widgets/rewards_balance_card.dart';
 import '../widgets/catalog_tab_navigation.dart';
 import '../widgets/reward_item_card.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 
 class EmployeeRewardsPage extends StatefulWidget {
   const EmployeeRewardsPage({super.key});
@@ -105,7 +106,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 SliverPadding(
                   padding: EdgeInsets.symmetric(
                     horizontal: Responsive.pagePadding(context),
-                    vertical: Responsive.pagePadding(context) + 8,
+                    vertical: Responsive.pagePadding(context),
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
@@ -120,6 +121,26 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    GestureDetector(
+                                      onTap: () => MainLayout.of(context)
+                                          ?.selectTabByTitle('Recognitions'),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12.0),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.arrow_back_rounded,
+                                                size: 20,
+                                                color: Colors.black87),
+                                            const SizedBox(width: 8),
+                                            Text('Back to Dashboard',
+                                                style: AppTextStyles.bodyBold(
+                                                    color: Colors.black87)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                     const Text(
                                       'Rewards Store',
                                       style: TextStyle(
@@ -291,7 +312,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   border: Border.all(color: const Color(0xFFE8EAF6)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1E56BD).withValues(alpha: 0.06),
+                      color: const Color(0xFF2D2A70).withValues(alpha: 0.06),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -410,12 +431,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isPayroll
-                                          ? const Color(0xFF3B31A5)
+                                          ? const Color(0xFF2D2A70)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isPayroll
-                                            ? const Color(0xFF3B31A5)
+                                            ? const Color(0xFF2D2A70)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -455,12 +476,12 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                         vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isPayroll
-                                          ? const Color(0xFF3B31A5)
+                                          ? const Color(0xFF2D2A70)
                                           : const Color(0xFFF7F8FD),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: !isPayroll
-                                            ? const Color(0xFF3B31A5)
+                                            ? const Color(0xFF2D2A70)
                                             : const Color(0xFFE8EAF6),
                                       ),
                                     ),
@@ -549,7 +570,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                             child: ElevatedButton(
                               onPressed: () => _handleSubmitConversion(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3B31A5),
+                                backgroundColor: const Color(0xFF2D2A70),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -601,7 +622,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       number: '1',
                       title: 'Enter amount',
                       subtitle: 'Minimum 500 pts per request',
-                      color: const Color(0xFF3B5BDB),
+                      color: const Color(0xFF2D2A70),
                     ),
                     const SizedBox(height: 12),
                     _ConversionStep(
@@ -637,7 +658,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color:
-                                const Color(0xFF3B5BDB).withValues(alpha: 0.08),
+                                const Color(0xFF2D2A70).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(

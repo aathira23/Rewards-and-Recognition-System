@@ -170,77 +170,86 @@ class MainLayoutState extends State<MainLayout> {
 
   // ── Compact icon+label sidebar nav (desktop) ──────────────────────
   Widget _buildCompactNavList() {
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      itemCount: widget.destinations.length,
-      itemBuilder: (context, index) {
-        final dest = widget.destinations[index];
-        final isSelected = _selectedIndex == index;
+      children: [
+        for (int index = 0; index < widget.destinations.length; index++)
+          if (!widget.destinations[index].isHidden)
+            _buildCompactNavItem(index, widget.destinations[index]),
+      ],
+    );
+  }
 
-        return Tooltip(
-          message: dest.title,
-          preferBelow: false,
-          child: InkWell(
-            onTap: () => selectIndex(index),
-            splashColor: Colors.white.withValues(alpha: 0.1),
-            highlightColor: Colors.white.withValues(alpha: 0.06),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 44,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.white.withValues(alpha: 0.18)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      dest.icon,
-                      size: 22,
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dest.title,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.55),
-                      letterSpacing: 0.1,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+  Widget _buildCompactNavItem(int index, NavDestination dest) {
+    final isSelected = _selectedIndex == index;
+
+    return Tooltip(
+      message: dest.title,
+      preferBelow: false,
+      child: InkWell(
+        onTap: () => selectIndex(index),
+        splashColor: Colors.white.withValues(alpha: 0.1),
+        highlightColor: Colors.white.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 44,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.18)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  dest.icon,
+                  size: 22,
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.55),
+                ),
               ),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                dest.title,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight:
+                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.55),
+                  letterSpacing: 0.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   // ── Row-style nav for mobile drawer ──────────────────────────────
   Widget _buildDrawerNavList(ThemeData theme) {
+    final visibleIndices = <int>[];
+    for (int i = 0; i < widget.destinations.length; i++) {
+        if (!widget.destinations[i].isHidden) visibleIndices.add(i);
+    }
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: widget.destinations.length,
+      itemCount: visibleIndices.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
-      itemBuilder: (context, index) {
+      itemBuilder: (context, listIndex) {
+        final index = visibleIndices[listIndex];
         final dest = widget.destinations[index];
         final isSelected = _selectedIndex == index;
         return Material(

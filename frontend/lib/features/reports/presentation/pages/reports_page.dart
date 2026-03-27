@@ -30,7 +30,7 @@ enum _ReportType {
     subtitle:
         'Complete history of peer recognitions, ecards, manager rewards and formal awards with sender/receiver details, points and messages',
     icon: Icons.emoji_events_rounded,
-    color: Color(0xFF3B82F6),
+    color: Color(0xFF2D2A70),
     hasDateFilter: true,
     hasDeptFilter: true,
     columns: [
@@ -609,11 +609,11 @@ class _ReportsViewState extends State<_ReportsView> {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color:
-                          sel ? const Color(0xFF1E56BD) : Colors.grey.shade100,
+                          sel ? const Color(0xFF2D2A70) : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                           color: sel
-                              ? const Color(0xFF1E56BD)
+                              ? const Color(0xFF2D2A70)
                               : Colors.grey.shade300),
                     ),
                     child: Text('${d}d',
