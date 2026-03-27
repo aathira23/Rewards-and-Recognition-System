@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import 'package:rr_frontend/core/widgets/app_snackbar.dart';
 
 import 'package:rr_frontend/core/utils/responsive.dart';
 import 'package:rr_frontend/core/utils/leveling_utils.dart';
@@ -64,19 +65,30 @@ class _RRDashboardView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(padding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 32),
-            _buildSummaryRow(context),
-            const SizedBox(height: 40),
-            _buildModulesSection(context),
-            const SizedBox(height: 40),
-            _buildRecentFeed(context),
-          ],
+      body: BlocListener<RecognitionsBloc, RecognitionsState>(
+        listener: (context, state) {
+          if (state.status == RecognitionStatus.success &&
+              state.lastSentRecognition != null) {
+            AppSnackbar.success(context, 'Recognition sent successfully!');
+          } else if (state.status == RecognitionStatus.failure) {
+            AppSnackbar.error(
+                context, state.errorMessage ?? 'Failed to send recognition');
+          }
+        },
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 32),
+              _buildSummaryRow(context),
+              const SizedBox(height: 40),
+              _buildModulesSection(context),
+              const SizedBox(height: 40),
+              _buildRecentFeed(context),
+            ],
+          ),
         ),
       ),
     );
