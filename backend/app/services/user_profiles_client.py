@@ -56,7 +56,7 @@ def _parse_profile(raw: dict) -> Optional[UserProfile]:
         first_name=raw.get("first_name"),
         last_name=raw.get("last_name"),
         email=raw.get("email"),
-        role=raw.get("role") or raw.get("role_name"),
+        role=raw.get("role") or raw.get("role_name") or "EMPLOYEE",
         org_id=_safe_int(raw.get("comp_id")),
         department_id=_safe_int(raw.get("bu_id")),
         department_name=raw.get("bu_name"),
@@ -81,8 +81,10 @@ def get_user_profile(user_id: int, token: str) -> Optional[UserProfile]:
       3. Parse, cache (1h TTL), return.
     """
     if user_id in _profile_cache:
+        logger.info("Cache 2 HIT  (Pattern A) — user_id=%s, cache_size=%d", user_id, len(_profile_cache))
         return _profile_cache[user_id]
 
+    logger.info("Cache 2 MISS (Pattern A) — user_id=%s, fetching from User Service", user_id)
     try:
         with httpx.Client(timeout=10.0, verify=settings.USER_SERVICE_VERIFY_SSL) as client:
             resp = client.get(
@@ -98,6 +100,8 @@ def get_user_profile(user_id: int, token: str) -> Optional[UserProfile]:
 
         if profile:
             _profile_cache[user_id] = profile
+            logger.info("Cache 2 STORE (Pattern A) — user_id=%s name=%r role=%r, cache_size=%d",
+                        user_id, profile.name, profile.role, len(_profile_cache))
 
         return profile
 
@@ -128,6 +132,9 @@ def get_users_batch(user_ids: List[int], token: str) -> Dict[int, UserProfile]:
         else:
             miss_ids.append(uid)
 
+    logger.info("Cache 2 (Pattern B) — %d HITs, %d MISSes (ids=%s), cache_size=%d",
+                len(result), len(miss_ids), miss_ids, len(_profile_cache))
+
     if not miss_ids:
         return result
 
@@ -143,11 +150,14 @@ def get_users_batch(user_ids: List[int], token: str) -> Dict[int, UserProfile]:
         data = resp.json()
         raw_list = data.get("response_data") or []
 
+        stored = 0
         for item in raw_list:
             profile = _parse_profile(item)
             if profile:
                 _profile_cache[profile.id] = profile
                 result[profile.id] = profile
+                stored += 1
+        logger.info("Cache 2 STORE (Pattern B) — stored %d profiles, cache_size=%d", stored, len(_profile_cache))
 
     except Exception as exc:
         logger.warning("Pattern B batch fetch failed for ids=%s: %s", miss_ids, exc)
@@ -173,8 +183,13 @@ def get_users_list(token: str, skip: int = 0, limit: int = 10) -> Dict:
     """
     cache_key = f"list:{skip}:{limit}"
     if cache_key in _picker_cache:
-        return _picker_cache[cache_key]
+        cached = _picker_cache[cache_key]
+        logger.info("Cache 2 HIT  (Pattern C) — key=%r, total=%d users, picker_cache_size=%d",
+                    cache_key, cached.get('total', 0), len(_picker_cache))
+        return cached
 
+    logger.info("Cache 2 MISS (Pattern C) — key=%r, fetching from User Service (skip=%d, limit=%d)",
+                cache_key, skip, limit)
     try:
         with httpx.Client(timeout=10.0, verify=settings.USER_SERVICE_VERIFY_SSL) as client:
             resp = client.get(
@@ -193,6 +208,11 @@ def get_users_list(token: str, skip: int = 0, limit: int = 10) -> Dict:
             if profile:
                 _profile_cache[profile.id] = profile  # populate Cache 2 as side-effect
                 items.append(profile)
+
+        # Log a sample of roles to verify the fix
+        role_sample = [(p.name, p.role) for p in items[:5]]
+        logger.info("Cache 2 STORE (Pattern C) — stored %d users, profile_cache_size=%d, role_sample=%s",
+                    len(items), len(_profile_cache), role_sample)
 
         result = {"items": items, "total": len(items), "skip": skip, "limit": limit}
         _picker_cache[cache_key] = result

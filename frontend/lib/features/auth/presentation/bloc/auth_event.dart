@@ -22,6 +22,14 @@ class AuthLoginRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+/// Event to log in by validating a raw Styria Bearer token (dev / testing).
+class AuthTokenLoginRequested extends AuthEvent {
+  final String token;
+  const AuthTokenLoginRequested({required this.token});
+  @override
+  List<Object?> get props => [token];
+}
+
 /// Event to fetch the user profile (called after successful login).
 class AuthProfileFetchRequested extends AuthEvent {}
 

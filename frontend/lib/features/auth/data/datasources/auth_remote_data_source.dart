@@ -11,6 +11,10 @@ abstract class AuthRemoteDataSource {
     required String email,
     required String password,
   });
+
+  /// Dev helper: validates a raw Styria Bearer token via the backend and
+  /// returns it as an AuthModel so it can be stored and used normally.
+  Future<AuthModel> tokenLogin({required String token});
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -47,6 +51,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // but we add a fallback for extra safety.
       throw Exception(
           'Failed to login: Unexpected status code ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<AuthModel> tokenLogin({required String token}) async {
+    final response = await client.post(
+      ApiConstants.tokenLogin,
+      data: {'token': token},
+      options: Options(contentType: Headers.jsonContentType),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return AuthModel.fromJson(response.data['data']);
+    } else {
+      throw Exception(
+          'Token login failed: Unexpected status code ${response.statusCode}');
     }
   }
 }

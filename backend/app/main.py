@@ -3,6 +3,12 @@ FastAPI application entry point for Rewards & Recognition System.
 """
 import logging
 
+# Ensure app loggers (INFO+) are visible in uvicorn stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s  %(name)s - %(message)s",
+)
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware

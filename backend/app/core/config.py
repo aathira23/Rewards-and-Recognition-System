@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     # Cache 2 endpoints — fetch user profiles by id or in bulk
     GET_USERS_URL: str = "http://localhost:9102/python/api/v1/users"
     GET_USER_BATCH_URL: str = "http://localhost:9102/python/api/v1/users/batch"
+    # Login proxy endpoint — used in user_service mode to forward credentials to Styria
+    STYRIA_LOGIN_URL: str = "http://localhost:9102/python/api/v1/auth/login"
     # Set False in production only if User Service uses a self-signed cert
     USER_SERVICE_VERIFY_SSL: bool = True
 

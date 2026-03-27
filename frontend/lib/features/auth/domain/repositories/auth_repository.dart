@@ -11,6 +11,9 @@ abstract class AuthRepository {
     required String password,
   });
 
+  /// Dev helper: validates a raw Styria token and returns an AuthEntity.
+  Future<Either<Failure, AuthEntity>> tokenLogin({required String token});
+
   /// Logs out the user and clears the token.
   Future<Either<Failure, void>> logout();
 
