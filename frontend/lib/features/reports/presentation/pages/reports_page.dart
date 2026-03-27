@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -30,7 +31,7 @@ enum _ReportType {
     subtitle:
         'Complete history of peer recognitions, ecards, manager rewards and formal awards with sender/receiver details, points and messages',
     icon: Icons.emoji_events_rounded,
-    color: Color(0xFF2D2A70),
+    color: AppTheme.brandBlue,
     hasDateFilter: true,
     hasDeptFilter: true,
     columns: [
@@ -609,11 +610,11 @@ class _ReportsViewState extends State<_ReportsView> {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color:
-                          sel ? const Color(0xFF2D2A70) : Colors.grey.shade100,
+                          sel ? AppTheme.brandBlue : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                           color: sel
-                              ? const Color(0xFF2D2A70)
+                              ? AppTheme.brandBlue
                               : Colors.grey.shade300),
                     ),
                     child: Text('${d}d',

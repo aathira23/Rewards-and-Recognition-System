@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/award_type_entity.dart';
@@ -144,7 +145,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
           label: const Text('Submit Nomination'),
           style: ElevatedButton.styleFrom(
             backgroundColor: (_selectedAwardType != null && _selectedUser != null)
-                ? const Color(0xFF2D2A70)
+                ? AppTheme.brandBlue
                 : Colors.grey.shade300,
             foregroundColor: Colors.white,
             padding:
@@ -484,7 +485,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide:
-              BorderSide(color: const Color(0xFF2D2A70), width: 1.5),
+              BorderSide(color: AppTheme.brandBlue, width: 1.5),
         ),
         contentPadding: const EdgeInsets.all(14),
       ),

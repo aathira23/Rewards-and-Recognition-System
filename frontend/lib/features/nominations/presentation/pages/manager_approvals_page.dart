@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -215,7 +216,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                     icon: const Icon(Icons.emoji_events_rounded, size: 18),
                     label: const Text('View & Nominate'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2D2A70),
+                      backgroundColor: AppTheme.brandBlue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 12),
@@ -259,9 +260,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               labelPadding: const EdgeInsets.symmetric(horizontal: 24),
-              indicatorColor: const Color(0xFF2D2A70),
+              indicatorColor: AppTheme.brandBlue,
               indicatorWeight: 3,
-              labelColor: const Color(0xFF2D2A70),
+              labelColor: AppTheme.brandBlue,
               unselectedLabelColor: Colors.grey[500],
               labelStyle: AppTextStyles.bodyBold(),
               unselectedLabelStyle: AppTextStyles.body(),
@@ -304,13 +305,13 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2D2A70).withOpacity(0.1),
+                            color: AppTheme.brandBlue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '$approvalCount',
                             style: AppTextStyles.smallBold(
-                                color: const Color(0xFF2D2A70)),
+                                color: AppTheme.brandBlue),
                           ),
                         ),
                       ],
@@ -736,8 +737,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   labelPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  indicatorColor: const Color(0xFF2D2A70),
-                  labelColor: const Color(0xFF2D2A70),
+                  indicatorColor: AppTheme.brandBlue,
+                  labelColor: AppTheme.brandBlue,
                   unselectedLabelColor: Colors.grey[500],
                   labelStyle: AppTextStyles.bodyBold(),
                   tabs: [

@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -167,7 +168,7 @@ class _RRDashboardView extends StatelessWidget {
                     // eCards Earned = eCards received by the current user
                     final ecardsCount = recState.stats?.receivedCount ?? 0;
 
-                    const bannerColor = Color(0xFF2D2A70);
+                    const bannerColor = AppTheme.brandBlue;
 
                     return Container(
                       padding: const EdgeInsets.all(32),
@@ -205,7 +206,7 @@ class _RRDashboardView extends StatelessWidget {
                                 Row(
                                   children: [
                                     const Icon(Icons.star_rounded,
-                                        color: Color(0xFFFFCC00), size: 24),
+                                        color: AppTheme.accentYellow, size: 24),
                                     const SizedBox(width: 8),
                                     Text(
                                       'CURRENT STANDING',
@@ -221,7 +222,7 @@ class _RRDashboardView extends StatelessWidget {
                                       width: 68,
                                       height: 68,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFFCC00),
+                                        color: AppTheme.accentYellow,
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Stack(
@@ -301,7 +302,7 @@ class _RRDashboardView extends StatelessWidget {
                                         Colors.white.withOpacity(0.12),
                                     valueColor:
                                         const AlwaysStoppedAnimation<Color>(
-                                            Color(0xFFFFCC00)),
+                                            AppTheme.accentYellow),
                                     minHeight: 12,
                                   ),
                                 ),
@@ -400,7 +401,7 @@ class _RRDashboardView extends StatelessWidget {
                   icon: const Icon(Icons.favorite_outline_rounded, size: 18),
                   label: const Text('Send an eCard'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D2A70),
+                    backgroundColor: AppTheme.brandBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
