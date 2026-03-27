@@ -192,7 +192,9 @@ class _MyEcardsPanelState extends State<MyEcardsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final received = widget.stats.receivedRecognitions ?? [];
+    final received = (widget.stats.receivedRecognitions ?? [])
+        .where((r) => (r.sourceType ?? '').toUpperCase() != 'AWARD')
+        .toList();
     final cardCount = received.length;
 
     return Container(
@@ -386,6 +388,7 @@ class EcardFeedPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final filteredFeed = feed.where((r) => (r.sourceType ?? '').toUpperCase() != 'AWARD').toList();
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: _cardDecoration(context),
@@ -395,7 +398,7 @@ class EcardFeedPanel extends StatelessWidget {
         children: [
           Text('Feed', style: AppTextStyles.pageTitle()),
           const SizedBox(height: 16),
-          if (feed.isEmpty)
+          if (filteredFeed.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
@@ -408,9 +411,9 @@ class EcardFeedPanel extends StatelessWidget {
               height: 230,
               child: ListView.separated(
                 clipBehavior: Clip.hardEdge,
-                itemCount: feed.length,
+                itemCount: filteredFeed.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (_, i) => _FeedItem(recognition: feed[i]),
+                itemBuilder: (_, i) => _FeedItem(recognition: filteredFeed[i]),
               ),
             ),
         ],
