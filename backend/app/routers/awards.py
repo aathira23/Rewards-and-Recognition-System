@@ -12,10 +12,17 @@ from app.services.awards_service import AwardsService
 from app.utils.enums import UserRole, ApprovalLevel
 from app.utils.response import success, client_error, created, conflict, server_error, paginated_success
 from app.services.user_profiles_client import get_users_batch
+from app.core.config import settings
+from app.models.users import User as UserModel
+from app.schemas.ecards import UserShortResponse
 
 
-def _enrich_award_responses(responses: list[AwardResponse], token: str) -> list[AwardResponse]:
-    """Populate nominee / nominator from User Service."""
+def _enrich_award_responses(responses: list[AwardResponse], token: str, db: Session | None = None) -> list[AwardResponse]:
+    """Populate nominee / nominator from the authoritative profile source.
+
+    Uses the local `users` table when `AUTH_MODE == 'local'` and a DB session
+    is provided. Otherwise falls back to the external User Service batch API.
+    """
     uid_set = set()
     for r in responses:
         if r.nominee_id:
@@ -24,14 +31,33 @@ def _enrich_award_responses(responses: list[AwardResponse], token: str) -> list[
             uid_set.add(r.nominator_id)
     if not uid_set:
         return responses
-    profiles = get_users_batch(list(uid_set), token)
+
+    profiles: dict = {}
+    # If running in local mode and DB is available, query local users table
+    if settings.AUTH_MODE == "local" and db is not None:
+        users = db.query(UserModel).filter(UserModel.id.in_(list(uid_set))).all()
+        for u in users:
+            profiles[u.id] = UserShortResponse(
+                id=u.id,
+                name=u.name,
+                department_name=u.department.name if getattr(u, 'department', None) else None,
+            )
+    else:
+        # Fall back to external user service batch lookup (cached)
+        profiles = get_users_batch(list(uid_set), token)
+
     for r in responses:
         p = profiles.get(r.nominee_id)
         if p:
-            r.nominee = {"id": p.id, "name": p.name}
+            # p may be a UserShortResponse or an external UserProfile-like object
+            name = getattr(p, 'name', None) or (p['name'] if isinstance(p, dict) and 'name' in p else None)
+            if name:
+                r.nominee = {"id": r.nominee_id, "name": name}
         p = profiles.get(r.nominator_id)
         if p:
-            r.nominator = {"id": p.id, "name": p.name}
+            name = getattr(p, 'name', None) or (p['name'] if isinstance(p, dict) and 'name' in p else None)
+            if name:
+                r.nominator = {"id": r.nominator_id, "name": name}
     return responses
 from app.utils.constants import (
     DEFAULT_PAGE_SIZE, SUCCESS_NOMINATION_SUCCESSFUL, SUCCESS_NOMINATIONS_FETCHED,
@@ -98,7 +124,7 @@ def get_nominations(
         per_page=per_page
     )
     items = [AwardResponse.model_validate(n) for n in nominations]
-    _enrich_award_responses(items, token)
+    _enrich_award_responses(items, token, db)
     return paginated_success(
         items=items,
         total=total,
@@ -119,10 +145,9 @@ def get_award_types(
     # HR and Admin see ALL award types (including inactive) for config management.
     # Other roles only see active award types they are eligible for.
     is_hr_admin = current_user.role in (UserRole.HR.value, UserRole.ADMIN.value)
-    role_filter = None if is_hr_admin else current_user.role
     active_only = not is_hr_admin
 
-    types = service.get_award_types(active_only=active_only, user_role=role_filter)
+    types = service.get_award_types(active_only=active_only, user_role=current_user.role)
     return success(data=[AwardTypeResponse.model_validate(t) for t in types], message=SUCCESS_AWARD_TYPES_FETCHED)
 
 
@@ -215,7 +240,7 @@ def get_nomination(
         return client_error(message=ERROR_UNAUTHORIZED_NOMINATION_VIEW, status_code=403)
 
     resp = AwardResponse.model_validate(nomination)
-    _enrich_award_responses([resp], token)
+    _enrich_award_responses([resp], token, db)
     return success(data=resp, message=SUCCESS_NOMINATION_DETAILS_FETCHED)
 
 
@@ -252,7 +277,7 @@ def action_nomination(
             comments=request.comments
         )
         resp = AwardResponse.model_validate(result)
-        _enrich_award_responses([resp], token)
+        _enrich_award_responses([resp], token, db)
         return success(data=resp, message=SUCCESS_NOMINATION_APPROVED)
     else:
         result = service.reject_nomination(
@@ -262,7 +287,7 @@ def action_nomination(
             comments=request.comments or "Rejected"
         )
         resp = AwardResponse.model_validate(result)
-        _enrich_award_responses([resp], token)
+        _enrich_award_responses([resp], token, db)
         return success(data=resp, message=SUCCESS_NOMINATION_REJECTED)
 
 
