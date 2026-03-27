@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -158,7 +159,7 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                                     size: 18),
                                 label: const Text('View & Nominate'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2D2A70),
+                                  backgroundColor: AppTheme.brandBlue,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20, vertical: 12),
@@ -228,9 +229,9 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               labelPadding: const EdgeInsets.symmetric(horizontal: 24),
-              indicatorColor: const Color(0xFF2D2A70),
+              indicatorColor: AppTheme.brandBlue,
               indicatorWeight: 3,
-              labelColor: const Color(0xFF2D2A70),
+              labelColor: AppTheme.brandBlue,
               unselectedLabelColor: Colors.grey[500],
               labelStyle: AppTextStyles.bodyBold(),
               unselectedLabelStyle: AppTextStyles.body(),

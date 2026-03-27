@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/award_type_entity.dart';
@@ -183,7 +184,7 @@ class _AwardListTile extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: onNominate,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2D2A70),
+                          backgroundColor: AppTheme.brandBlue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 18),
                           shape: RoundedRectangleBorder(

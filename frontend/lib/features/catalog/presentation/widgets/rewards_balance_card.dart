@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
@@ -90,14 +91,14 @@ class RewardsBalanceCard extends StatelessWidget {
                   theme.colorScheme.secondary.withValues(alpha: 0.7),
                 ]
               : [
-                  const Color(0xFF2D2A70),
-                  const Color(0xFF4C49A2),
+                  AppTheme.brandBlue,
+                  AppTheme.brandBlueLight,
                 ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : const Color(0xFF2D2A70))
+            color: (isDark ? Colors.black : AppTheme.brandBlue)
                 .withValues(alpha: 0.25),
             blurRadius: 25,
             offset: const Offset(0, 12),
