@@ -174,11 +174,26 @@ def get_leaderboard(
     metric: str = "POINTS",   # POINTS, COUNT
     limit: int = 10,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(_oauth2_scheme)
 ):
     """Get recognition leaderboard."""
     service = RecognitionService(db)
     data = service.get_leaderboard(period=period, metric=metric, limit=limit)
+    
+    # Fetch latest profiles from User Service (if not local mode) to match Feed
+    user_ids = [item.get("user_id") for item in data if item.get("user_id")]
+    if user_ids:
+        profiles = _resolve_profiles(db, user_ids, token)
+        for item in data:
+            uid = item.get("user_id")
+            if uid in profiles:
+                p = profiles[uid]
+                item["name"] = p.name
+                item["department_name"] = getattr(p, "department_name", None)
+            else:
+                item["name"] = f"User {uid}"
+
     return success(data=data, message=SUCCESS_LEADERBOARD_RETRIEVED)
 
 

@@ -19,6 +19,8 @@ import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../recognitions/presentation/bloc/recognitions_bloc.dart';
 import '../../../recognitions/presentation/bloc/recognitions_event.dart' as rec;
+import '../../../recognitions/presentation/bloc/recognitions_state.dart';
+import '../../../recognitions/presentation/widgets/recognition_feed_list.dart';
 
 class EmployeeNominationsPage extends StatelessWidget {
   const EmployeeNominationsPage({super.key});
@@ -176,11 +178,26 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
             ),
             _buildTabs(context),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildMyAwardsTab(context),
-                  _buildNominationsTab(context),
+                  // Main Content
+                  Expanded(
+                    flex: 3,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildMyAwardsTab(context),
+                        _buildNominationsTab(context),
+                      ],
+                    ),
+                  ),
+                  // Right Sidebar: Company Feed (Awards Only)
+                  if (!Responsive.isMobile(context))
+                    Expanded(
+                      flex: 1,
+                      child: _buildCompanyFeed(context),
+                    ),
                 ],
               ),
             ),
@@ -248,6 +265,57 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompanyFeed(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 24, right: 32, top: 32, bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Company Feed',
+              style: AppTextStyles.headline1(color: Colors.black87)),
+          const SizedBox(height: 24),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
+                builder: (context, state) {
+                  final awardsFeed = state.feed
+                      .where((r) =>
+                          (r.sourceType ?? '').toUpperCase() == 'AWARD')
+                      .toList();
+                  if (state.status == RecognitionStatus.loading &&
+                      state.feed.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (awardsFeed.isEmpty) {
+                    return Center(
+                        child: Text('No recent awards',
+                            style:
+                                AppTextStyles.body(color: Colors.grey[500])));
+                  }
+                  return RecognitionFeedList(
+                    feed: awardsFeed,
+                    shrinkWrap: true,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
