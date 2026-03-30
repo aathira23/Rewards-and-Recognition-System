@@ -24,6 +24,13 @@ abstract class HrApprovalsRemoteDataSource {
   /// Bulk budget allocation.
   Future<int> bulkAllocateBudget(
       int points, int? departmentId, String? roleFilter);
+
+  /// Fetch all employees (for life-event selection).
+  Future<List<Map<String, dynamic>>> fetchAllEmployees();
+
+  /// Trigger a manual life-event celebration (BIRTH or MARRIAGE).
+  Future<Map<String, dynamic>> triggerLifeEvent(
+      int userId, String celebrationType);
 }
 
 class HrApprovalsRemoteDataSourceImpl implements HrApprovalsRemoteDataSource {
@@ -189,6 +196,46 @@ class HrApprovalsRemoteDataSourceImpl implements HrApprovalsRemoteDataSource {
       final res =
           await client.post(ApiConstants.managerBulkAllocate, data: data);
       return res.data['data']?['updated_wallets'] ?? 0;
+    } on ServerException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchAllEmployees() async {
+    try {
+      final res = await client.get(
+        ApiConstants.users,
+        queryParameters: {'per_page': 200},
+      );
+      final raw = res.data['data'] ?? res.data ?? [];
+      if (raw is Map && raw.containsKey('items')) {
+        final items = raw['items'];
+        return (items is List)
+            ? items.cast<Map<String, dynamic>>()
+            : <Map<String, dynamic>>[];
+      }
+      if (raw is List) return raw.cast<Map<String, dynamic>>();
+      return <Map<String, dynamic>>[];
+    } on ServerException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> triggerLifeEvent(
+      int userId, String celebrationType) async {
+    try {
+      final res = await client.post(
+        ApiConstants.celebrationsTrigger,
+        data: {'user_id': userId, 'celebration_type': celebrationType},
+      );
+      final data = res.data['data'];
+      return (data is Map<String, dynamic>) ? data : {};
     } on ServerException {
       rethrow;
     } catch (e) {

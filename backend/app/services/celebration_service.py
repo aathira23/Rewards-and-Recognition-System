@@ -231,3 +231,125 @@ class CelebrationService:
             count += 1
 
         return count
+
+    # ────────────────────────────────────────────────────────────────
+    # Manual life-event celebrations (HR-only)
+    # ────────────────────────────────────────────────────────────────
+
+    # Default points when no PointsPolicy rule exists for the event key
+    _LIFE_EVENT_DEFAULTS = {
+        "BIRTH": 750,
+        "MARRIAGE": 1000,
+    }
+
+    # Human-readable labels used in messages
+    _LIFE_EVENT_LABELS = {
+        "BIRTH": ("New Baby", "🍼"),
+        "MARRIAGE": ("Marriage", "💍"),
+    }
+
+    def trigger_manual_celebration(
+        self, user_id: int, celebration_type: str, hr_actor_id: int
+    ) -> Dict[str, Any]:
+        """
+        Manually trigger a BIRTH or MARRIAGE celebration for an employee.
+
+        Called exclusively by HR/Admin via POST /celebrations/trigger.
+        Unlike automated events there is no date-field to scan, so HR
+        controls when this fires.  We prevent duplicate triggers within
+        the same calendar year to avoid accidental double-awards.
+
+        Returns a dict describing what was done.
+        """
+        from app.models.users import User
+        from app.utils.enums import CelebrationType
+
+        if celebration_type not in (CelebrationType.BIRTH.value, CelebrationType.MARRIAGE.value):
+            raise ValueError(f"celebration_type must be BIRTH or MARRIAGE, got '{celebration_type}'")
+
+        today = date.today()
+        year = today.year
+
+        # Prevent double-award in the same calendar year
+        existing = self.repository.get_celebration(user_id, celebration_type, year)
+        if existing:
+            label, _ = self._LIFE_EVENT_LABELS[celebration_type]
+            raise ValueError(
+                f"A {label} celebration was already awarded to user {user_id} in {year}"
+            )
+
+        # Resolve employee
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+
+        points = self._get_points_from_policy(
+            celebration_type,
+            default=self._LIFE_EVENT_DEFAULTS[celebration_type],
+        )
+        label, emoji = self._LIFE_EVENT_LABELS[celebration_type]
+
+        # Record celebration
+        celebration = self.repository.create_celebration(user_id, celebration_type, year, points)
+
+        # Award points
+        self.points_service.award_points(
+            user_id=user_id,
+            points=points,
+            source_type=ReferenceType.CELEBRATION.value,
+            source_id=celebration.id,
+        )
+
+        # Recognition feed entry
+        if celebration_type == CelebrationType.BIRTH.value:
+            feed_message = (
+                f"Congratulations to {user.name} on the arrival of their new baby! "
+                f"Wishing your family joy and happiness! {emoji}"
+            )
+        else:  # MARRIAGE
+            feed_message = (
+                f"Congratulations to {user.name} on their marriage! "
+                f"Wishing you a lifetime of happiness together! {emoji}"
+            )
+
+        self.recognition_service.create_feed_entry(
+            actor_id=hr_actor_id,
+            receiver_id=user_id,
+            source_type="CELEBRATION",
+            source_id=celebration.id,
+            message=feed_message,
+        )
+
+        # Notification to employee
+        if celebration_type == CelebrationType.BIRTH.value:
+            notif_message = (
+                f"{emoji} Congratulations on your new baby! You've been awarded "
+                f"{points} reward points to celebrate this special milestone."
+            )
+        else:
+            notif_message = (
+                f"{emoji} Congratulations on your marriage! You've been awarded "
+                f"{points} reward points to celebrate this wonderful occasion."
+            )
+
+        self.notification_service.create_notification(
+            user_id=user_id,
+            message=notif_message,
+            source_type=ReferenceType.CELEBRATION.value,
+            source_id=celebration.id,
+            email_context={
+                "colleague_name": user.name,
+                "event_type": label,
+                "event_date": str(today),
+                "recognize_url": "",
+            },
+        )
+
+        self.db.commit()
+        return {
+            "user_id": user_id,
+            "user_name": user.name,
+            "celebration_type": celebration_type,
+            "points_awarded": points,
+            "year": year,
+        }

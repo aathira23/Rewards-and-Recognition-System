@@ -34,8 +34,7 @@ class NominateEmployeeDialog extends StatefulWidget {
   });
 
   @override
-  State<NominateEmployeeDialog> createState() =>
-      _NominateEmployeeDialogState();
+  State<NominateEmployeeDialog> createState() => _NominateEmployeeDialogState();
 }
 
 class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
@@ -84,10 +83,21 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     Iterable<UserEntity> list = widget.users.where((u) => u.id != myId);
 
     if (UserRoleUtils.isManager(myRole)) {
-      list = list.where((u) => u.managerId == myId);
+      final directReports = list.where((u) => u.managerId == myId).toList();
+      // Graceful fallback: manager_id may be null when using an external
+      // User Service that doesn't expose hierarchy data. In that case show
+      // all non-admin employees so nominations are still possible.
+      list = directReports.isNotEmpty
+          ? directReports
+          : list.where((u) => !UserRoleUtils.isHR(u.role));
     } else if (UserRoleUtils.isDepartmentHead(myRole)) {
       if (myDeptId != null) {
-        list = list.where((u) => u.departmentId == myDeptId);
+        final deptMembers =
+            list.where((u) => u.departmentId == myDeptId).toList();
+        // Same fallback: department_id might not be populated.
+        list = deptMembers.isNotEmpty
+            ? deptMembers
+            : list.where((u) => !UserRoleUtils.isHR(u.role));
       }
     } else if (UserRoleUtils.isEmployee(myRole)) {
       list = list.where((u) => UserRoleUtils.isEmployee(u.role));
@@ -132,10 +142,9 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         OutlinedButton(
           onPressed: () => Navigator.pop(context),
           style: OutlinedButton.styleFrom(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: const Text('Cancel'),
         ),
@@ -144,14 +153,14 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
           icon: const Icon(Icons.send_rounded, size: 16),
           label: const Text('Submit Nomination'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: (_selectedAwardType != null && _selectedUser != null)
-                ? AppTheme.brandBlue
-                : Colors.grey.shade300,
+            backgroundColor:
+                (_selectedAwardType != null && _selectedUser != null)
+                    ? AppTheme.brandBlue
+                    : Colors.grey.shade300,
             foregroundColor: Colors.white,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             elevation: 0,
           ),
         ),
@@ -206,9 +215,8 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected
-                ? theme.colorScheme.primary
-                : Colors.grey.shade200,
+            color:
+                isSelected ? theme.colorScheme.primary : Colors.grey.shade200,
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: [
@@ -313,9 +321,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
           ],
           Text(label,
               style: TextStyle(
-                  fontSize: 10,
-                  color: color,
-                  fontWeight: FontWeight.w600)),
+                  fontSize: 10, color: color, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -324,6 +330,33 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
   // ── Section 2: Nominee Search ────────────────────────────────────────
   Widget _buildNomineeSearch(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Show a loading skeleton while the user list is still being fetched.
+    if (widget.users.isEmpty) {
+      return Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.grey.shade400),
+            ),
+            const SizedBox(width: 12),
+            Text('Loading employees…',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          ],
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
@@ -339,8 +372,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by name or email...',
-                hintStyle:
-                    TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                 prefixIcon:
                     Icon(Icons.search, size: 18, color: Colors.grey.shade400),
                 suffixIcon: _searchQuery.isNotEmpty
@@ -368,8 +400,8 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                      color: theme.colorScheme.primary, width: 1.5),
+                  borderSide:
+                      BorderSide(color: theme.colorScheme.primary, width: 1.5),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -484,8 +516,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide:
-              BorderSide(color: AppTheme.brandBlue, width: 1.5),
+          borderSide: BorderSide(color: AppTheme.brandBlue, width: 1.5),
         ),
         contentPadding: const EdgeInsets.all(14),
       ),

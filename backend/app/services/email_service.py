@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import smtplib
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
@@ -138,6 +139,8 @@ class EmailService:
                         subject=subject,
                         body_html=body_html,
                         body_text=body_text,
+                        ctx=ctx,
+                        token=self._token,
                     )
             logger.warning("EmailService.send: user %s not found", recipient_user_id)
             return None
@@ -168,6 +171,8 @@ class EmailService:
             subject=subject,
             body_html=body_html,
             body_text=body_text,
+            ctx=ctx,
+            token=self._token,
         )
 
     def send_to_email(
@@ -191,6 +196,7 @@ class EmailService:
             subject=subject,
             body_html=body_html,
             body_text=body_text,
+            ctx=ctx,
         )
 
     # ------------------------------------------------------------------
@@ -232,6 +238,8 @@ class EmailService:
         subject: str,
         body_html: str,
         body_text: Optional[str],
+        ctx: Optional[Dict[str, Any]] = None,
+        token: Optional[str] = None,
     ) -> EmailLog:
         log = self.repository.create_log(
             recipient_email=to_email,
@@ -243,30 +251,70 @@ class EmailService:
         )
 
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-            msg["To"] = to_email
+            # ── Route through Styria notification service ──────────────────
+            if settings.USE_NOTIFICATION_SERVICE:
+                from app.utils.notification_client import send_notification as ns_send
+                # Derive a plain-text body: prefer .txt template, else strip HTML tags.
+                plain_body = (
+                    body_text
+                    or re.sub(r"<[^>]+>", " ", body_html).strip()[:600]
+                )
+                action_url = ctx.get("frontend_url", settings.FRONTEND_URL) if ctx else settings.FRONTEND_URL
+                # Single API call to notification service: EMAIL + optional TEAMS.
+                # When TEAMS_NOTIFICATIONS_ENABLED, the recipient's corporate email
+                # is also used as the Teams recipient — the NS resolves it to a DM.
+                ok = ns_send(
+                    to_emails=[to_email],
+                    teams_recipients=[to_email] if settings.TEAMS_NOTIFICATIONS_ENABLED else None,
+                    subject=subject,
+                    title=subject,
+                    body=plain_body,
+                    action_url=action_url,
+                    action_label="Open Dashboard",
+                    sender_name=settings.SMTP_FROM_NAME,
+                    additional_data=ctx,
+                    token=token or self._token,
+                )
+                if ok:
+                    log.status = "SENT"
+                    log.sent_at = datetime.now(timezone.utc)
+                    logger.info(
+                        "Email sent via notification service to %s [%s]",
+                        to_email, template_name,
+                    )
+                else:
+                    log.status = "FAILED"
+                    log.error_message = "Notification service returned a failure response"
+                    logger.warning(
+                        "Notification service failed for %s [%s]", to_email, template_name
+                    )
 
-            if body_text:
-                msg.attach(MIMEText(body_text, "plain"))
-            msg.attach(MIMEText(body_html, "html"))
+            # ── Direct SMTP (dev / fallback) ───────────────────────────────
+            else:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = subject
+                msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
+                msg["To"] = to_email
 
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-            server.ehlo()
-            if settings.SMTP_USE_TLS:
-                server.starttls()
-                server.ehlo()  # re-identify after STARTTLS
+                if body_text:
+                    msg.attach(MIMEText(body_text, "plain"))
+                msg.attach(MIMEText(body_html, "html"))
 
-            if settings.SMTP_USERNAME:
-                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+                server.ehlo()
+                if settings.SMTP_USE_TLS:
+                    server.starttls()
+                    server.ehlo()  # re-identify after STARTTLS
 
-            server.sendmail(settings.SMTP_FROM_EMAIL, [to_email], msg.as_string())
-            server.quit()
+                if settings.SMTP_USERNAME:
+                    server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
 
-            log.status = "SENT"
-            log.sent_at = datetime.now(timezone.utc)
-            logger.info("Email sent to %s [%s]", to_email, template_name)
+                server.sendmail(settings.SMTP_FROM_EMAIL, [to_email], msg.as_string())
+                server.quit()
+
+                log.status = "SENT"
+                log.sent_at = datetime.now(timezone.utc)
+                logger.info("Email sent to %s [%s]", to_email, template_name)
 
         except Exception as exc:
             log.status = "FAILED"

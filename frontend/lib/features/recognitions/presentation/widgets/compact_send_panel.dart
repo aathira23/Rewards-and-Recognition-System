@@ -666,30 +666,65 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            DropdownMenu<int>(
-              expandedInsets: EdgeInsets.zero,
-              menuHeight: 250,
-              inputDecorationTheme: InputDecorationTheme(
-                hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            // Use a live BlocBuilder so the picker populates even when the
+            // dialog was opened before the user list finished loading.
+            BlocProvider.value(
+              value: widget.outerContext.read<RecognitionsBloc>(),
+              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
+                builder: (_, recState) {
+                  if (recState.users.isEmpty) {
+                    return Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.grey.shade400),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Loading employees…',
+                              style: AppTextStyles.body(
+                                  color: Colors.grey.shade500)),
+                        ],
+                      ),
+                    );
+                  }
+                  return DropdownMenu<int>(
+                    expandedInsets: EdgeInsets.zero,
+                    menuHeight: 250,
+                    inputDecorationTheme: InputDecorationTheme(
+                      hintStyle:
+                          AppTextStyles.body(color: Colors.grey.shade400),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                    hintText: 'Search employee name...',
+                    dropdownMenuEntries: recState.users.map((u) {
+                      return DropdownMenuEntry<int>(value: u.id, label: u.name);
+                    }).toList(),
+                    onSelected: (v) => receiverId = v,
+                    textStyle: AppTextStyles.body(),
+                  );
+                },
               ),
-              hintText: 'Search employee name...',
-              dropdownMenuEntries: widget.users.map((u) {
-                return DropdownMenuEntry<int>(value: u.id, label: u.name);
-              }).toList(),
-              onSelected: (v) => receiverId = v,
-              textStyle: AppTextStyles.body(),
             ),
 
             const SizedBox(height: 20),

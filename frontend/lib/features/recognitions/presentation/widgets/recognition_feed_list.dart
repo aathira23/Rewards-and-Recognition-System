@@ -76,18 +76,35 @@ class _FeedItem extends StatelessWidget {
       );
     } else if (type == 'CELEBRATION') {
       const c = Color(0xFF7C3AED);
-      final isBirthday = message.toLowerCase().contains('birthday');
+      final msgLower = message.toLowerCase();
+      final isBirthday = msgLower.contains('birthday');
+      final isNewBaby = msgLower.contains('baby') || msgLower.contains('birth');
+      final isMarriage =
+          msgLower.contains('marriage') || msgLower.contains('married');
+
+      final IconData celebIcon = isBirthday
+          ? Icons.cake_rounded
+          : isNewBaby
+              ? Icons.child_friendly_rounded
+              : isMarriage
+                  ? Icons.favorite_rounded
+                  : Icons.workspace_premium_rounded;
+
+      final String celebLabel = isBirthday
+          ? 'Birthday 🎂'
+          : isNewBaby
+              ? 'New Baby 🍼'
+              : isMarriage
+                  ? 'Marriage 💍'
+                  : 'Work Anniversary 🌟';
+
       iconBg = const Color(0xFFEDE9FE);
-      iconChild = Icon(
-        isBirthday ? Icons.cake_rounded : Icons.workspace_premium_rounded,
-        color: c,
-        size: 20,
-      );
+      iconChild = Icon(celebIcon, color: c, size: 20);
       titleLine = _nameText(receiverName, "'s special day");
       tagLine = _Tag(
-        label: isBirthday ? 'Birthday 🎂' : 'Work Anniversary 🌟',
+        label: celebLabel,
         color: c,
-        icon: isBirthday ? Icons.cake_rounded : Icons.workspace_premium_rounded,
+        icon: celebIcon,
       );
     } else {
       // ECARD

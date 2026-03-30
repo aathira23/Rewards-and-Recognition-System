@@ -28,7 +28,8 @@ class HrApprovalsPage extends StatelessWidget {
       create: (_) => sl<HrApprovalsBloc>()
         ..add(LoadNominations())
         ..add(LoadConversions())
-        ..add(LoadManagers()),
+        ..add(LoadManagers())
+        ..add(LoadEmployees()),
       child: const _HrApprovalsView(),
     );
   }
@@ -47,6 +48,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
   String _nomFilter = 'ALL';
   // null = still loading; true/false = flag resolved
   bool? _conversionEnabled;
+  // Life Events tab — employee search
+  String _empSearch = '';
 
   @override
   void initState() {
@@ -59,7 +62,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
         await sl<FeatureFlagService>().isEnabled('conversion_enabled');
     if (!mounted) return;
     final oldController = _tabController;
-    final newController = TabController(length: enabled ? 3 : 2, vsync: this);
+    final newController = TabController(length: enabled ? 4 : 3, vsync: this);
     setState(() {
       _conversionEnabled = enabled;
       _tabController = newController;
@@ -130,7 +133,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                     context.read<HrApprovalsBloc>()
                       ..add(LoadNominations())
                       ..add(LoadConversions())
-                      ..add(LoadManagers());
+                      ..add(LoadManagers())
+                      ..add(LoadEmployees());
                   }),
                 ),
               ),
@@ -183,6 +187,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                                   .where((c) => c['status'] == 'PENDING')
                                   .length),
                         const Tab(text: 'Budget Allocation'),
+                        const Tab(text: 'Life Events'),
                       ],
                     ),
                   ),
@@ -199,6 +204,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                       if (_conversionEnabled == true)
                         _buildConversionsTab(context, theme, state),
                       _buildBudgetAllocationTab(context, theme, state),
+                      _buildLifeEventsTab(context, theme, state),
                     ],
                   ),
                 ),
@@ -822,6 +828,226 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                   ));
             },
             child: const Text('Allocate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  TAB 4 — Life Events (Manual HR-triggered celebrations)
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildLifeEventsTab(
+      BuildContext context, ThemeData theme, HrApprovalsState state) {
+    final filtered = state.employees.where((e) {
+      if (_empSearch.isEmpty) return true;
+      final name = (e['name'] ?? '').toString().toLowerCase();
+      final email = (e['email'] ?? '').toString().toLowerCase();
+      return name.contains(_empSearch) || email.contains(_empSearch);
+    }).toList();
+
+    return SingleChildScrollView(
+      padding:
+          EdgeInsets.symmetric(horizontal: Responsive.pagePadding(context)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Description card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.celebration_rounded,
+                        color: theme.colorScheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Life Event Celebrations',
+                        style: AppTextStyles.cardTitle()),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Manually recognise an employee\'s personal milestone. '
+                  'Select an employee below and choose the event type. '
+                  'Points will be awarded immediately and the employee will be notified.',
+                  style: AppTextStyles.bodyMedium()
+                      .copyWith(color: Colors.grey.shade700),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Search field
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Search employees…',
+              prefixIcon: const Icon(Icons.search_rounded),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            onChanged: (v) => setState(() => _empSearch = v.trim().toLowerCase()),
+          ),
+          const SizedBox(height: 16),
+
+          // Employee list
+          if (state.empLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (filtered.isEmpty)
+            EmptyStateView(
+              icon: Icons.people_outline,
+              title: _empSearch.isEmpty
+                  ? 'No employees found'
+                  : 'No employees match "$_empSearch"',
+            )
+          else
+            ...filtered.map(
+              (emp) => _buildEmployeeLifeEventCard(context, emp, theme, state),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmployeeLifeEventCard(BuildContext context,
+      Map<String, dynamic> emp, ThemeData theme, HrApprovalsState state) {
+    final name = emp['name'] ?? 'Employee #${emp['id']}';
+    final email = emp['email'] ?? '';
+    final role = emp['role'] ?? '';
+    final userId = emp['id'] as int;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: AppTextStyles.bodyBold()),
+                Text(email,
+                    style: AppTextStyles.bodyMedium()
+                        .copyWith(color: Colors.grey.shade600)),
+                Text(_roleLabel(role),
+                    style: AppTextStyles.small()
+                        .copyWith(color: Colors.grey.shade500)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // New Baby button
+          Tooltip(
+            message: 'New Baby',
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pink.shade50,
+                foregroundColor: Colors.pink.shade700,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                elevation: 0,
+                side: BorderSide(color: Colors.pink.shade200),
+              ),
+              icon: const Text('🍼', style: TextStyle(fontSize: 14)),
+              label: const Text('New Baby',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              onPressed: state.lifeEventLoading
+                  ? null
+                  : () => _confirmLifeEvent(
+                      context, userId, name, 'BIRTH', '🍼 New Baby'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Marriage button
+          Tooltip(
+            message: 'Marriage',
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.shade50,
+                foregroundColor: Colors.purple.shade700,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                elevation: 0,
+                side: BorderSide(color: Colors.purple.shade200),
+              ),
+              icon: const Text('💍', style: TextStyle(fontSize: 14)),
+              label: const Text('Marriage',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              onPressed: state.lifeEventLoading
+                  ? null
+                  : () => _confirmLifeEvent(
+                      context, userId, name, 'MARRIAGE', '💍 Marriage'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmLifeEvent(BuildContext context, int userId, String userName,
+      String type, String label) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: 'Confirm $label Celebration',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You are about to trigger a $label celebration for:',
+              style: AppTextStyles.bodyMedium(),
+            ),
+            const SizedBox(height: 8),
+            Text(userName, style: AppTextStyles.bodyBold()),
+            const SizedBox(height: 12),
+            Text(
+              'This will award recognition points to the employee and '
+              'post a congratulations message on the feed.',
+              style: AppTextStyles.bodyMedium()
+                  .copyWith(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context
+                  .read<HrApprovalsBloc>()
+                  .add(TriggerLifeEvent(userId: userId, celebrationType: type));
+            },
+            child: const Text('Confirm'),
           ),
         ],
       ),

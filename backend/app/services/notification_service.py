@@ -1,12 +1,19 @@
 from sqlalchemy.orm import Session
 from typing import Optional
+import logging
+import threading
 from app.models.notifications import Notification
 from app.jobs.email_worker import enqueue_email
 from app.repository.notification_repository import NotificationRepository
 
+logger = logging.getLogger(__name__)
+
 
 # Map in-app source_type → EmailEventType for auto-dispatch.
 _SOURCE_TO_EMAIL_EVENT: dict = {}  # populated lazily to avoid circular imports
+
+# Source types that also trigger a Teams notification (when Teams is enabled).
+_TEAMS_SOURCE_TYPES = {"ECARD", "AWARD", "CELEBRATION"}
 
 
 def _get_source_email_map() -> dict:
@@ -59,6 +66,14 @@ class NotificationService:
                 token=self._token,
             )
 
+        # --- Auto-dispatch Teams (best-effort, non-blocking) ---
+        # Teams is sent as part of the unified email+teams call in EmailService._dispatch()
+        # when USE_NOTIFICATION_SERVICE + TEAMS_NOTIFICATIONS_ENABLED are both True.
+        # This separate path only fires when email is NOT being dispatched for this event
+        # (i.e. no email_event_type mapped) to avoid duplicating Teams messages.
+        if source_type in _TEAMS_SOURCE_TYPES and evt is None:
+            self._enqueue_teams(user_id=user_id, body=message)
+
         return notification
 
     def get_user_notifications(
@@ -94,6 +109,72 @@ class NotificationService:
             context={"short_reason": subject, "detailed_message": body},
             token=self._token,
         )
+
+    def send_teams_notification(
+        self,
+        user_id: int,
+        title: str,
+        body: str,
+        action_url: str = "",
+    ) -> None:
+        """
+        Send a Microsoft Teams message to a user (best-effort, non-blocking).
+        Resolves the user's email from local DB or User Service, then calls
+        the notification service. Does nothing if Teams is disabled.
+        """
+        from app.core.config import settings
+        if not settings.TEAMS_NOTIFICATIONS_ENABLED:
+            return
+        self._enqueue_teams(user_id=user_id, body=body, title=title, action_url=action_url)
+
+    def _enqueue_teams(
+        self,
+        *,
+        user_id: int,
+        body: str,
+        title: str = "Rewards & Recognition",
+        action_url: str = "",
+    ) -> None:
+        """Resolve user email and fire Teams notification in a background thread."""
+        from app.core.config import settings
+        if not settings.TEAMS_NOTIFICATIONS_ENABLED:
+            return
+
+        # Capture state needed by the thread (DB session is not thread-safe).
+        token = self._token
+        _title = title
+        _body = body
+        _url = action_url or settings.FRONTEND_URL
+
+        # Resolve email synchronously (fast local DB lookup).
+        email = self._resolve_user_email(user_id, token=token)
+        if not email:
+            logger.debug(
+                "_enqueue_teams: no email resolved for user %s, skipping Teams notification",
+                user_id,
+            )
+            return
+
+        def _fire() -> None:
+            from app.utils.notification_client import send_teams
+            send_teams([email], title=_title, body=_body, action_url=_url, token=token)
+
+        t = threading.Thread(target=_fire, daemon=True, name=f"teams-notify-{user_id}")
+        t.start()
+
+    def _resolve_user_email(self, user_id: int, *, token: Optional[str] = None) -> Optional[str]:
+        """Return the user's email from local DB, falling back to User Service."""
+        from app.models.users import User
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if user and user.email:
+            return user.email
+        _token = token or self._token
+        if _token:
+            from app.services.user_profiles_client import get_user_profile
+            profile = get_user_profile(user_id, _token)
+            if profile and profile.email:
+                return profile.email
+        return None
 
     def send_expiry_reminders(self, days_before: int = 7) -> int:
         """Send notifications to users whose points are expiring soon."""

@@ -927,6 +927,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                       DropdownMenuEntry(value: 'BIRTHDAY', label: 'BIRTHDAY'),
                       DropdownMenuEntry(
                           value: 'ANNIVERSARY', label: 'ANNIVERSARY'),
+                      DropdownMenuEntry(value: 'BIRTH', label: 'BIRTH'),
+                      DropdownMenuEntry(value: 'MARRIAGE', label: 'MARRIAGE'),
                     ],
                     onSelected: (v) {
                       if (v != null) {

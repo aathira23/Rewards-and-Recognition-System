@@ -54,6 +54,7 @@ class ApiConstants {
   static const String celebrationsUpcoming = 'celebrations/upcoming';
   static const String celebrationsHistory = 'celebrations/history';
   static const String celebrationsProcess = 'celebrations/process-today';
+  static const String celebrationsTrigger = 'celebrations/trigger';
 
   // Notifications
   static const String notifications = 'inbox/';

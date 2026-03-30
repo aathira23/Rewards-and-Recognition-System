@@ -68,5 +68,24 @@ class Settings(BaseSettings):
     # Set this to a long-lived service account token in production.
     SYSTEM_TOKEN: Optional[str] = None
 
+    # ── Notification Service Integration ──────────────────────────────────
+    # Base URL of the Styria notification microservice (Java/Spring Boot).
+    # Staging: https://api-styria-staging.tarento.dev  (same gateway as User Service)
+    # Local dev: http://localhost:9030
+    NOTIFICATION_SERVICE_BASE_URL: str = "http://localhost:9030"
+    # Set True to route outbound emails through the notification service instead
+    # of the local SMTP path. Keep False in dev (no notification service running).
+    USE_NOTIFICATION_SERVICE: bool = True
+    # Set True to also send Microsoft Teams messages for key R&R events
+    # (award approvals, recognitions, celebrations). Requires the notification
+    # service to be configured with valid MS Graph API credentials.
+    TEAMS_NOTIFICATIONS_ENABLED: bool = True
+    # Comma-separated list of Teams recipient email addresses for broadcast events.
+    TEAMS_RECIPIENTS: str = ""
+    # MS Teams team ID used by the notification service for channel messages.
+    TEAMS_TEAM_ID: str = ""
+    # Set False when notification service uses a self-signed certificate (staging).
+    NOTIFICATION_SERVICE_VERIFY_SSL: bool = False
+
 
 settings = Settings()
