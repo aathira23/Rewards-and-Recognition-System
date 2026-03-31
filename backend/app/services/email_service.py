@@ -47,21 +47,85 @@ _jinja_env = Environment(
 
 # ---------------------------------------------------------------------------
 # Subject lines (Jinja2 strings, rendered with the same context as the body)
+# Use only ASCII punctuation so notification service doesn't garble en-dashes.
 # ---------------------------------------------------------------------------
 TEMPLATE_SUBJECTS: Dict[str, str] = {
     "welcome":               "Welcome to {{ org_name }}!",
-    "verify_email":          "Verify your email address – {{ org_name }}",
+    "verify_email":          "Verify your email address - {{ org_name }}",
     "password_reset":        "Reset your {{ org_name }} password",
-    "award_decision":        "{{ item_type }} – {{ status }}",
-    "conversion_decision":   "Points Conversion – {{ status }}",
-    "nomination_submitted":  "Award Nomination Submitted – {{ org_name }}",
-    "redemption_receipt":    "Redemption confirmed – {{ reward_name }}",
-    "conversion_submitted":  "Points conversion submitted – {{ org_name }}",
-    "points_expiry":         "⚠ Your points expire on {{ expiry_date }}",
-    "celebration_reminder":  "{{ event_type }}: {{ colleague_name }} – {{ org_name }}",
+    "award_decision":        "{{ item_type }} - {{ status }}",
+    "conversion_decision":   "Points Conversion - {{ status }}",
+    "nomination_submitted":  "Award Nomination Submitted - {{ org_name }}",
+    "redemption_receipt":    "Redemption confirmed - {{ reward_name }}",
+    "conversion_submitted":  "Points conversion submitted - {{ org_name }}",
+    "points_expiry":         "Your points expire on {{ expiry_date }}",
+    "celebration_reminder":  "{{ event_type }}: {{ colleague_name }} - {{ org_name }}",
     "pending_approvals":     "You have {{ pending_count }} pending approval(s)",
     "recognition_received":  "{{ sender_name }} recognised you!",
     "hr_critical":           "[HR Alert] {{ short_reason }}",
+}
+
+# ---------------------------------------------------------------------------
+# Clean titles & body text sent to the Styria notification service.
+# The NS renders these inside its own branded template, so we keep them
+# short and plain — no HTML, no entities.
+# ---------------------------------------------------------------------------
+_NS_TITLES: Dict[str, str] = {
+    "welcome":               "Welcome to {{ org_name }}!",
+    "verify_email":          "Verify Your Email Address",
+    "password_reset":        "Password Reset Request",
+    "award_decision":        "{{ item_type }} - {{ status }}",
+    "conversion_decision":   "Points Conversion {{ status }}",
+    "nomination_submitted":  "Nomination Submitted",
+    "redemption_receipt":    "Redemption Confirmed - {{ reward_name }}",
+    "conversion_submitted":  "Conversion Request Received",
+    "points_expiry":         "Your Points Are Expiring Soon",
+    "celebration_reminder":  "{{ event_type }}: {{ colleague_name }}",
+    "pending_approvals":     "Pending Approvals Reminder",
+    "recognition_received":  "You've Been Recognised!",
+    "hr_critical":           "[HR Alert] {{ short_reason }}",
+}
+
+_NS_BODIES: Dict[str, str] = {
+    "welcome":
+        "Hi {{ user_name }}, welcome to {{ org_name }}! "
+        "Your account is ready. Log in to start earning and redeeming points.",
+    "verify_email":
+        "Hi {{ user_name }}, please verify your email address to activate your account.",
+    "password_reset":
+        "Hi {{ user_name }}, a password reset was requested for your account. "
+        "If this wasn't you, you can ignore this message.",
+    "award_decision":
+        "Hi {{ user_name }}, your {{ item_type | lower }} nomination has been {{ status | lower }}"
+        "{% if comment %}: {{ comment }}{% endif %}.",
+    "conversion_decision":
+        "Hi {{ user_name }}, your request to convert {{ points_amount }} points has been "
+        "{{ status | lower }}{% if comment %}: {{ comment }}{% endif %}.",
+    "nomination_submitted":
+        "Hi {{ user_name }}, your award nomination has been submitted and is awaiting review.",
+    "redemption_receipt":
+        "Hi {{ user_name }}, your redemption of {{ reward_name }} for {{ points_used }} points "
+        "is confirmed and being processed. "
+        "Your remaining balance is {{ remaining_balance }} pts.",
+    "conversion_submitted":
+        "Hi {{ user_name }}, your request to convert {{ points }} points to cash "
+        "({{ cash_amount }}) has been received and is pending HR approval.",
+    "points_expiry":
+        "Hi {{ user_name }}, {{ points }} of your points will expire on {{ expiry_date }} "
+        "({{ days_left }} day(s) away). Head to the store to spend them!",
+    "celebration_reminder":
+        "A reminder that {{ colleague_name }} has a {{ event_type | lower }} coming up. "
+        "Log in to send them a celebration!",
+    "pending_approvals":
+        "Hi {{ user_name }}, you have {{ pending_count }} pending award nomination(s) "
+        "waiting for your review.",
+    "recognition_received":
+        "{{ sender_name }} has recognised you"
+        "{% if badge_name %} with '{{ badge_name }}'{% endif %}"
+        "{% if message %} - {{ message }}{% endif %}.",
+    "hr_critical":
+        "{{ short_reason }}"
+        "{% if detailed_message %}: {{ detailed_message }}{% endif %}",
 }
 
 # ---------------------------------------------------------------------------
@@ -254,25 +318,43 @@ class EmailService:
             # ── Route through Styria notification service ──────────────────
             if settings.USE_NOTIFICATION_SERVICE:
                 from app.utils.notification_client import send_notification as ns_send
-                # Derive a plain-text body: prefer .txt template, else strip HTML tags.
-                plain_body = (
-                    body_text
-                    or re.sub(r"<[^>]+>", " ", body_html).strip()[:600]
-                )
+
+                # Build a clean short title for the NS branded template.
+                ns_title = subject  # safe fallback
+                ns_title_tpl = _NS_TITLES.get(template_name)
+                if ns_title_tpl and ctx:
+                    try:
+                        ns_title = _jinja_env.from_string(ns_title_tpl).render(**ctx)
+                    except Exception:
+                        pass
+
+                # Build a clean plain-text body for the NS branded template.
+                # Prefer per-template body string; fall back to stripping our HTML.
+                ns_body_tpl = _NS_BODIES.get(template_name)
+                if ns_body_tpl and ctx:
+                    try:
+                        ns_body = _jinja_env.from_string(ns_body_tpl).render(**ctx)
+                    except Exception:
+                        ns_body = None
+                else:
+                    ns_body = None
+                if not ns_body:
+                    import html as _html
+                    # Strip <head> section first so title/meta don't pollute the body
+                    stripped = re.sub(r"(?is)<head[^>]*>.*?</head>", "", body_html)
+                    stripped = re.sub(r"<[^>]+>", " ", stripped)
+                    ns_body = " ".join(_html.unescape(stripped).split())[:500]
+
                 action_url = ctx.get("frontend_url", settings.FRONTEND_URL) if ctx else settings.FRONTEND_URL
-                # Single API call to notification service: EMAIL + optional TEAMS.
-                # When TEAMS_NOTIFICATIONS_ENABLED, the recipient's corporate email
-                # is also used as the Teams recipient — the NS resolves it to a DM.
                 ok = ns_send(
                     to_emails=[to_email],
                     teams_recipients=[to_email] if settings.TEAMS_NOTIFICATIONS_ENABLED else None,
                     subject=subject,
-                    title=subject,
-                    body=plain_body,
+                    title=ns_title,
+                    body=ns_body,
                     action_url=action_url,
                     action_label="Open Dashboard",
                     sender_name=settings.SMTP_FROM_NAME,
-                    additional_data=ctx,
                     token=token or self._token,
                 )
                 if ok:

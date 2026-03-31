@@ -99,10 +99,11 @@ def update_store_item(
 def redeem_reward(
     redemption_data: RedemptionCreate,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme),
 ):
     """Instantly redeem a reward (Merchandise/Vouchers). Deducts points immediately."""
-    service = StoreService(db)
+    service = StoreService(db, token=token)
     try:
         redemption = service.redeem_reward(
             user_id=current_user_id,

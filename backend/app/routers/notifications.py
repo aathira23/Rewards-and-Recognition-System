@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id, get_current_user
+from app.core.dependencies import get_current_user_id, get_current_user, oauth2_scheme
 from app.schemas.notifications import NotificationResponse
 
 from app.utils.response import success, client_error, paginated_success
@@ -83,12 +83,13 @@ def mark_notifications_read(
 def send_expiry_reminders(
     days_before: int = 7,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Trigger expiry reminder notifications (Admin/HR only)."""
     if current_user.role != "HR":
         return client_error(message=ERROR_ONLY_HR_TRIGGER_REMINDERS, status_code=403)
 
-    service = NotificationService(db)
+    service = NotificationService(db, token=token)
     sent_count = service.send_expiry_reminders(days_before=days_before)
     return success(data={"sent_count": sent_count}, message=SUCCESS_EXPIRY_REMINDERS_SENT.format(sent_count))

@@ -506,6 +506,18 @@ class BadgePickerDialog extends StatefulWidget {
 
 class _BadgePickerDialogState extends State<BadgePickerDialog> {
   BadgeEntity? _selected;
+  int? _receiverId;
+  UserEntity? _selectedUser;
+  final TextEditingController _recipientSearchController =
+      TextEditingController();
+  String _recipientSearchQuery = '';
+  String? _message;
+
+  @override
+  void dispose() {
+    _recipientSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -559,8 +571,6 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
   Widget _buildSendForm(BuildContext context) {
     final badge = _selected!;
     final info = BadgeUtils.getDisplayInfo(badge.name);
-    int? receiverId;
-    String? message;
 
     return StatefulBuilder(
       builder: (ctx, setLocal) {
@@ -656,7 +666,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
 
             const SizedBox(height: 22),
 
-            // ── Recipient ──────────────────────────────────────────
+            // ── Recipient (searchable) ─────────────────────────────
             Row(
               children: [
                 Icon(Icons.person_outline,
@@ -666,8 +676,6 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            // Use a live BlocBuilder so the picker populates even when the
-            // dialog was opened before the user list finished loading.
             BlocProvider.value(
               value: widget.outerContext.read<RecognitionsBloc>(),
               child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
@@ -697,31 +705,133 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                       ),
                     );
                   }
-                  return DropdownMenu<int>(
-                    expandedInsets: EdgeInsets.zero,
-                    menuHeight: 250,
-                    inputDecorationTheme: InputDecorationTheme(
-                      hintStyle:
-                          AppTextStyles.body(color: Colors.grey.shade400),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                    ),
+
+                  // Search input
+                  final inputDecoration = InputDecoration(
                     hintText: 'Search employee name...',
-                    dropdownMenuEntries: recState.users.map((u) {
-                      return DropdownMenuEntry<int>(value: u.id, label: u.name);
-                    }).toList(),
-                    onSelected: (v) => receiverId = v,
-                    textStyle: AppTextStyles.body(),
+                    hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  );
+
+                  final q = _recipientSearchQuery.trim().toLowerCase();
+
+                  final filtered = q.isEmpty
+                      ? <UserEntity>[]
+                      : recState.users.where((u) {
+                          final name = u.name.toLowerCase();
+                          final email = (u.email ?? '').toLowerCase();
+                          return name.contains(q) || email.contains(q);
+                        }).toList();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _recipientSearchController,
+                        decoration: inputDecoration,
+                        onChanged: (v) => setLocal(() {
+                          _recipientSearchQuery = v;
+                          if (_selectedUser != null) {
+                            _selectedUser = null;
+                            _receiverId = null;
+                          }
+                        }),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_recipientSearchQuery.isNotEmpty &&
+                          _selectedUser == null)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          child: filtered.isEmpty
+                              ? Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                                  child: Center(
+                                    child: Text(
+                                      'No results for "${_recipientSearchQuery}"',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  itemCount: filtered.length,
+                                  separatorBuilder: (_, __) => Divider(
+                                      height: 1,
+                                      thickness: 0.5,
+                                      color: Colors.grey.shade200),
+                                  itemBuilder: (ctx, i) {
+                                    final user = filtered[i];
+                                    final isSel = _selectedUser?.id == user.id;
+                                    return InkWell(
+                                      onTap: () => setLocal(() {
+                                        _selectedUser = user;
+                                        _recipientSearchController.text =
+                                            user.name;
+                                        _receiverId = user.id;
+                                      }),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 10),
+                                        color: isSel
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.06)
+                                            : Colors.transparent,
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 15,
+                                              backgroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                                  .withValues(alpha: 0.12),
+                                              child: Text(
+                                                user.name.isNotEmpty
+                                                    ? user.name[0].toUpperCase()
+                                                    : '?',
+                                                style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .primary),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                                child: Text(user.name,
+                                                    style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w500))),
+                                            if (isSel)
+                                              Icon(Icons.check_circle_rounded,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                  size: 16),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -760,7 +870,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                 contentPadding: const EdgeInsets.all(16),
               ),
               maxLines: 4,
-              onChanged: (v) => message = v,
+              onChanged: (v) => _message = v,
             ),
 
             const SizedBox(height: 24),
@@ -785,16 +895,16 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                   flex: 2,
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      if (receiverId == null) {
+                      if (_receiverId == null) {
                         AppSnackbar.warning(ctx, 'Please select a recipient.');
                         return;
                       }
                       widget.outerContext
                           .read<RecognitionsBloc>()
                           .add(SendRecognitionRequested(
-                            receiverId: receiverId!,
+                            receiverId: _receiverId!,
                             badgeId: _selected!.id,
-                            message: message,
+                            message: _message ?? '',
                           ));
                       Navigator.pop(ctx);
                     },

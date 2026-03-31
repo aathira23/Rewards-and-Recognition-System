@@ -88,7 +88,7 @@ def convert_points_request(
     """Request points conversion to cash/payroll. (User Shortcut)"""
     if not is_feature_enabled(db, 'conversion_enabled'):
         return client_error(message=_CONVERSION_DISABLED_MSG, status_code=403)
-    service = StoreService(db)
+    service = StoreService(db, token=token)
     try:
         # Get conversion rate from active policies
         policies = service.get_policies()
@@ -213,7 +213,7 @@ def action_conversion(
     """Approve or reject a conversion request (Admin logic)."""
     if not is_feature_enabled(db, 'conversion_enabled'):
         return client_error(message=_CONVERSION_DISABLED_MSG, status_code=403)
-    service = StoreService(db)
+    service = StoreService(db, token=token)
     try:
         # Only HR/Admin users can approve/reject conversions
         if getattr(current_user, "role", None) not in (UserRole.HR.value, UserRole.ADMIN.value):

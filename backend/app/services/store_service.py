@@ -16,11 +16,11 @@ from app.repository.store_repository import StoreRepository
 class StoreService:
     """Service for managing the rewards catalog and redemptions."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
         self.repository = StoreRepository(db)
         self.points_service = PointsService(db)
-        self.notification_service = NotificationService(db)
+        self.notification_service = NotificationService(db, token=token)
 
     def get_catalog(self, page: int = 1, per_page: int = 20, include_inactive: bool = False):
         """Get rewards from the catalog, paginated. Returns (total, items).
