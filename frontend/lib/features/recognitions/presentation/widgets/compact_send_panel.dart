@@ -492,12 +492,14 @@ class BadgePickerDialog extends StatefulWidget {
   final List<BadgeEntity> badges;
   final List<UserEntity> users;
   final BuildContext outerContext;
+  final BadgeEntity? initialBadge;
 
   const BadgePickerDialog({
     super.key,
     required this.badges,
     required this.users,
     required this.outerContext,
+    this.initialBadge,
   });
 
   @override
@@ -512,6 +514,12 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
       TextEditingController();
   String _recipientSearchQuery = '';
   String? _message;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialBadge;
+  }
 
   @override
   void dispose() {
@@ -538,37 +546,29 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
   }
 
   Widget _buildBadgeGrid() {
-    // 1. Sort by name for stability
     final sortedBadges = List<BadgeEntity>.from(widget.badges)
       ..sort((a, b) => a.name.compareTo(b.name));
 
-    // 2. Interleave for visual diversity
-    final displayBadges = BadgeUtils.interleaveByColor<BadgeEntity>(
-      sortedBadges,
-      (b) => b.name,
-    );
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 140,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 0.75,
+    return SizedBox(
+      height: 400, // Reduced from 480 to be even more compact
+      child: GridView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: sortedBadges.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4, // More columns = smaller badges
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.75, // Adjusted for smaller width
+        ),
+        itemBuilder: (ctx, i) => _PickerBadgeCard(
+          badge: sortedBadges[i],
+          onTap: () => setState(() => _selected = sortedBadges[i]),
+        ),
       ),
-      itemCount: displayBadges.length,
-      itemBuilder: (ctx, i) {
-        final badge = displayBadges[i];
-        return _PickerBadgeCard(
-          badge: badge,
-          onTap: () => setState(() => _selected = badge),
-        );
-      },
     );
   }
 
-  Widget _buildSendForm(BuildContext context) {
+  Widget _buildSendForm(BuildContext ctx) {
     final badge = _selected!;
     final info = BadgeUtils.getDisplayInfo(badge.name);
 
@@ -578,41 +578,36 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Selected badge banner ──────────────────────────────
+            // ── Badge Banner ────────────────────────────────────────
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: info.color.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: info.color.withValues(alpha: 0.25)),
+                color: info.color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: info.color.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: info.color.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: badge.iconUrl != null
-                          ? Image.network(
-                              badge.iconUrl!,
-                              width: 34,
-                              height: 34,
+                          ? Image.network(badge.iconUrl!,
+                              width: 28,
+                              height: 28,
                               fit: BoxFit.contain,
                               errorBuilder: (_, __, ___) => info.hasEmoji
                                   ? Text(info.emoji!,
-                                      style: const TextStyle(fontSize: 22))
-                                  : Icon(info.icon,
-                                      color: info.color, size: 28),
-                            )
+                                      style: AppTextStyles.emoji())
+                                  : Icon(info.icon, color: info.color, size: 24))
                           : (info.hasEmoji
-                              ? Text(info.emoji!,
-                                  style: const TextStyle(fontSize: 22))
-                              : Icon(info.icon, color: info.color, size: 28)),
+                              ? Text(info.emoji!, style: AppTextStyles.emoji())
+                              : Icon(info.icon, color: info.color, size: 24)),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -620,40 +615,14 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          badge.name,
-                          style: AppTextStyles.sectionHeader(color: info.color),
-                        ),
-                        if (badge.description != null &&
-                            badge.description!.isNotEmpty) ...[
-                          const SizedBox(height: 3),
-                          Text(
-                            badge.description!,
-                            style: AppTextStyles.small(color: Colors.grey[600]),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (badge.points != null && badge.points! > 0) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: info.color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '+${badge.points} pts',
+                        Text(badge.name, style: AppTextStyles.sectionHeader()),
+                        if (badge.points != null && badge.points! > 0)
+                          Text('+${badge.points} pts',
                               style:
-                                  AppTextStyles.captionBold(color: info.color),
-                            ),
-                          ),
-                        ],
+                                  AppTextStyles.captionBold(color: info.color)),
                       ],
                     ),
                   ),
-                  // Back / change badge
                   IconButton(
                     tooltip: 'Change badge',
                     icon: Icon(Icons.swap_horiz_rounded,
@@ -664,257 +633,245 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
               ),
             ),
 
-            const SizedBox(height: 22),
-
-            // ── Recipient (searchable) ─────────────────────────────
-            Row(
-              children: [
-                Icon(Icons.person_outline,
-                    size: 16, color: Colors.grey.shade500),
-                const SizedBox(width: 6),
-                Text('Recipient', style: AppTextStyles.sectionTitle()),
-              ],
-            ),
-            const SizedBox(height: 8),
-            BlocProvider.value(
-              value: widget.outerContext.read<RecognitionsBloc>(),
-              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
-                builder: (_, recState) {
-                  if (recState.users.isEmpty) {
-                    return Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.grey.shade400),
-                          ),
-                          const SizedBox(width: 12),
-                          Text('Loading employees…',
-                              style: AppTextStyles.body(
-                                  color: Colors.grey.shade500)),
-                        ],
-                      ),
-                    );
-                  }
-
-                  // Search input
-                  final inputDecoration = InputDecoration(
-                    hintText: 'Search employee name...',
-                    hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  );
-
-                  final q = _recipientSearchQuery.trim().toLowerCase();
-
-                  final filtered = q.isEmpty
-                      ? <UserEntity>[]
-                      : recState.users.where((u) {
-                          final name = u.name.toLowerCase();
-                          final email = (u.email ?? '').toLowerCase();
-                          return name.contains(q) || email.contains(q);
-                        }).toList();
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: _recipientSearchController,
-                        decoration: inputDecoration,
-                        onChanged: (v) => setLocal(() {
-                          _recipientSearchQuery = v;
-                          if (_selectedUser != null) {
-                            _selectedUser = null;
-                            _receiverId = null;
-                          }
-                        }),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_recipientSearchQuery.isNotEmpty &&
-                          _selectedUser == null)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 200),
-                          child: filtered.isEmpty
-                              ? Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                                  child: Center(
-                                    child: Text(
-                                      'No results for "${_recipientSearchQuery}"',
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey.shade400),
-                                    ),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  itemCount: filtered.length,
-                                  separatorBuilder: (_, __) => Divider(
-                                      height: 1,
-                                      thickness: 0.5,
-                                      color: Colors.grey.shade200),
-                                  itemBuilder: (ctx, i) {
-                                    final user = filtered[i];
-                                    final isSel = _selectedUser?.id == user.id;
-                                    return InkWell(
-                                      onTap: () => setLocal(() {
-                                        _selectedUser = user;
-                                        _recipientSearchController.text =
-                                            user.name;
-                                        _receiverId = user.id;
-                                      }),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 14, vertical: 10),
-                                        color: isSel
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withValues(alpha: 0.06)
-                                            : Colors.transparent,
-                                        child: Row(
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 15,
-                                              backgroundColor: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary
-                                                  .withValues(alpha: 0.12),
-                                              child: Text(
-                                                user.name.isNotEmpty
-                                                    ? user.name[0].toUpperCase()
-                                                    : '?',
-                                                style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .primary),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                                child: Text(user.name,
-                                                    style: const TextStyle(
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w500))),
-                                            if (isSel)
-                                              Icon(Icons.check_circle_rounded,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .primary,
-                                                  size: 16),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── Message ────────────────────────────────────────────
-            Row(
-              children: [
-                Icon(Icons.edit_note_rounded,
-                    size: 16, color: Colors.grey.shade500),
-                const SizedBox(width: 6),
-                Text('Message', style: AppTextStyles.sectionTitle()),
-                const SizedBox(width: 6),
-                Text('(optional)',
-                    style: AppTextStyles.caption(color: Colors.grey.shade400)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              style: AppTextStyles.body(),
-              decoration: InputDecoration(
-                hintText: 'Tell them why they deserve this recognition…',
-                hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                contentPadding: const EdgeInsets.all(16),
-              ),
-              maxLines: 4,
-              onChanged: (v) => _message = v,
-            ),
-
             const SizedBox(height: 24),
 
-            // ── Action row ─────────────────────────────────────────
-            Row(
+            // ── Main Form with Floating Overlay ──────────────────────
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => _selected = null),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                    label: const Text('Back'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Recipient Label
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline,
+                            size: 16, color: Colors.grey.shade500),
+                        const SizedBox(width: 6),
+                        Text('Recipient', style: AppTextStyles.sectionTitle()),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 8),
+
+                    // Placeholder for TextField height to keep layout stable
+                    const SizedBox(height: 52),
+
+                    const SizedBox(height: 24),
+
+                    // Message Section
+                    Row(
+                      children: [
+                        Icon(Icons.edit_note_rounded,
+                            size: 16, color: Colors.grey.shade500),
+                        const SizedBox(width: 6),
+                        Text('Message', style: AppTextStyles.sectionTitle()),
+                        const SizedBox(width: 6),
+                        Text('(optional)',
+                            style: AppTextStyles.caption(
+                                color: Colors.grey.shade400)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: TextEditingController(text: _message),
+                      style: AppTextStyles.body(),
+                      decoration: InputDecoration(
+                        hintText: 'Tell them why they deserve this recognition…',
+                        hintStyle:
+                            AppTextStyles.body(color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      maxLines: 3,
+                      onChanged: (v) => _message = v,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Action Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(() => _selected = null),
+                            icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                            label: const Text('Back'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              if (_receiverId == null) {
+                                AppSnackbar.warning(
+                                    ctx, 'Please select a recipient.');
+                                return;
+                              }
+                              widget.outerContext
+                                  .read<RecognitionsBloc>()
+                                  .add(SendRecognitionRequested(
+                                    receiverId: _receiverId!,
+                                    badgeId: _selected!.id,
+                                    message: _message ?? '',
+                                  ));
+                              Navigator.pop(ctx);
+                            },
+                            icon: const Icon(Icons.send_rounded, size: 16),
+                            label: const Text('Send Recognition'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (_receiverId == null) {
-                        AppSnackbar.warning(ctx, 'Please select a recipient.');
-                        return;
-                      }
-                      widget.outerContext
-                          .read<RecognitionsBloc>()
-                          .add(SendRecognitionRequested(
-                            receiverId: _receiverId!,
-                            badgeId: _selected!.id,
-                            message: _message ?? '',
-                          ));
-                      Navigator.pop(ctx);
-                    },
-                    icon: const Icon(Icons.send_rounded, size: 16),
-                    label: const Text('Send Recognition'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
+
+                // Floating Search Results Overlay
+                Positioned(
+                  top: 24, // Positioned exactly where the TextField starts in the overlap
+                  left: 0,
+                  right: 0,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BlocBuilder<RecognitionsBloc, RecognitionsState>(
+                        bloc: widget.outerContext.read<RecognitionsBloc>(),
+                        builder: (ctx, recState) {
+                          if (recState.users.isEmpty) {
+                            return Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          }
+
+                          return TextField(
+                            controller: _recipientSearchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search employee name...',
+                              hintStyle: AppTextStyles.body(
+                                  color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade200),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade200),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                            ),
+                            onChanged: (v) => setLocal(() {
+                              _recipientSearchQuery = v;
+                              if (_selectedUser != null) {
+                                _selectedUser = null;
+                                _receiverId = null;
+                              }
+                            }),
+                          );
+                        },
+                      ),
+                      
+                      // The actual floating list
+                      if (_recipientSearchQuery.isNotEmpty && _selectedUser == null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Material(
+                            elevation: 8,
+                            borderRadius: BorderRadius.circular(12),
+                            shadowColor: Colors.black45,
+                            child: Container(
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
+                                bloc: widget.outerContext.read<RecognitionsBloc>(),
+                                builder: (ctx, recState) {
+                                  final q = _recipientSearchQuery.trim().toLowerCase();
+                                  final filtered = recState.users.where((u) {
+                                    final name = u.name.toLowerCase();
+                                    final email = (u.email ?? '').toLowerCase();
+                                    return name.contains(q) || email.contains(q);
+                                  }).toList();
+
+                                  if (filtered.isEmpty) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Text('No results for "$_recipientSearchQuery"',
+                                          style: TextStyle(color: Colors.grey.shade400)),
+                                    );
+                                  }
+
+                                  return ListView.separated(
+                                    shrinkWrap: true,
+                                    padding: EdgeInsets.zero,
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                                    itemBuilder: (ctx, i) {
+                                      final user = filtered[i];
+                                      return InkWell(
+                                        onTap: () => setLocal(() {
+                                          _selectedUser = user;
+                                          _recipientSearchController.text = user.name;
+                                          _receiverId = user.id;
+                                          _recipientSearchQuery = '';
+                                        }),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          child: Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 14,
+                                                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                                child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(child: Text(user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -979,8 +936,8 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 44, // Reduced from 52
+                  height: 44, // Reduced from 52
                   decoration: BoxDecoration(
                     color: info.color.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
@@ -989,17 +946,17 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
                     child: widget.badge.iconUrl != null
                         ? Image.network(
                             widget.badge.iconUrl!,
-                            width: 32,
-                            height: 32,
+                            width: 26, // Reduced from 32
+                            height: 26, // Reduced from 32
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => info.hasEmoji
                                 ? Text(info.emoji!,
-                                    style: AppTextStyles.emoji())
-                                : Icon(info.icon, color: info.color, size: 28),
+                                    style: AppTextStyles.emoji(size: 20))
+                                : Icon(info.icon, color: info.color, size: 22),
                           )
                         : (info.hasEmoji
-                            ? Text(info.emoji!, style: AppTextStyles.emoji())
-                            : Icon(info.icon, color: info.color, size: 28)),
+                            ? Text(info.emoji!, style: AppTextStyles.emoji(size: 20))
+                            : Icon(info.icon, color: info.color, size: 22)),
                   ),
                 ),
                 const SizedBox(height: 8),

@@ -10,6 +10,7 @@ import '../../domain/entities/recognition_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
+import 'compact_send_panel.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Badges Earned Summary — horizontal badge icons with counts
@@ -610,10 +611,11 @@ class SendEcardPanel extends StatelessWidget {
   void _openSendDialog(BuildContext context, BadgeEntity badge) {
     showDialog(
       context: context,
-      builder: (dialogCtx) => _SendFormDialog(
-        badge: badge,
+      builder: (dialogCtx) => BadgePickerDialog(
+        badges: badges,
         users: users,
         outerContext: context,
+        initialBadge: badge,
       ),
     );
   }
@@ -696,168 +698,7 @@ class _SendBadgeCardState extends State<_SendBadgeCard> {
   }
 }
 
-class _SendFormDialog extends StatefulWidget {
-  final BadgeEntity badge;
-  final List<UserEntity> users;
-  final BuildContext outerContext;
-  const _SendFormDialog({
-    required this.badge,
-    required this.users,
-    required this.outerContext,
-  });
-  @override
-  State<_SendFormDialog> createState() => _SendFormDialogState();
-}
-
-class _SendFormDialogState extends State<_SendFormDialog> {
-  int? _receiverId;
-  String? _message;
-
-  @override
-  Widget build(BuildContext context) {
-    final badge = widget.badge;
-    final info = BadgeUtils.getDisplayInfo(badge.name);
-
-    return AppDialog(
-      title: 'Send Appreciation',
-      maxWidth: 500,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Selected badge banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: BoxDecoration(
-              color: info.color.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: info.color.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: info.color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: badge.iconUrl != null
-                        ? Image.network(badge.iconUrl!,
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) =>
-                                Icon(info.icon, color: info.color, size: 24))
-                        : (info.hasEmoji
-                            ? Text(info.emoji!,
-                                style: const TextStyle(fontSize: 20))
-                            : Icon(info.icon, color: info.color, size: 24)),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(badge.name,
-                        style: AppTextStyles.sectionHeader(color: info.color)),
-                    if (badge.points != null && badge.points! > 0)
-                      Text('+${badge.points} pts',
-                          style: AppTextStyles.caption(color: info.color)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Recipient
-          Text('Recipient', style: AppTextStyles.sectionTitle()),
-          const SizedBox(height: 8),
-          DropdownMenu<int>(
-            expandedInsets: EdgeInsets.zero,
-            menuHeight: 250,
-            inputDecorationTheme: InputDecorationTheme(
-              hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            hintText: 'Search employee name...',
-            dropdownMenuEntries: widget.users.map((u) {
-              return DropdownMenuEntry<int>(value: u.id, label: u.name);
-            }).toList(),
-            onSelected: (v) => _receiverId = v,
-            textStyle: AppTextStyles.body(),
-          ),
-          const SizedBox(height: 20),
-          // Message
-          Text('Message (optional)', style: AppTextStyles.sectionTitle()),
-          const SizedBox(height: 8),
-          TextField(
-            style: AppTextStyles.body(),
-            decoration: InputDecoration(
-              hintText: 'Tell them why they deserve this recognition…',
-              hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              contentPadding: const EdgeInsets.all(16),
-            ),
-            maxLines: 4,
-            onChanged: (v) => _message = v,
-          ),
-        ],
-      ),
-      actions: [
-        OutlinedButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            if (_receiverId == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please select a recipient.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return;
-            }
-            widget.outerContext
-                .read<RecognitionsBloc>()
-                .add(SendRecognitionRequested(
-                  receiverId: _receiverId!,
-                  badgeId: widget.badge.id,
-                  message: _message,
-                ));
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.send_rounded, size: 16),
-          label: const Text('Send Recognition'),
-        ),
-      ],
-    );
-  }
-}
+// _SendFormDialog replaced by BadgePickerDialog from compact_send_panel.dart
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  eCard History Table — All / Received / Sent tabs
