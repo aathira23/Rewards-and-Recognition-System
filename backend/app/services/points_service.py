@@ -146,7 +146,8 @@ class PointsService:
         )
         self.repository.commit()
         self.invalidate_aggregates(user_id)
-    def invalidate_aggregates(user_id: int) -> None:
+
+    def invalidate_aggregates(self, user_id: int) -> None:
         """Remove cached aggregates for a user after a points mutation."""
         _aggregates_cache.pop(user_id, None)
 
