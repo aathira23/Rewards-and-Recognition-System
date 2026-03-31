@@ -5,14 +5,20 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:dio/browser.dart' show BrowserHttpClientAdapter;
 import 'auth_interceptor.dart';
+import 'cache_interceptor.dart';
 import '../constants/api_constants.dart';
 import '../errors/exceptions.dart';
 
 class ApiClient {
   final Dio _dio;
+  late final CacheInterceptor _cacheInterceptor;
 
   ApiClient({Dio? dio, AuthInterceptor? authInterceptor})
       : _dio = dio ?? Dio() {
+    _cacheInterceptor = CacheInterceptor(
+      defaultTtl: const Duration(minutes: 5),
+      maxEntries: 200,
+    );
     _applyBaseOptions();
     // Use browser HTTP adapter when running on web.
     if (kIsWeb) {
@@ -22,8 +28,13 @@ class ApiClient {
     if (authInterceptor != null) {
       _dio.interceptors.add(authInterceptor);
     }
+    // Add the in-memory GET response cache interceptor.
+    _dio.interceptors.add(_cacheInterceptor);
     _initializeInterceptors();
   }
+
+  /// Clear the in-memory response cache (e.g. on logout).
+  void clearCache() => _cacheInterceptor.clearAll();
 
   void _applyBaseOptions() {
     _dio.options.baseUrl = ApiConstants.baseUrl;

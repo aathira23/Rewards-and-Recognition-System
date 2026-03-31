@@ -1,14 +1,23 @@
 from __future__ import annotations
 
+import logging
 from sqlalchemy.orm import Session
 from typing import Optional, List, Any, Dict
 from datetime import datetime, timezone, timedelta
+from cachetools import TTLCache
 
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
 from app.utils.enums import ReferenceType
 from app.core.config import settings
 from app.repository.recognition_repository import RecognitionRepository
+
+logger = logging.getLogger(__name__)
+
+# Module-level caches
+_badge_cache: TTLCache = TTLCache(maxsize=100, ttl=60 * 60)       # 1 h
+_ecard_policy_cache: TTLCache = TTLCache(maxsize=10, ttl=60 * 60) # 1 h
+_leaderboard_cache: TTLCache = TTLCache(maxsize=50, ttl=60 * 60)  # 1 h
 
 
 class RecognitionService:
@@ -23,19 +32,32 @@ class RecognitionService:
 
     # --- Badge Management ---
     def get_badges(self, active_only: bool = True):
-        """Get all badges."""
-        return self.repository.get_badges(active_only)
+        """Get all badges (served from 1 h cache)."""
+        cache_key = f"badges:{active_only}"
+        if cache_key in _badge_cache:
+            return _badge_cache[cache_key]
+        result = self.repository.get_badges(active_only)
+        _badge_cache[cache_key] = result
+        return result
 
     def get_badge_by_id(self, badge_id: int):
-        """Get a badge by ID."""
-        return self.repository.get_badge_by_id(badge_id)
+        """Get a badge by ID (served from 1 h cache)."""
+        cache_key = f"badge:{badge_id}"
+        if cache_key in _badge_cache:
+            return _badge_cache[cache_key]
+        badge = self.repository.get_badge_by_id(badge_id)
+        if badge:
+            _badge_cache[cache_key] = badge
+        return badge
 
     def create_badge(self, name: str, description: str = None, icon_url: str = None):
         """Create a new badge."""
         existing = self.repository.get_badge_by_name(name)
         if existing:
             raise ValueError("Badge with this name already exists")
-        return self.repository.create_badge(name, description, icon_url)
+        result = self.repository.create_badge(name, description, icon_url)
+        _badge_cache.clear()  # invalidate badge caches on create
+        return result
 
     def update_badge(self, badge_id: int, data: Dict[str, Any]):
         """Update an existing badge."""
@@ -45,12 +67,19 @@ class RecognitionService:
         for key, value in data.items():
             if value is not None:
                 setattr(badge, key, value)
-        return self.repository.save_badge(badge)
+        result = self.repository.save_badge(badge)
+        _badge_cache.clear()  # invalidate badge caches on update
+        return result
 
     # --- eCard / Recognition Logic ---
     def _get_ecard_policy(self):
-        """Return the generic (event_key IS NULL) ECARD policy row, or None."""
-        return self.repository.get_ecard_policy()
+        """Return the generic ECARD policy row from cache (1 h TTL), or None."""
+        cache_key = "ecard_policy"
+        if cache_key in _ecard_policy_cache:
+            return _ecard_policy_cache[cache_key]
+        policy = self.repository.get_ecard_policy()
+        _ecard_policy_cache[cache_key] = policy
+        return policy
 
     def _check_monthly_limit(self, sender_id: int, policy) -> None:
         """Raise ValueError if sender has hit their monthly eCard limit."""
@@ -336,7 +365,12 @@ class RecognitionService:
 
     # --- Leaderboard ---
     def get_leaderboard(self, period: str = "MONTHLY", metric: str = "POINTS", limit: int = 10) -> List[Dict[str, Any]]:
-        """Calculate leaderboard ranking."""
+        """Calculate leaderboard ranking (served from 1 h cache)."""
+        cache_key = f"{period}:{metric}:{limit}"
+        if cache_key in _leaderboard_cache:
+            logger.debug("Leaderboard cache HIT — key=%s", cache_key)
+            return _leaderboard_cache[cache_key]
+
         # Determine start date. For 'ALL_TIME' do not apply a date filter.
         start_date: Optional[datetime] = datetime.now().replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
@@ -362,4 +396,6 @@ class RecognitionService:
                 "recognitions_received": int(secondary or 0) if metric == "POINTS" else int(score or 0)
             })
 
+        _leaderboard_cache[cache_key] = leaderboard
+        logger.debug("Leaderboard cache STORE — key=%s, entries=%d", cache_key, len(leaderboard))
         return leaderboard

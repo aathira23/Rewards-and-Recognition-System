@@ -3,14 +3,22 @@ Store service - Business logic for reward catalog and redemptions.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
+from cachetools import TTLCache
 
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
 from app.utils.enums import RedemptionStatus, ConversionStatus, ReferenceType
 from app.repository.store_repository import StoreRepository
+
+logger = logging.getLogger(__name__)
+
+# Module-level caches
+_catalog_cache: TTLCache = TTLCache(maxsize=200, ttl=15 * 60)  # 15 min
+_policy_cache: TTLCache = TTLCache(maxsize=20, ttl=60 * 60)    # 1 h
 
 
 class StoreService:
@@ -23,15 +31,15 @@ class StoreService:
         self.notification_service = NotificationService(db, token=token)
 
     def get_catalog(self, page: int = 1, per_page: int = 20, include_inactive: bool = False):
-        """Get rewards from the catalog, paginated. Returns (total, items).
-
-        For the employee-facing catalog (include_inactive=False) rewards with
-        stock_quantity == 0 are excluded as well as inactive ones.
-        When include_inactive=True (HR config view) every reward is returned.
-        """
+        """Get rewards from the catalog, paginated (served from 15 min cache)."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
-        return self.repository.get_catalog_paginated(skip, per_page, include_inactive)
+        cache_key = f"catalog:{skip}:{per_page}:{include_inactive}"
+        if cache_key in _catalog_cache:
+            return _catalog_cache[cache_key]
+        result = self.repository.get_catalog_paginated(skip, per_page, include_inactive)
+        _catalog_cache[cache_key] = result
+        return result
 
     def get_reward_by_id(self, reward_id: int):
         """Get a specific reward by ID."""
@@ -39,7 +47,9 @@ class StoreService:
 
     def create_reward(self, reward_data: Any):
         """Create a new reward item in the store."""
-        return self.repository.create_reward(reward_data.model_dump())
+        result = self.repository.create_reward(reward_data.model_dump())
+        _catalog_cache.clear()
+        return result
 
     def update_reward(self, reward_id: int, reward_data: Any) -> Reward:
         """Update an existing reward item."""
@@ -55,6 +65,7 @@ class StoreService:
         # HR controls is_active manually — stock hitting 0 does NOT auto-deactivate.
         # 0-stock rewards are simply hidden from the employee catalog by the query filter.
 
+        _catalog_cache.clear()  # invalidate catalog on update
         return self.repository.save_reward(reward)
 
     def redeem_reward(self, user_id: int, reward_id: int) -> Redemption:
@@ -98,6 +109,7 @@ class StoreService:
             # Auto-deactivate if stock reaches 0
             if reward.stock_quantity <= 0:
                 reward.is_active = False
+            _catalog_cache.clear()  # stock changed
 
         # 3. Create redemption record
         # All catalog items (Merchandise & Gift Cards) are instant fulfillment
@@ -276,8 +288,13 @@ class StoreService:
         return conversion
 
     def get_policies(self, include_inactive: bool = False):
-        """Get all points and conversion rules. If not include_inactive, returns only active."""
-        return self.repository.get_policies(include_inactive)
+        """Get all points and conversion rules (served from 1 h cache)."""
+        cache_key = f"policies:{include_inactive}"
+        if cache_key in _policy_cache:
+            return _policy_cache[cache_key]
+        result = self.repository.get_policies(include_inactive)
+        _policy_cache[cache_key] = result
+        return result
 
     def create_policy(self, policy_data: Any):
         """Create a new point policy, deactivating any existing duplicate first.
@@ -304,9 +321,12 @@ class StoreService:
                 if key != "id":
                     setattr(policy, key, value)
             policy.is_active = True
+            _policy_cache.clear()
             return self.repository.save_policy(policy)
         else:
-            return self.repository.create_policy(data)
+            result = self.repository.create_policy(data)
+            _policy_cache.clear()
+            return result
 
     def update_policy(self, policy_id: int, policy_data: Any):
         """Update an existing policy."""
@@ -318,4 +338,5 @@ class StoreService:
         for key, value in update_data.items():
             setattr(policy, key, value)
 
+        _policy_cache.clear()
         return self.repository.save_policy(policy)

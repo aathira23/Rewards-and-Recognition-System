@@ -4,14 +4,21 @@ Aligned with UI requirements for rich descriptions.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from cachetools import TTLCache
 
 from app.models.points_ledger import PointsLedger
 from app.utils.enums import TransactionType, ReferenceType, WalletType
 from app.repository.points_repository import PointsRepository
+
+logger = logging.getLogger(__name__)
+
+# Module-level cache: user_id → aggregates dict.  5 min TTL, up to 5 000 users.
+_aggregates_cache: TTLCache = TTLCache(maxsize=5_000, ttl=5 * 60)
 
 
 class PointsService:
@@ -104,6 +111,7 @@ class PointsService:
 
         self.repository.commit()
         self.repository.refresh(batch)
+        self.invalidate_aggregates(user_id)
         return batch
 
     def deduct_points(self, user_id: int, points: int, reference_type: str, reference_id: int):
@@ -137,9 +145,21 @@ class PointsService:
             source_wallet_id=wallet.id,
         )
         self.repository.commit()
+        self.invalidate_aggregates(user_id)
+    def invalidate_aggregates(user_id: int) -> None:
+        """Remove cached aggregates for a user after a points mutation."""
+        _aggregates_cache.pop(user_id, None)
 
     def get_aggregates(self, user_id: int) -> Dict[str, int]:
-        """Compute dashboard metrics: balance, earned, redeemed, pending."""
+        """Compute dashboard metrics: balance, earned, redeemed, pending.
+
+        Results are served from an in-memory TTL cache (5 min) to avoid
+        8 separate DB round-trips on every dashboard load.
+        """
+        if user_id in _aggregates_cache:
+            logger.debug("Aggregates cache HIT — user_id=%s", user_id)
+            return _aggregates_cache[user_id]
+
         wallet = self.get_employee_wallet(user_id)
         balance = self.get_user_balance(user_id)
 
@@ -156,7 +176,7 @@ class PointsService:
         end_of_month = date(today.year, today.month, last_day)
         expiring_this_month = self.repository.get_expiring_points_range(user_id, today, end_of_month)
 
-        return {
+        result = {
             "balance": balance,
             "total_earned": int(earned),
             "total_redeemed": int(redeemed),
@@ -166,6 +186,9 @@ class PointsService:
             "expiring_today": int(expiring_today),
             "expiring_this_month": int(expiring_this_month),
         }
+        _aggregates_cache[user_id] = result
+        logger.debug("Aggregates cache STORE — user_id=%s", user_id)
+        return result
 
     def fetch_ledger_history(
         self,
