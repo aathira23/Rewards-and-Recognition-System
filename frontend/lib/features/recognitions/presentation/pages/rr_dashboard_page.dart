@@ -468,144 +468,118 @@ class _RRDashboardView extends StatelessWidget {
         Text('Main Modules', style: AppTextStyles.sectionHeader()),
         const SizedBox(height: 24),
         LayoutBuilder(builder: (context, constraints) {
-          final bool isMobile = Responsive.isMobile(context);
-          if (isMobile) {
-            return Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                _buildDynamicModuleCard(
-                    context,
-                    'Awards',
-                    'Celebrate outstanding achievements!',
-                    Icons.emoji_events_outlined,
-                    const Color(0xFFFFF7ED),
-                    const Color(0xFFEA580C),
-                    constraints.maxWidth / 2 - 24, onTap: () {
-                  final authState = context.read<AuthBloc>().state;
-                  String targetTab = 'Nominations';
-                  if (authState is AuthAuthenticated) {
-                    final role = authState.auth.user?.role.toUpperCase();
-                    if (role == 'MANAGER' || role == 'DEPT_HEAD') {
-                      targetTab = 'Approvals';
-                    } else if (role == 'HR' || role == 'ADMIN') {
-                      targetTab = 'Approvals & Allocation';
-                    }
+          final authState = context.read<AuthBloc>().state;
+          bool isManager = false;
+          if (authState is AuthAuthenticated) {
+            final role = authState.auth.user?.role.toUpperCase();
+            isManager = role == 'MANAGER' || role == 'DEPT_HEAD';
+          }
+
+          // ── Responsive column calculation ──
+          final availableWidth = constraints.maxWidth;
+          int columns = 1;
+          if (availableWidth > 1200) {
+            columns = isManager ? 6 : 5;
+          } else if (availableWidth > 900) {
+            columns = 3;
+          } else if (availableWidth > 600) {
+            columns = 2;
+          }
+
+          const double spacing = 16;
+          final double cardWidth =
+              (availableWidth - (columns - 1) * spacing) / columns;
+
+          final List<Widget> cards = [
+            _buildDynamicModuleCard(
+              context,
+              'Awards',
+              'Celebrate outstanding achievements!',
+              Icons.emoji_events_outlined,
+              const Color(0xFFFFF7ED),
+              const Color(0xFFEA580C),
+              cardWidth,
+              onTap: () {
+                String targetTab = 'Nominations';
+                if (authState is AuthAuthenticated) {
+                  final role = authState.auth.user?.role.toUpperCase();
+                  if (role == 'MANAGER' || role == 'DEPT_HEAD') {
+                    targetTab = 'Approvals';
+                  } else if (role == 'HR' || role == 'ADMIN') {
+                    targetTab = 'Approvals & Allocation';
                   }
-                  MainLayout.of(context)?.selectTabByTitle(targetTab);
-                }),
-                _buildDynamicModuleCard(
-                    context,
-                    'eCards',
-                    'Spread positivity & appreciate peers!',
-                    Icons.favorite_outline_rounded,
-                    const Color(0xFFF0F9FF),
-                    const Color(0xFF0284C7),
-                    constraints.maxWidth / 2 - 24,
-                    onTap: () =>
-                        MainLayout.of(context)?.selectTabByTitle('eCards')),
-                _buildDynamicModuleCard(
-                    context,
-                    'Leaderboard',
-                    'Rise to the top & inspire others!',
-                    Icons.military_tech_outlined,
-                    const Color(0xFFFDF4FF),
-                    const Color(0xFFC026D3),
-                    constraints.maxWidth / 2 - 24, onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('Leaderboard');
-                }),
-                _buildDynamicModuleCard(
-                    context,
-                    'Redeem Rewards',
-                    'Treat yourself to amazing gifts!',
-                    Icons.card_giftcard_rounded,
-                    const Color(0xFFF5F3FF),
-                    const Color(0xFF7C3AED),
-                    constraints.maxWidth / 2 - 24, onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('Rewards');
-                }),
-                _buildDynamicModuleCard(
-                    context,
-                    'My Activity',
-                    'Track your journey of excellence!',
-                    Icons.history_rounded,
-                    const Color(0xFFECFDF5),
-                    const Color(0xFF059669),
-                    constraints.maxWidth / 2 - 24, onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('My Activity');
-                }),
-              ],
+                }
+                MainLayout.of(context)?.selectTabByTitle(targetTab);
+              },
+            ),
+            _buildDynamicModuleCard(
+              context,
+              'eCards',
+              'Spread positivity & appreciate peers!',
+              Icons.favorite_outline_rounded,
+              const Color(0xFFF0F9FF),
+              const Color(0xFF0284C7),
+              cardWidth,
+              onTap: () => MainLayout.of(context)?.selectTabByTitle('eCards'),
+            ),
+            _buildDynamicModuleCard(
+              context,
+              'Leaderboard',
+              'Rise to the top & inspire others!',
+              Icons.military_tech_outlined,
+              const Color(0xFFFDF4FF),
+              const Color(0xFFC026D3),
+              cardWidth,
+              onTap: () {
+                MainLayout.of(context)?.selectTabByTitle('Leaderboard');
+              },
+            ),
+            _buildDynamicModuleCard(
+              context,
+              'Redeem Rewards',
+              'Treat yourself to amazing gifts!',
+              Icons.card_giftcard_rounded,
+              const Color(0xFFF5F3FF),
+              const Color(0xFF7C3AED),
+              cardWidth,
+              onTap: () {
+                MainLayout.of(context)?.selectTabByTitle('Rewards');
+              },
+            ),
+            _buildDynamicModuleCard(
+              context,
+              'My Activity',
+              'Track your journey of excellence!',
+              Icons.history_rounded,
+              const Color(0xFFECFDF5),
+              const Color(0xFF059669),
+              cardWidth,
+              onTap: () {
+                MainLayout.of(context)?.selectTabByTitle('My Activity');
+              },
+            ),
+          ];
+
+          if (isManager) {
+            cards.add(
+              _buildDynamicModuleCard(
+                context,
+                'Team Analytics',
+                'Insights into your team\'s performance!',
+                Icons.analytics_rounded,
+                const Color(0xFFF0FDFA), // Teal 50
+                const Color(0xFF0D9488), // Teal 600
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Analytics'),
+              ),
             );
           }
-          return IntrinsicHeight(
-            child: Row(
-              children: [
-                Expanded(
-                    child: _buildModuleCard(
-                        context,
-                        'Awards',
-                        'Celebrate outstanding achievements!',
-                        Icons.emoji_events_outlined,
-                        const Color(0xFFFFF7ED),
-                        const Color(0xFFEA580C), onTap: () {
-                  final authState = context.read<AuthBloc>().state;
-                  String targetTab = 'Nominations';
-                  if (authState is AuthAuthenticated) {
-                    final role = authState.auth.user?.role.toUpperCase();
-                    if (role == 'MANAGER' || role == 'DEPT_HEAD') {
-                      targetTab = 'Approvals';
-                    } else if (role == 'HR' || role == 'ADMIN') {
-                      targetTab = 'Approvals & Allocation';
-                    }
-                  }
-                  MainLayout.of(context)?.selectTabByTitle(targetTab);
-                })),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildModuleCard(
-                        context,
-                        'eCards',
-                        'Spread positivity & appreciate peers!',
-                        Icons.favorite_outline_rounded,
-                        const Color(0xFFF0F9FF),
-                        const Color(0xFF0284C7),
-                        onTap: () => MainLayout.of(context)
-                            ?.selectTabByTitle('eCards'))),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildModuleCard(
-                        context,
-                        'Leaderboard',
-                        'Rise to the top & inspire others!',
-                        Icons.military_tech_outlined,
-                        const Color(0xFFFDF4FF),
-                        const Color(0xFFC026D3), onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('Leaderboard');
-                })),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildModuleCard(
-                        context,
-                        'Redeem Rewards',
-                        'Treat yourself to amazing gifts!',
-                        Icons.card_giftcard_rounded,
-                        const Color(0xFFF5F3FF),
-                        const Color(0xFF7C3AED), onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('Rewards');
-                })),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildModuleCard(
-                        context,
-                        'My Activity',
-                        'Track your journey of excellence!',
-                        Icons.history_rounded,
-                        const Color(0xFFECFDF5),
-                        const Color(0xFF059669), onTap: () {
-                  MainLayout.of(context)?.selectTabByTitle('My Activity');
-                })),
-              ],
-            ),
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: cards,
           );
         }),
       ],
@@ -724,6 +698,7 @@ class _HoverableModuleCardState extends State<_HoverableModuleCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(20),
+          constraints: const BoxConstraints(minHeight: 180),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
