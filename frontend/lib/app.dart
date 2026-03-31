@@ -1,6 +1,7 @@
 /// "The root widget of the application, configuring themes, localizations, and initial navigation."
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:rr_frontend/core/network/auth_interceptor.dart';
 import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:rr_frontend/features/analytics/presentation/pages/dashboard_page.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
@@ -15,7 +16,15 @@ class RRApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<AuthBloc>()..add(AuthCheckRequested()),
+      create: (_) {
+        final authBloc = sl<AuthBloc>()..add(AuthCheckRequested());
+        // Wire 401 handler: when any API call gets Unauthorized,
+        // dispatch logout so the UI returns to the login screen.
+        sl<AuthInterceptor>().onUnauthorized = () {
+          authBloc.add(AuthLogoutRequested());
+        };
+        return authBloc;
+      },
       child: MaterialApp(
         title: 'Rewards & Recognition',
         debugShowCheckedModeBanner: false,

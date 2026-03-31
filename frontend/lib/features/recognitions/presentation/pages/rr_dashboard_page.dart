@@ -141,12 +141,19 @@ class _RRDashboardView extends StatelessWidget {
 
   Widget _buildStatsBanner(BuildContext context) {
     return BlocBuilder<RecognitionsBloc, RecognitionsState>(
+      buildWhen: (prev, curr) =>
+          prev.stats?.receivedCount != curr.stats?.receivedCount,
       builder: (context, recState) {
         return BlocBuilder<PointsBloc, PointsState>(
+          buildWhen: (prev, curr) =>
+              prev.summary?.balance != curr.summary?.balance,
           builder: (context, ptsState) {
             return BlocBuilder<AuthBloc, AuthState>(
+              buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
               builder: (context, authState) {
                 return BlocBuilder<NominationsBloc, NominationsState>(
+                  buildWhen: (prev, curr) =>
+                      prev.nominations != curr.nominations,
                   builder: (context, nomState) {
                     final balance = ptsState.summary?.balance ?? 0;
                     final level = LevelingUtils.getLevel(balance);
@@ -211,7 +218,8 @@ class _RRDashboardView extends StatelessWidget {
                                     Text(
                                       'CURRENT STANDING',
                                       style: AppTextStyles.captionStrong(
-                                          color: Colors.white.withOpacity(0.7)),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7)),
                                     ),
                                   ],
                                 ),
@@ -231,14 +239,14 @@ class _RRDashboardView extends StatelessWidget {
                                           Icon(
                                             Icons.shield_rounded,
                                             size: 52,
-                                            color:
-                                                Colors.black.withOpacity(0.12),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.12),
                                           ),
                                           Text(
                                             level.toString(),
                                             style: AppTextStyles.headline1(
                                                 color: Colors.black
-                                                    .withOpacity(0.55)),
+                                                    .withValues(alpha: 0.55)),
                                           ),
                                         ],
                                       ),
@@ -263,7 +271,7 @@ class _RRDashboardView extends StatelessWidget {
                                               'pts',
                                               style: AppTextStyles.sectionTitle(
                                                   color: Colors.white
-                                                      .withOpacity(0.85)),
+                                                      .withValues(alpha: 0.85)),
                                             ),
                                           ],
                                         ),
@@ -271,7 +279,7 @@ class _RRDashboardView extends StatelessWidget {
                                           'Available Balance',
                                           style: AppTextStyles.bodyLarge(
                                               color: Colors.white
-                                                  .withOpacity(0.7)),
+                                                  .withValues(alpha: 0.7)),
                                         ),
                                       ],
                                     ),
@@ -290,7 +298,7 @@ class _RRDashboardView extends StatelessWidget {
                                           '$pointsToNext pts to Level ${level + 1}',
                                           style: AppTextStyles.smallMedium(
                                               color: Colors.white
-                                                  .withOpacity(0.9))),
+                                                  .withValues(alpha: 0.9))),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
@@ -299,7 +307,7 @@ class _RRDashboardView extends StatelessWidget {
                                   child: LinearProgressIndicator(
                                     value: progress,
                                     backgroundColor:
-                                        Colors.white.withOpacity(0.12),
+                                        Colors.white.withValues(alpha: 0.12),
                                     valueColor:
                                         const AlwaysStoppedAnimation<Color>(
                                             AppTheme.accentYellow),
@@ -340,7 +348,7 @@ class _RRDashboardView extends StatelessWidget {
             child: Icon(
               icon,
               size: 100,
-              color: iconColor.withOpacity(0.05),
+              color: iconColor.withValues(alpha: 0.05),
             ),
           ),
           Column(
@@ -445,7 +453,8 @@ class _RRDashboardView extends StatelessWidget {
                       label: const Text('Give an Award'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black87,
-                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        side: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.3)),
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -702,10 +711,10 @@ class _HoverableModuleCardState extends State<_HoverableModuleCard> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withOpacity(0.08)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_isHovered ? 0.08 : 0.02),
+                color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.02),
                 blurRadius: _isHovered ? 20 : 10,
                 offset: Offset(0, _isHovered ? 8 : 4),
               ),

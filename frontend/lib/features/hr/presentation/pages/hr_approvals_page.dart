@@ -857,10 +857,10 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withOpacity(0.4),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.2)),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

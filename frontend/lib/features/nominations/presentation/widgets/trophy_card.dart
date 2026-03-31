@@ -26,7 +26,7 @@ class TrophyCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFFEF08A), width: 2), // Yellow border
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -50,7 +50,7 @@ class TrophyCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.orange.withOpacity(0.2),
+                          color: Colors.orange.withValues(alpha: 0.2),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -85,7 +85,7 @@ class TrophyCard extends StatelessWidget {
           // Divider
           Container(
             height: 1,
-            color: const Color(0xFFFEF08A).withOpacity(0.5),
+            color: const Color(0xFFFEF08A).withValues(alpha: 0.5),
             margin: const EdgeInsets.symmetric(horizontal: 24),
           ),
           
@@ -105,7 +105,7 @@ class TrophyCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
             ),
             child: Row(

@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
-import '../../../../core/widgets/app_dialog.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/recognition_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
-import '../bloc/recognitions_bloc.dart';
-import '../bloc/recognitions_event.dart';
 import 'compact_send_panel.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -389,7 +385,9 @@ class EcardFeedPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filteredFeed = feed.where((r) => (r.sourceType ?? '').toUpperCase() != 'AWARD').toList();
+    final filteredFeed = feed
+        .where((r) => (r.sourceType ?? '').toUpperCase() != 'AWARD')
+        .toList();
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: _cardDecoration(context),
