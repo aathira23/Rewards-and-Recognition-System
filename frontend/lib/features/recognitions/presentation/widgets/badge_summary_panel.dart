@@ -539,6 +539,15 @@ class SendEcardPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sentCount = stats?.sentCount ?? 0;
+    // eCard limit / cooldown state (for the Send panel header)
+    final int? monthlyLimit = stats?.monthlyLimit;
+    final int monthlySent = stats?.monthlySent ?? 0;
+    final DateTime? nextAvailableAt = stats?.nextAvailableAt;
+    final bool limitReached =
+        monthlyLimit != null && monthlySent >= monthlyLimit;
+    final bool onCooldown =
+        nextAvailableAt != null && DateTime.now().isBefore(nextAvailableAt);
+    final brandColor = Theme.of(context).colorScheme.primary;
 
     final sortedBadges = List<BadgeEntity>.from(badges)
       ..sort((a, b) => a.name.compareTo(b.name));
@@ -567,6 +576,15 @@ class SendEcardPanel extends StatelessWidget {
                   ],
                 ),
               ),
+              StatusPills(
+                monthlyLimit: monthlyLimit,
+                monthlySent: monthlySent,
+                limitReached: limitReached,
+                onCooldown: onCooldown,
+                nextAvailableAt: nextAvailableAt,
+                brandColor: brandColor,
+              ),
+              const SizedBox(width: 8),
               Text('$sentCount eCards Sent',
                   style:
                       AppTextStyles.bodyBold(color: const Color(0xFF4636A6))),

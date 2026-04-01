@@ -488,6 +488,38 @@ class _StatusPills extends StatelessWidget {
   }
 }
 
+// Public wrapper so other widgets can reuse the same pills UI.
+class StatusPills extends StatelessWidget {
+  final int? monthlyLimit;
+  final int monthlySent;
+  final bool limitReached;
+  final bool onCooldown;
+  final DateTime? nextAvailableAt;
+  final Color brandColor;
+
+  const StatusPills({
+    Key? key,
+    required this.monthlyLimit,
+    required this.monthlySent,
+    required this.limitReached,
+    required this.onCooldown,
+    required this.nextAvailableAt,
+    required this.brandColor,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return _StatusPills(
+      monthlyLimit: monthlyLimit,
+      monthlySent: monthlySent,
+      limitReached: limitReached,
+      onCooldown: onCooldown,
+      nextAvailableAt: nextAvailableAt,
+      brandColor: brandColor,
+    );
+  }
+}
+
 class BadgePickerDialog extends StatefulWidget {
   final List<BadgeEntity> badges;
   final List<UserEntity> users;
@@ -604,7 +636,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                               errorBuilder: (_, __, ___) => info.hasEmoji
                                   ? Text(info.emoji!,
                                       style: AppTextStyles.emoji())
-                                  : Icon(info.icon, color: info.color, size: 24))
+                                  : Icon(info.icon,
+                                      color: info.color, size: 24))
                           : (info.hasEmoji
                               ? Text(info.emoji!, style: AppTextStyles.emoji())
                               : Icon(info.icon, color: info.color, size: 24)),
@@ -676,7 +709,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                       controller: TextEditingController(text: _message),
                       style: AppTextStyles.body(),
                       decoration: InputDecoration(
-                        hintText: 'Tell them why they deserve this recognition…',
+                        hintText:
+                            'Tell them why they deserve this recognition…',
                         hintStyle:
                             AppTextStyles.body(color: Colors.grey.shade400),
                         filled: true,
@@ -703,7 +737,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => setState(() => _selected = null),
-                            icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                            icon:
+                                const Icon(Icons.arrow_back_rounded, size: 16),
                             label: const Text('Back'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -747,7 +782,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
 
                 // Floating Search Results Overlay
                 Positioned(
-                  top: 24, // Positioned exactly where the TextField starts in the overlap
+                  top:
+                      24, // Positioned exactly where the TextField starts in the overlap
                   left: 0,
                   right: 0,
                   child: Column(
@@ -765,7 +801,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                 border: Border.all(color: Colors.grey.shade200),
                               ),
                               child: const Center(
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             );
                           }
@@ -801,9 +838,10 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                           );
                         },
                       ),
-                      
+
                       // The actual floating list
-                      if (_recipientSearchQuery.isNotEmpty && _selectedUser == null)
+                      if (_recipientSearchQuery.isNotEmpty &&
+                          _selectedUser == null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Material(
@@ -817,21 +855,28 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.grey.shade200),
                               ),
-                              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
-                                bloc: widget.outerContext.read<RecognitionsBloc>(),
+                              child: BlocBuilder<RecognitionsBloc,
+                                  RecognitionsState>(
+                                bloc: widget.outerContext
+                                    .read<RecognitionsBloc>(),
                                 builder: (ctx, recState) {
-                                  final q = _recipientSearchQuery.trim().toLowerCase();
+                                  final q = _recipientSearchQuery
+                                      .trim()
+                                      .toLowerCase();
                                   final filtered = recState.users.where((u) {
                                     final name = u.name.toLowerCase();
                                     final email = (u.email ?? '').toLowerCase();
-                                    return name.contains(q) || email.contains(q);
+                                    return name.contains(q) ||
+                                        email.contains(q);
                                   }).toList();
 
                                   if (filtered.isEmpty) {
                                     return Padding(
                                       padding: const EdgeInsets.all(16),
-                                      child: Text('No results for "$_recipientSearchQuery"',
-                                          style: TextStyle(color: Colors.grey.shade400)),
+                                      child: Text(
+                                          'No results for "$_recipientSearchQuery"',
+                                          style: TextStyle(
+                                              color: Colors.grey.shade400)),
                                     );
                                   }
 
@@ -839,27 +884,48 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                     shrinkWrap: true,
                                     padding: EdgeInsets.zero,
                                     itemCount: filtered.length,
-                                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                                    separatorBuilder: (_, __) => Divider(
+                                        height: 1, color: Colors.grey.shade100),
                                     itemBuilder: (ctx, i) {
                                       final user = filtered[i];
                                       return InkWell(
                                         onTap: () => setLocal(() {
                                           _selectedUser = user;
-                                          _recipientSearchController.text = user.name;
+                                          _recipientSearchController.text =
+                                              user.name;
                                           _receiverId = user.id;
                                           _recipientSearchQuery = '';
                                         }),
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 12),
                                           child: Row(
                                             children: [
                                               CircleAvatar(
                                                 radius: 14,
-                                                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                                                child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                                                backgroundColor:
+                                                    Theme.of(context)
+                                                        .primaryColor
+                                                        .withValues(alpha: 0.1),
+                                                child: Text(
+                                                    user.name.isNotEmpty
+                                                        ? user.name[0]
+                                                            .toUpperCase()
+                                                        : '?',
+                                                    style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Theme.of(context)
+                                                            .primaryColor)),
                                               ),
                                               const SizedBox(width: 12),
-                                              Expanded(child: Text(user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+                                              Expanded(
+                                                  child: Text(user.name,
+                                                      style: const TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight: FontWeight
+                                                              .w500))),
                                             ],
                                           ),
                                         ),
@@ -904,79 +970,76 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedScale(
-        scale: _hovered ? 1.04 : 1.0,
-        duration: const Duration(milliseconds: 180),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? info.color.withValues(alpha: 0.07)
+                : Theme.of(context).colorScheme.surface,
+            border: Border.all(
               color: _hovered
-                  ? info.color.withValues(alpha: 0.07)
-                  : Theme.of(context).colorScheme.surface,
-              border: Border.all(
-                color: _hovered
-                    ? info.color.withValues(alpha: 0.5)
-                    : Colors.grey.shade200,
-                width: _hovered ? 1.5 : 1,
+                  ? info.color.withValues(alpha: 0.5)
+                  : Colors.grey.shade200,
+              width: _hovered ? 1.5 : 1,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              if (_hovered)
+                BoxShadow(
+                  color: info.color.withValues(alpha: 0.15),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44, // Reduced from 52
+                height: 44, // Reduced from 52
+                decoration: BoxDecoration(
+                  color: info.color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: widget.badge.iconUrl != null
+                      ? Image.network(
+                          widget.badge.iconUrl!,
+                          width: 26, // Reduced from 32
+                          height: 26, // Reduced from 32
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => info.hasEmoji
+                              ? Text(info.emoji!,
+                                  style: AppTextStyles.emoji(size: 20))
+                              : Icon(info.icon, color: info.color, size: 22),
+                        )
+                      : (info.hasEmoji
+                          ? Text(info.emoji!,
+                              style: AppTextStyles.emoji(size: 20))
+                          : Icon(info.icon, color: info.color, size: 22)),
+                ),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                if (_hovered)
-                  BoxShadow(
-                    color: info.color.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 44, // Reduced from 52
-                  height: 44, // Reduced from 52
-                  decoration: BoxDecoration(
-                    color: info.color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: widget.badge.iconUrl != null
-                        ? Image.network(
-                            widget.badge.iconUrl!,
-                            width: 26, // Reduced from 32
-                            height: 26, // Reduced from 32
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => info.hasEmoji
-                                ? Text(info.emoji!,
-                                    style: AppTextStyles.emoji(size: 20))
-                                : Icon(info.icon, color: info.color, size: 22),
-                          )
-                        : (info.hasEmoji
-                            ? Text(info.emoji!, style: AppTextStyles.emoji(size: 20))
-                            : Icon(info.icon, color: info.color, size: 22)),
-                  ),
-                ),
-                const SizedBox(height: 8),
+              const SizedBox(height: 8),
+              Text(
+                widget.badge.name,
+                style: AppTextStyles.small(color: Colors.grey[700]),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (widget.badge.points != null && widget.badge.points! > 0) ...[
+                const SizedBox(height: 4),
                 Text(
-                  widget.badge.name,
-                  style: AppTextStyles.small(color: Colors.grey[700]),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  '+${widget.badge.points} pts',
+                  style: AppTextStyles.captionBold(color: info.color),
                 ),
-                if (widget.badge.points != null &&
-                    widget.badge.points! > 0) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '+${widget.badge.points} pts',
-                    style: AppTextStyles.captionBold(color: info.color),
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ),

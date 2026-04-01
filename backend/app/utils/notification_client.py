@@ -177,12 +177,7 @@ def send_notification(
     additional_data: Optional[dict] = None,
     token: Optional[str] = None,
 ) -> bool:
-    """
-    Unified send: EMAIL + optional TEAMS in a single notification service call.
-    This mirrors how the Styria training service fires notifications.
-    Teams channel is only included when TEAMS_NOTIFICATIONS_ENABLED=True
-    and `teams_recipients` is provided.
-    """
+
     if not settings.USE_NOTIFICATION_SERVICE:
         return False
 
