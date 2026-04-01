@@ -178,15 +178,24 @@ class _MyActivityPageState extends State<MyActivityPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GestureDetector(
-                  onTap: () => MainLayout.of(context)?.selectTabByTitle('Recognitions'),
+                  onTap: () {
+                    final role = widget.userRole.toUpperCase();
+                    final destination = (role == 'HR' || role == 'ADMIN')
+                        ? 'Dashboard'
+                        : 'Recognitions';
+                    MainLayout.of(context)?.selectTabByTitle(destination);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+                        const Icon(Icons.arrow_back,
+                            color: Color(0xFF64748B), size: 18),
                         const SizedBox(width: 8),
-                        Text('Back to Dashboard', style: AppTextStyles.body(color: const Color(0xFF64748B))),
+                        Text('Back to Dashboard',
+                            style: AppTextStyles.body(
+                                color: const Color(0xFF64748B))),
                       ],
                     ),
                   ),
