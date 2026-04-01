@@ -89,6 +89,24 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.dashboard_rounded,
           page: HrDashboardPage(userRole: r),
         ),
+        const NavDestination(
+          title: 'Awards',
+          subtitle: 'View nominations and award status',
+          icon: Icons.emoji_events_rounded,
+          page: EmployeeNominationsPage(),
+        ),
+        const NavDestination(
+          title: 'eCards',
+          subtitle: 'Spread positivity & appreciate peers!',
+          icon: Icons.favorite_outline_rounded,
+          page: EmployeeRecognitionsPage(),
+        ),
+        const NavDestination(
+          title: 'Rewards',
+          subtitle: 'Redeem your hard-earned points',
+          icon: Icons.shopping_bag_rounded,
+          page: EmployeeRewardsPage(),
+        ),
         NavDestination(
           title: 'Analytics',
           subtitle: 'Organisation-wide performance insights',
@@ -112,6 +130,12 @@ class _DashboardPageState extends State<DashboardPage> {
           subtitle: 'Review nominations, conversions & allocate budgets',
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
+        ),
+        NavDestination(
+          title: 'My Activity',
+          subtitle: 'Track your point earnings, redemptions, and conversions',
+          icon: Icons.history_rounded,
+          page: MyActivityPage(userRole: r),
         ),
         const NavDestination(
           title: 'Leaderboard',

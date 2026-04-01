@@ -183,8 +183,13 @@ class _MyActivityPageState extends State<MyActivityPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GestureDetector(
-                  onTap: () =>
-                      MainLayout.of(context)?.selectTabByTitle('Recognitions'),
+                  onTap: () {
+                    final role = widget.userRole.toUpperCase();
+                    final destination = (role == 'HR' || role == 'ADMIN')
+                        ? 'Dashboard'
+                        : 'Recognitions';
+                    MainLayout.of(context)?.selectTabByTitle(destination);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: Row(

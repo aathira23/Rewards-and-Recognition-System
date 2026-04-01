@@ -8,6 +8,8 @@ import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../core/widgets/empty_state_view.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/services/feature_flag_service.dart';
 import '../../domain/entities/reward_entity.dart';
@@ -122,25 +124,41 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    GestureDetector(
-                                      onTap: () => MainLayout.of(context)
-                                          ?.selectTabByTitle('Recognitions'),
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 12.0),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.arrow_back_rounded,
-                                                size: 20,
-                                                color: Colors.black87),
-                                            const SizedBox(width: 8),
-                                            Text('Back to Dashboard',
-                                                style: AppTextStyles.bodyBold(
-                                                    color: Colors.black87)),
-                                          ],
-                                        ),
-                                      ),
+                                    BlocBuilder<AuthBloc, AuthState>(
+                                      builder: (context, authState) {
+                                        String destination = 'Recognitions';
+                                        if (authState is AuthAuthenticated) {
+                                          final role = authState.auth.user?.role
+                                              .toUpperCase();
+                                          if (role == 'HR' || role == 'ADMIN') {
+                                            destination = 'Dashboard';
+                                          }
+                                        }
+
+                                        return GestureDetector(
+                                          onTap: () => MainLayout.of(context)
+                                              ?.selectTabByTitle(destination),
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 12.0),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                    Icons.arrow_back_rounded,
+                                                    size: 20,
+                                                    color: Colors.black87),
+                                                const SizedBox(width: 8),
+                                                Text('Back to Dashboard',
+                                                    style:
+                                                        AppTextStyles.bodyBold(
+                                                            color:
+                                                                Colors.black87)),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                     const Text(
                                       'Rewards Store',
