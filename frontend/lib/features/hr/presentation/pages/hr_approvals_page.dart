@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_dialog.dart';
@@ -124,13 +125,57 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                   Responsive.pagePadding(context),
                   0,
                 ),
-                child: AppPageHeader(
-                  action: _RefreshBtn(onTap: () {
-                    context.read<HrApprovalsBloc>()
-                      ..add(LoadNominations())
-                      ..add(LoadConversions())
-                      ..add(LoadManagers());
-                  }),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () =>
+                          MainLayout.of(context)?.selectTabByTitle('Dashboard'),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_back_rounded,
+                                size: 20, color: Colors.black87),
+                            const SizedBox(width: 8),
+                            Text('Back to Dashboard',
+                                style: AppTextStyles.bodyBold(
+                                    color: Colors.black87)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Approvals & Allocation',
+                                style: AppTextStyles.headline1(
+                                    color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Review nominations and manage manager budgets',
+                                style: AppTextStyles.body(
+                                    color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _RefreshBtn(onTap: () {
+                          context.read<HrApprovalsBloc>()
+                            ..add(LoadNominations())
+                            ..add(LoadConversions())
+                            ..add(LoadManagers());
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
 

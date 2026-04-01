@@ -16,6 +16,7 @@ import 'package:rr_frontend/features/analytics/presentation/pages/analytics_page
 import 'package:rr_frontend/features/reports/presentation/pages/reports_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_config_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_approvals_page.dart';
+import 'package:rr_frontend/features/hr/presentation/pages/hr_dashboard_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String userName;
@@ -82,6 +83,13 @@ class _DashboardPageState extends State<DashboardPage> {
     if (r == 'HR' || r == 'ADMIN') {
       return [
         NavDestination(
+          title: 'Dashboard',
+          heading: 'Rewards & Recognition',
+          subtitle: 'Overview of rewards and recognition',
+          icon: Icons.dashboard_rounded,
+          page: HrDashboardPage(userRole: r),
+        ),
+        NavDestination(
           title: 'Analytics',
           subtitle: 'Organisation-wide performance insights',
           icon: Icons.analytics_rounded,
@@ -104,13 +112,6 @@ class _DashboardPageState extends State<DashboardPage> {
           subtitle: 'Review nominations, conversions & allocate budgets',
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
-        ),
-        NavDestination(
-          title: 'My Activity',
-          heading: 'My Activity',
-          subtitle: 'Track your point earnings, redemptions, and conversions',
-          icon: Icons.history_rounded,
-          page: MyActivityPage(userRole: r),
         ),
         const NavDestination(
           title: 'Leaderboard',

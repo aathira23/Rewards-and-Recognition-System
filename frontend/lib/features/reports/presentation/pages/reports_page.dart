@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
@@ -241,6 +242,41 @@ class _ReportsViewState extends State<_ReportsView> {
 
   void _goBack() => setState(() => _active = null);
 
+  Widget _buildPageHeader(String title, String subtitle, {VoidCallback? onBack}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onBack ??
+              () => MainLayout.of(context)?.selectTabByTitle('Dashboard'),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_back_rounded,
+                    size: 20, color: Colors.black87),
+                const SizedBox(width: 8),
+                Text(
+                    onBack == null ? 'Back to Dashboard' : 'Back to Reports',
+                    style: AppTextStyles.bodyBold(color: Colors.black87)),
+              ],
+            ),
+          ),
+        ),
+        Text(
+          title,
+          style: AppTextStyles.headline1(color: Colors.black87),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: AppTextStyles.body(color: Colors.grey.shade600),
+        ),
+      ],
+    );
+  }
+
   // ── build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -289,6 +325,11 @@ class _ReportsViewState extends State<_ReportsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildPageHeader(
+            'Reports & Insights',
+            'Organization-wide data and trends',
+          ),
+          const SizedBox(height: 32),
           LayoutBuilder(builder: (ctx, constraints) {
             final w = constraints.maxWidth;
             // desktop ≥1100 → 3 cols, tablet ≥600 → 2 cols, mobile → 1 col
@@ -324,35 +365,12 @@ class _ReportsViewState extends State<_ReportsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── breadcrumb ──
-          Row(
-            children: [
-              InkWell(
-                onTap: _goBack,
-                borderRadius: BorderRadius.circular(6),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.arrow_back_rounded,
-                      size: 18, color: Colors.grey.shade600),
-                  const SizedBox(width: 6),
-                  Text('Reports',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500)),
-                ]),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('/',
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-              ),
-              Text(type.title,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
+          _buildPageHeader(
+            type.title,
+            type.subtitle,
+            onBack: _goBack,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
 
           // ── title + actions ──
           LayoutBuilder(
