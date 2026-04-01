@@ -18,6 +18,8 @@ class SendRecognitionUseCase
       receiverId: params.receiverId,
       badgeId: params.badgeId,
       message: params.message,
+      personaType: params.personaType,
+      personaLabel: params.personaLabel,
     );
   }
 }
@@ -26,13 +28,18 @@ class SendRecognitionParams extends Equatable {
   final int receiverId;
   final int badgeId;
   final String? message;
+  final String personaType;
+  final String? personaLabel;
 
   const SendRecognitionParams({
     required this.receiverId,
     required this.badgeId,
+    required this.personaType,
     this.message,
+    this.personaLabel,
   });
 
   @override
-  List<Object?> get props => [receiverId, badgeId, message];
+  List<Object?> get props =>
+      [receiverId, badgeId, message, personaType, personaLabel];
 }

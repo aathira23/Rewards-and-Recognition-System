@@ -7,6 +7,8 @@ import '../../../../core/widgets/app_snackbar.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
 import 'sent_recognitions_list.dart';
@@ -547,10 +549,39 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
   String _recipientSearchQuery = '';
   String? _message;
 
+  List<Map<String, dynamic>> _personas = [];
+  late Map<String, dynamic> _selectedPersona;
+
   @override
   void initState() {
     super.initState();
     _selected = widget.initialBadge;
+
+    _personas = [
+      {'persona_type': 'PERSONAL', 'persona_label': null}
+    ];
+
+    final authState = widget.outerContext.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      final user = authState.auth.user;
+      final role = user?.role.toUpperCase() ?? '';
+      final defaultDeptLabel = 'Department';
+      final deptName = user?.departmentName ?? defaultDeptLabel;
+
+      if (role == 'HR' || role == 'MANAGER' || role == 'DEPT_HEAD') {
+        _personas.add({
+          'persona_type': 'DEPARTMENT',
+          'persona_label': deptName,
+        });
+      } else if (role == 'ADMIN') {
+        _personas.add({
+          'persona_type': 'Company',
+          'persona_label': 'Tarento',
+        });
+      }
+    }
+
+    _selectedPersona = _personas.first;
   }
 
   @override
@@ -691,6 +722,53 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
 
                     const SizedBox(height: 24),
 
+                    // Send As Persona Selector
+                    if (_personas.length > 1) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.assignment_ind_outlined,
+                              size: 16, color: Colors.grey.shade500),
+                          const SizedBox(width: 6),
+                          Text('Send as', style: AppTextStyles.sectionTitle()),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<Map<String, dynamic>>(
+                            value: _selectedPersona,
+                            isExpanded: true,
+                            icon: Icon(Icons.arrow_drop_down,
+                                color: Colors.grey.shade600),
+                            items: _personas.map((persona) {
+                              final isPersonal =
+                                  persona['persona_type'] == 'PERSONAL';
+                              final label = isPersonal
+                                  ? 'Send as Myself'
+                                  : persona['persona_label'] ??
+                                      '${persona['persona_type']}';
+                              return DropdownMenuItem(
+                                value: persona,
+                                child: Text(label, style: AppTextStyles.body()),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setLocal(() => _selectedPersona = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
                     // Message Section
                     Row(
                       children: [
@@ -763,6 +841,10 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                     receiverId: _receiverId!,
                                     badgeId: _selected!.id,
                                     message: _message ?? '',
+                                    personaType:
+                                        _selectedPersona['persona_type'],
+                                    personaLabel:
+                                        _selectedPersona['persona_label'],
                                   ));
                               Navigator.pop(ctx);
                             },

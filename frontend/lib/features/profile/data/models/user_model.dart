@@ -8,6 +8,7 @@ class UserModel extends UserEntity {
     required super.email,
     required super.role,
     super.departmentId,
+    super.departmentName,
     super.managerId,
   });
 
@@ -21,6 +22,7 @@ class UserModel extends UserEntity {
       email: json['email'] ?? '',
       role: json['role'] ?? '',
       departmentId: json['department_id'],
+      departmentName: json['department_name'],
       managerId: json['manager_id'],
     );
   }
@@ -33,6 +35,7 @@ class UserModel extends UserEntity {
       'email': email,
       'role': role,
       'department_id': departmentId,
+      'department_name': departmentName,
       'manager_id': managerId,
     };
   }
