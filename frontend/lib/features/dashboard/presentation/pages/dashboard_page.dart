@@ -4,7 +4,7 @@ import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
-import 'package:rr_frontend/features/recognitions/presentation/pages/rr_dashboard_page.dart';
+import 'package:rr_frontend/features/dashboard/presentation/pages/dashboard_home_page.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/employee_recognitions_page.dart';
 
 import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
@@ -16,7 +16,6 @@ import 'package:rr_frontend/features/analytics/presentation/pages/analytics_page
 import 'package:rr_frontend/features/reports/presentation/pages/reports_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_config_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_approvals_page.dart';
-import 'package:rr_frontend/features/hr/presentation/pages/hr_dashboard_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String userName;
@@ -82,12 +81,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
     if (r == 'HR' || r == 'ADMIN') {
       return [
-        NavDestination(
+        const NavDestination(
           title: 'Dashboard',
           heading: 'Rewards & Recognition',
           subtitle: 'Overview of rewards and recognition',
           icon: Icons.dashboard_rounded,
-          page: HrDashboardPage(userRole: r),
+          page: DashboardHomePage(),
         ),
         const NavDestination(
           title: 'Awards',
@@ -156,7 +155,7 @@ class _DashboardPageState extends State<DashboardPage> {
           heading: 'Rewards & Recognition',
           subtitle: 'Celebrate, Earn, and Redeem!',
           icon: Icons.card_giftcard_rounded,
-          page: const RRDashboardPage(),
+          page: const DashboardHomePage(),
         ),
         const NavDestination(
           title: 'eCards',
@@ -210,7 +209,7 @@ class _DashboardPageState extends State<DashboardPage> {
         heading: 'Rewards & Recognition',
         subtitle: 'Celebrate, Earn, and Redeem!',
         icon: Icons.card_giftcard_rounded,
-        page: const RRDashboardPage(),
+        page: const DashboardHomePage(),
       ),
       const NavDestination(
         title: 'eCards',

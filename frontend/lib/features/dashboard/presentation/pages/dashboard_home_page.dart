@@ -1,42 +1,39 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
-import 'package:rr_frontend/core/utils/responsive.dart';
-import 'package:rr_frontend/injection_container.dart';
-import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
-import 'package:rr_frontend/features/analytics/presentation/bloc/analytics_bloc.dart';
-import 'package:rr_frontend/features/analytics/presentation/bloc/analytics_event.dart';
-import 'package:rr_frontend/features/analytics/presentation/bloc/analytics_state.dart';
-import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_bloc.dart';
-import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_event.dart' as rec;
-import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_state.dart';
-import 'package:rr_frontend/features/recognitions/presentation/widgets/recognition_feed_list.dart';
+import 'package:rr_frontend/core/widgets/app_snackbar.dart';
 
+import 'package:rr_frontend/core/utils/responsive.dart';
+import 'package:rr_frontend/core/utils/leveling_utils.dart';
+import 'package:rr_frontend/injection_container.dart';
+import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_bloc.dart';
+import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_event.dart'
+    as rec;
+import 'package:rr_frontend/features/recognitions/presentation/bloc/recognitions_state.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_bloc.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_event.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_state.dart';
 import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_bloc.dart';
-import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_event.dart' as nom;
+import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_event.dart'
+    as nom;
 import 'package:rr_frontend/features/nominations/presentation/bloc/nominations_state.dart';
 import 'package:rr_frontend/features/nominations/presentation/widgets/nominate_employee_dialog.dart';
-import 'package:rr_frontend/features/recognitions/presentation/widgets/compact_send_panel.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_state.dart';
 import 'package:rr_frontend/features/profile/domain/entities/user_entity.dart';
-import 'package:rr_frontend/core/utils/leveling_utils.dart';
 
-class HrDashboardPage extends StatelessWidget {
-  final String userRole;
-  const HrDashboardPage({super.key, required this.userRole});
+import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
+import 'package:rr_frontend/features/recognitions/presentation/widgets/recognition_feed_list.dart';
+import 'package:rr_frontend/features/recognitions/presentation/widgets/compact_send_panel.dart';
+
+class DashboardHomePage extends StatelessWidget {
+  const DashboardHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (context) => sl<AnalyticsBloc>()
-            ..add(const GetAnalyticsRequested(scope: 'ORG')),
-        ),
         BlocProvider(
           create: (context) => sl<RecognitionsBloc>()
             ..add(rec.GetAppreciationStatsRequested())
@@ -45,7 +42,8 @@ class HrDashboardPage extends StatelessWidget {
             ..add(rec.GetUsersRequested()),
         ),
         BlocProvider(
-          create: (context) => sl<PointsBloc>()..add(GetPointsSummaryRequested()),
+          create: (context) =>
+              sl<PointsBloc>()..add(GetPointsSummaryRequested()),
         ),
         BlocProvider(
           create: (context) => sl<NominationsBloc>()
@@ -54,13 +52,13 @@ class HrDashboardPage extends StatelessWidget {
             ..add(nom.GetUsersRequested()),
         ),
       ],
-      child: const _HrDashboardView(),
+      child: const _DashboardHomeView(),
     );
   }
 }
 
-class _HrDashboardView extends StatelessWidget {
-  const _HrDashboardView();
+class _DashboardHomeView extends StatelessWidget {
+  const _DashboardHomeView();
 
   @override
   Widget build(BuildContext context) {
@@ -68,19 +66,30 @@ class _HrDashboardView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(padding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 32),
-            _buildSummaryRow(context),
-            const SizedBox(height: 40),
-            _buildModulesSection(context),
-            const SizedBox(height: 40),
-            _buildRecentFeed(context),
-          ],
+      body: BlocListener<RecognitionsBloc, RecognitionsState>(
+        listener: (context, state) {
+          if (state.status == RecognitionStatus.success &&
+              state.lastSentRecognition != null) {
+            AppSnackbar.success(context, 'Recognition sent successfully!');
+          } else if (state.status == RecognitionStatus.failure) {
+            AppSnackbar.error(
+                context, state.errorMessage ?? 'Failed to send recognition');
+          }
+        },
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 32),
+              _buildSummaryRow(context),
+              const SizedBox(height: 40),
+              _buildModulesSection(context),
+              const SizedBox(height: 40),
+              _buildRecentFeed(context),
+            ],
+          ),
         ),
       ),
     );
@@ -132,12 +141,19 @@ class _HrDashboardView extends StatelessWidget {
 
   Widget _buildStatsBanner(BuildContext context) {
     return BlocBuilder<RecognitionsBloc, RecognitionsState>(
+      buildWhen: (prev, curr) =>
+          prev.stats?.receivedCount != curr.stats?.receivedCount,
       builder: (context, recState) {
         return BlocBuilder<PointsBloc, PointsState>(
+          buildWhen: (prev, curr) =>
+              prev.summary?.balance != curr.summary?.balance,
           builder: (context, ptsState) {
             return BlocBuilder<AuthBloc, AuthState>(
+              buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
               builder: (context, authState) {
                 return BlocBuilder<NominationsBloc, NominationsState>(
+                  buildWhen: (prev, curr) =>
+                      prev.nominations != curr.nominations,
                   builder: (context, nomState) {
                     final balance = ptsState.summary?.balance ?? 0;
                     final level = LevelingUtils.getLevel(balance);
@@ -145,6 +161,7 @@ class _HrDashboardView extends StatelessWidget {
                         LevelingUtils.getPointsToNextLevel(balance);
                     final progress = LevelingUtils.getProgress(balance);
 
+                    // Awards Won = approved nominations where current user is the nominee
                     int currentUserId = -1;
                     if (authState is AuthAuthenticated) {
                       currentUserId = authState.auth.user?.id ?? -1;
@@ -155,9 +172,10 @@ class _HrDashboardView extends StatelessWidget {
                             n.status.toLowerCase() == 'approved')
                         .length;
 
+                    // eCards Earned = eCards received by the current user
                     final ecardsCount = recState.stats?.receivedCount ?? 0;
 
-                    const bannerColor = Color(0xFF2D2A70);
+                    const bannerColor = AppTheme.brandBlue;
 
                     return Container(
                       padding: const EdgeInsets.all(32),
@@ -195,12 +213,13 @@ class _HrDashboardView extends StatelessWidget {
                                 Row(
                                   children: [
                                     const Icon(Icons.star_rounded,
-                                        color: Color(0xFFFFCC00), size: 24),
+                                        color: AppTheme.accentYellow, size: 24),
                                     const SizedBox(width: 8),
                                     Text(
                                       'CURRENT STANDING',
                                       style: AppTextStyles.captionStrong(
-                                          color: Colors.white.withOpacity(0.7)),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7)),
                                     ),
                                   ],
                                 ),
@@ -211,7 +230,7 @@ class _HrDashboardView extends StatelessWidget {
                                       width: 68,
                                       height: 68,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFFCC00),
+                                        color: AppTheme.accentYellow,
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Stack(
@@ -220,14 +239,14 @@ class _HrDashboardView extends StatelessWidget {
                                           Icon(
                                             Icons.shield_rounded,
                                             size: 52,
-                                            color:
-                                                Colors.black.withOpacity(0.12),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.12),
                                           ),
                                           Text(
                                             level.toString(),
                                             style: AppTextStyles.headline1(
                                                 color: Colors.black
-                                                    .withOpacity(0.55)),
+                                                    .withValues(alpha: 0.55)),
                                           ),
                                         ],
                                       ),
@@ -252,7 +271,7 @@ class _HrDashboardView extends StatelessWidget {
                                               'pts',
                                               style: AppTextStyles.sectionTitle(
                                                   color: Colors.white
-                                                      .withOpacity(0.85)),
+                                                      .withValues(alpha: 0.85)),
                                             ),
                                           ],
                                         ),
@@ -260,7 +279,7 @@ class _HrDashboardView extends StatelessWidget {
                                           'Available Balance',
                                           style: AppTextStyles.bodyLarge(
                                               color: Colors.white
-                                                  .withOpacity(0.7)),
+                                                  .withValues(alpha: 0.7)),
                                         ),
                                       ],
                                     ),
@@ -279,7 +298,7 @@ class _HrDashboardView extends StatelessWidget {
                                           '$pointsToNext pts to Level ${level + 1}',
                                           style: AppTextStyles.smallMedium(
                                               color: Colors.white
-                                                  .withOpacity(0.9))),
+                                                  .withValues(alpha: 0.9))),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
@@ -288,10 +307,10 @@ class _HrDashboardView extends StatelessWidget {
                                   child: LinearProgressIndicator(
                                     value: progress,
                                     backgroundColor:
-                                        Colors.white.withOpacity(0.12),
+                                        Colors.white.withValues(alpha: 0.12),
                                     valueColor:
                                         const AlwaysStoppedAnimation<Color>(
-                                            Color(0xFFFFCC00)),
+                                            AppTheme.accentYellow),
                                     minHeight: 12,
                                   ),
                                 ),
@@ -329,7 +348,7 @@ class _HrDashboardView extends StatelessWidget {
             child: Icon(
               icon,
               size: 100,
-              color: iconColor.withOpacity(0.05),
+              color: iconColor.withValues(alpha: 0.05),
             ),
           ),
           Column(
@@ -369,6 +388,7 @@ class _HrDashboardView extends StatelessWidget {
         children: [
           Text('Quick Actions', style: AppTextStyles.sectionHeader()),
           const SizedBox(height: 24),
+          // Send an eCard
           BlocBuilder<RecognitionsBloc, RecognitionsState>(
             builder: (context, state) {
               final bool canSend = state.status != RecognitionStatus.loading &&
@@ -389,7 +409,7 @@ class _HrDashboardView extends StatelessWidget {
                   icon: const Icon(Icons.favorite_outline_rounded, size: 18),
                   label: const Text('Send an eCard'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D2A70),
+                    backgroundColor: AppTheme.brandBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
@@ -400,6 +420,7 @@ class _HrDashboardView extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
+          // Give an Award
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, authState) {
               UserEntity? currentUser;
@@ -432,7 +453,8 @@ class _HrDashboardView extends StatelessWidget {
                       label: const Text('Give an Award'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black87,
-                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        side: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.3)),
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -455,134 +477,21 @@ class _HrDashboardView extends StatelessWidget {
         Text('Main Modules', style: AppTextStyles.sectionHeader()),
         const SizedBox(height: 24),
         LayoutBuilder(builder: (context, constraints) {
-          final availableWidth = constraints.maxWidth;
-          int columns = 1;
-          final List<Widget> cards = [
-            _buildDynamicModuleCard(
-              context,
-              'Awards',
-              'View nominations and award status.',
-              Icons.emoji_events_rounded,
-              const Color(0xFFFEF3C7),
-              const Color(0xFFD97706),
-              0, // Width will be calculated below
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Awards'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'eCards',
-              'Spread positivity & appreciate peers!',
-              Icons.favorite_outline_rounded,
-              const Color(0xFFFCE7F3),
-              const Color(0xFFDB2777),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('eCards'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'Rewards Store',
-              'Redeem your hard-earned points',
-              Icons.shopping_bag_rounded,
-              const Color(0xFFECFDF5),
-              const Color(0xFF059669),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Rewards'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'Leaderboard',
-              'Explore top contributors org-wide.',
-              Icons.military_tech_outlined,
-              const Color(0xFFF5F3FF),
-              const Color(0xFF7C3AED),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Leaderboard'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'Approvals and Allocation',
-              'Review nominations and manage budgets',
-              Icons.task_alt_rounded,
-              const Color(0xFFFFF7ED),
-              const Color(0xFFEA580C),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Approvals & Allocation'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'Analytics',
-              'Deep dive into company performance.',
-              Icons.analytics_rounded,
-              const Color(0xFFF0FDFA),
-              const Color(0xFF0D9488),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Analytics'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'Reports',
-              'Generate & export data insights.',
-              Icons.summarize_rounded,
-              const Color(0xFFFDF4FF),
-              const Color(0xFFC026D3),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Reports'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'Configuration',
-              'Manage awards, badges & rules.',
-              Icons.tune_rounded,
-              const Color(0xFFF0F9FF),
-              const Color(0xFF0284C7),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('Configuration'),
-            ),
-            _buildDynamicModuleCard(
-              context,
-              'My Activity',
-              'Track your activities and history.',
-              Icons.history_rounded,
-              const Color(0xFFF1F5F9),
-              const Color(0xFF475569),
-              0,
-              onTap: () => MainLayout.of(context)?.selectTabByTitle('My Activity'),
-            ),
-          ];
-
-          if (availableWidth > 1200) {
-            // 5, 4 Layout
-            const double spacing = 16;
-            final double cardWidth = (availableWidth - (5 - 1) * spacing) / 5;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: <Widget>[
-                    ...cards.sublist(0, 4).map((c) => Padding(
-                          padding: const EdgeInsets.only(right: spacing),
-                          child: SizedBox(width: cardWidth, child: c),
-                        )),
-                    SizedBox(width: cardWidth, child: cards[4]),
-                  ],
-                ),
-                const SizedBox(height: spacing),
-                Row(
-                  children: <Widget>[
-                    ...cards.sublist(5, 8).map((c) => Padding(
-                          padding: const EdgeInsets.only(right: spacing),
-                          child: SizedBox(width: cardWidth, child: c),
-                        )),
-                    SizedBox(width: cardWidth, child: cards[8]),
-                  ],
-                ),
-              ],
-            );
+          final authState = context.read<AuthBloc>().state;
+          bool isManager = false;
+          bool isHrOrAdmin = false;
+          if (authState is AuthAuthenticated) {
+            final role = authState.auth.user?.role.toUpperCase();
+            isManager = role == 'MANAGER' || role == 'DEPT_HEAD';
+            isHrOrAdmin = role == 'HR' || role == 'ADMIN';
           }
 
-          columns = 1;
-          if (availableWidth > 900) {
+          // ── Responsive column calculation ──
+          final availableWidth = constraints.maxWidth;
+          int columns = 1;
+          if (availableWidth > 1200) {
+            columns = isManager ? 6 : 5;
+          } else if (availableWidth > 900) {
             columns = 3;
           } else if (availableWidth > 600) {
             columns = 2;
@@ -592,15 +501,207 @@ class _HrDashboardView extends StatelessWidget {
           final double cardWidth =
               (availableWidth - (columns - 1) * spacing) / columns;
 
+          final List<Widget> cards;
+
+          if (isHrOrAdmin) {
+            // ── HR / Admin module cards ───────────────────────────
+            cards = [
+              _buildDynamicModuleCard(
+                context,
+                'Awards',
+                'Celebrate outstanding achievements!',
+                Icons.emoji_events_rounded,
+                const Color(0xFFFEF3C7),
+                const Color(0xFFD97706),
+                cardWidth,
+                onTap: () => MainLayout.of(context)?.selectTabByTitle('Awards'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'eCards',
+                'Spread positivity & appreciate peers!',
+                Icons.favorite_outline_rounded,
+                const Color(0xFFFCE7F3),
+                const Color(0xFFDB2777),
+                cardWidth,
+                onTap: () => MainLayout.of(context)?.selectTabByTitle('eCards'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Rewards Store',
+                'Redeem your hard-earned points',
+                Icons.shopping_bag_rounded,
+                const Color(0xFFECFDF5),
+                const Color(0xFF059669),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Rewards'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Leaderboard',
+                'Explore top contributors org-wide.',
+                Icons.military_tech_outlined,
+                const Color(0xFFF5F3FF),
+                const Color(0xFF7C3AED),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Leaderboard'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Approvals and Allocation',
+                'Review nominations and manage budgets.',
+                Icons.task_alt_rounded,
+                const Color(0xFFFFF7ED),
+                const Color(0xFFEA580C),
+                cardWidth,
+                onTap: () => MainLayout.of(context)
+                    ?.selectTabByTitle('Approvals & Allocation'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Analytics',
+                'Deep dive into company performance.',
+                Icons.analytics_rounded,
+                const Color(0xFFF0FDFA),
+                const Color(0xFF0D9488),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Analytics'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Reports',
+                'Generate & export data insights.',
+                Icons.summarize_rounded,
+                const Color(0xFFFDF4FF),
+                const Color(0xFFC026D3),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Reports'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Configuration',
+                'Manage awards, badges & rules.',
+                Icons.tune_rounded,
+                const Color(0xFFF0F9FF),
+                const Color(0xFF0284C7),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Configuration'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'My Activity',
+                'Track your activities and history.',
+                Icons.history_rounded,
+                const Color(0xFFF1F5F9),
+                const Color(0xFF475569),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('My Activity'),
+              ),
+            ];
+          } else {
+            // ── Employee / Manager module cards ───────────────────
+            cards = [
+              _buildDynamicModuleCard(
+                context,
+                'Awards',
+                'Celebrate outstanding achievements!',
+                Icons.emoji_events_outlined,
+                const Color(0xFFFFF7ED),
+                const Color(0xFFEA580C),
+                cardWidth,
+                onTap: () {
+                  final tab = isManager ? 'Approvals' : 'Nominations';
+                  MainLayout.of(context)?.selectTabByTitle(tab);
+                },
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'eCards',
+                'Spread positivity & appreciate peers!',
+                Icons.favorite_outline_rounded,
+                const Color(0xFFF0F9FF),
+                const Color(0xFF0284C7),
+                cardWidth,
+                onTap: () => MainLayout.of(context)?.selectTabByTitle('eCards'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Leaderboard',
+                'Rise to the top & inspire others!',
+                Icons.military_tech_outlined,
+                const Color(0xFFFDF4FF),
+                const Color(0xFFC026D3),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Leaderboard'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'Redeem Rewards',
+                'Treat yourself to amazing gifts!',
+                Icons.card_giftcard_rounded,
+                const Color(0xFFF5F3FF),
+                const Color(0xFF7C3AED),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('Rewards'),
+              ),
+              _buildDynamicModuleCard(
+                context,
+                'My Activity',
+                'Track your journey of excellence!',
+                Icons.history_rounded,
+                const Color(0xFFECFDF5),
+                const Color(0xFF059669),
+                cardWidth,
+                onTap: () =>
+                    MainLayout.of(context)?.selectTabByTitle('My Activity'),
+              ),
+            ];
+
+            if (isManager) {
+              cards.add(
+                _buildDynamicModuleCard(
+                  context,
+                  'Team Analytics',
+                  'Insights into your team\'s performance!',
+                  Icons.analytics_rounded,
+                  const Color(0xFFF0FDFA),
+                  const Color(0xFF0D9488),
+                  cardWidth,
+                  onTap: () =>
+                      MainLayout.of(context)?.selectTabByTitle('Analytics'),
+                ),
+              );
+            }
+          }
+
           return Wrap(
             spacing: spacing,
             runSpacing: spacing,
-            children: cards
-                .map((c) => SizedBox(width: cardWidth, child: c))
-                .toList(),
+            children: cards,
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildModuleCard(BuildContext context, String title, String subtitle,
+      IconData icon, Color bgColor, Color iconColor,
+      {VoidCallback? onTap}) {
+    return _HoverableModuleCard(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      bgColor: bgColor,
+      iconColor: iconColor,
+      onTap: onTap,
     );
   }
 
@@ -615,14 +716,9 @@ class _HrDashboardView extends StatelessWidget {
       {VoidCallback? onTap}) {
     return SizedBox(
       width: width,
-      child: _HoverableModuleCard(
-        title: title,
-        subtitle: subtitle,
-        icon: icon,
-        bgColor: bgColor,
-        iconColor: iconColor,
-        onTap: onTap,
-      ),
+      child: _buildModuleCard(
+          context, title, subtitle, icon, bgColor, iconColor,
+          onTap: onTap),
     );
   }
 
@@ -634,7 +730,8 @@ class _HrDashboardView extends StatelessWidget {
         const SizedBox(height: 24),
         BlocBuilder<RecognitionsBloc, RecognitionsState>(
           builder: (context, state) {
-            if (state.status == RecognitionStatus.loading && state.feed.isEmpty) {
+            if (state.status == RecognitionStatus.loading &&
+                state.feed.isEmpty) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state.feed.isEmpty) {
@@ -644,18 +741,20 @@ class _HrDashboardView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                 ),
-                child: Center(child: Text('No recent activity found', style: AppTextStyles.body(color: Colors.grey[500]))),
+                child: Center(
+                    child: Text('No recent activity',
+                        style: AppTextStyles.body(color: Colors.grey[500]))),
               );
             }
             return Container(
-              constraints: const BoxConstraints(maxHeight: 600),
+              constraints: const BoxConstraints(maxHeight: 500),
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
               ),
               child: RecognitionFeedList(
                 feed: state.feed,
@@ -667,15 +766,6 @@ class _HrDashboardView extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) {
-      final k = n / 1000;
-      return k == k.roundToDouble() ? '${k.round()}K' : '${k.toStringAsFixed(1)}K';
-    }
-    return '$n';
   }
 }
 
@@ -718,10 +808,10 @@ class _HoverableModuleCardState extends State<_HoverableModuleCard> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withOpacity(0.08)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_isHovered ? 0.08 : 0.02),
+                color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.02),
                 blurRadius: _isHovered ? 20 : 10,
                 offset: Offset(0, _isHovered ? 8 : 4),
               ),

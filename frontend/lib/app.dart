@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/network/auth_interceptor.dart';
 import 'package:rr_frontend/core/theme/app_theme.dart';
-import 'package:rr_frontend/features/analytics/presentation/pages/dashboard_page.dart';
+import 'package:rr_frontend/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_state.dart';
