@@ -803,8 +803,7 @@ class _HoverableModuleCardState extends State<_HoverableModuleCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(20),
-          constraints: const BoxConstraints(minHeight: 180),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
@@ -831,7 +830,7 @@ class _HoverableModuleCardState extends State<_HoverableModuleCard> {
                 ),
                 child: Icon(widget.icon, color: widget.iconColor, size: 22),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 widget.title,
                 style: AppTextStyles.bodyBold(color: Colors.black87),
