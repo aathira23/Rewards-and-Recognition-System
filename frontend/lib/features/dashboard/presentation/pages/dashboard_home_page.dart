@@ -550,14 +550,14 @@ class _DashboardHomeView extends StatelessWidget {
               ),
               _buildDynamicModuleCard(
                 context,
-                'Approvals and Allocation',
-                'Review nominations and manage budgets.',
+                'Allocations',
+                'Review conversions & allocate budgets.',
                 Icons.task_alt_rounded,
                 const Color(0xFFFFF7ED),
                 const Color(0xFFEA580C),
                 cardWidth,
                 onTap: () => MainLayout.of(context)
-                    ?.selectTabByTitle('Approvals & Allocation'),
+                    ?.selectTabByTitle('Allocations'),
               ),
               _buildDynamicModuleCard(
                 context,

@@ -165,22 +165,35 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
-                onTap: () => MainLayout.of(context)
-                    ?.selectTabByTitle('Recognitions'),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.arrow_back_rounded,
-                          size: 20, color: Colors.black87),
-                      const SizedBox(width: 8),
-                      Text('Back to Dashboard',
-                          style: AppTextStyles.bodyBold(color: Colors.black87)),
-                    ],
-                  ),
-                ),
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, authState) {
+                  String destination = 'Recognitions';
+                  if (authState is AuthAuthenticated) {
+                    final role = authState.auth.user?.role.toUpperCase();
+                    if (role == 'HR' || role == 'ADMIN') {
+                      destination = 'Dashboard';
+                    }
+                  }
+
+                  return GestureDetector(
+                    onTap: () => MainLayout.of(context)
+                        ?.selectTabByTitle(destination),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.arrow_back_rounded,
+                              size: 20, color: Colors.black87),
+                          const SizedBox(width: 8),
+                          Text('Back to Dashboard',
+                              style: AppTextStyles.bodyBold(
+                                  color: Colors.black87)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
               Text(
                 'Awards',

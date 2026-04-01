@@ -16,10 +16,9 @@ import '../bloc/hr_approvals_bloc.dart';
 import '../bloc/hr_approvals_event.dart';
 import '../bloc/hr_approvals_state.dart';
 
-/// HR Approvals & Allocation page — three tabs:
-///  1. Award Approvals  (approve / reject nominations)
-///  2. Conversion Requests  (approve / reject point conversions)
-///  3. Budget Allocation  (allocate budget to managers)
+/// HR Allocations page — two tabs:
+///  1. Conversion Requests  (approve / reject point conversions)
+///  2. Budget Allocation  (allocate budget to managers)
 class HrApprovalsPage extends StatelessWidget {
   const HrApprovalsPage({super.key});
 
@@ -27,7 +26,6 @@ class HrApprovalsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<HrApprovalsBloc>()
-        ..add(LoadNominations())
         ..add(LoadConversions())
         ..add(LoadManagers())
         ..add(LoadEmployees()),
@@ -46,7 +44,6 @@ class _HrApprovalsView extends StatefulWidget {
 class _HrApprovalsViewState extends State<_HrApprovalsView>
     with TickerProviderStateMixin {
   TabController? _tabController;
-  String _nomFilter = 'ALL';
   // null = still loading; true/false = flag resolved
   bool? _conversionEnabled;
   // Life Events tab — employee search
@@ -63,7 +60,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
         await sl<FeatureFlagService>().isEnabled('conversion_enabled');
     if (!mounted) return;
     final oldController = _tabController;
-    final newController = TabController(length: enabled ? 4 : 3, vsync: this);
+    final newController = TabController(length: enabled ? 3 : 2, vsync: this);
     setState(() {
       _conversionEnabled = enabled;
       _tabController = newController;
@@ -157,13 +154,13 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Approvals & Allocation',
+                                'Allocations',
                                 style: AppTextStyles.headline1(
                                     color: Colors.black87),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Review nominations and manage manager budgets',
+                                'Review conversions & allocate budgets',
                                 style: AppTextStyles.body(
                                     color: Colors.grey.shade600),
                               ),
@@ -172,7 +169,6 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                         ),
                         _RefreshBtn(onTap: () {
                           context.read<HrApprovalsBloc>()
-                            ..add(LoadNominations())
                             ..add(LoadConversions())
                             ..add(LoadManagers());
                         }),
@@ -214,16 +210,6 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                       unselectedLabelStyle: AppTextStyles.bodyMedium(),
                       dividerHeight: 0,
                       tabs: [
-                        _TabWithBadge(
-                            label: 'Award Approvals',
-                            count: state.nominations
-                                .where((n) =>
-                                    n['status'] == 'PENDING' &&
-                                    n['next_required_level']
-                                            ?.toString()
-                                            .toUpperCase() ==
-                                        'HR')
-                                .length),
                         if (_conversionEnabled == true)
                           _TabWithBadge(
                               label: 'Payroll Encashment',
@@ -244,7 +230,6 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildAwardApprovalsTab(context, theme, state),
                       if (_conversionEnabled == true)
                         _buildConversionsTab(context, theme, state),
                       _buildBudgetAllocationTab(context, theme, state),
@@ -256,315 +241,6 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           ),
         );
       },
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  TAB 1 — Award Approvals
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildAwardApprovalsTab(
-      BuildContext context, ThemeData theme, HrApprovalsState state) {
-    if (state.nomLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final filtered = _nomFilter == 'ALL'
-        ? state.nominations
-        : _nomFilter == 'PENDING'
-            ? state.nominations
-                .where((n) =>
-                    n['status'] == 'PENDING' &&
-                    n['next_required_level']?.toString().toUpperCase() == 'HR')
-                .toList()
-            : state.nominations
-                .where((n) => n['status'] == _nomFilter)
-                .toList();
-
-    final pendingCount = state.nominations
-        .where((n) =>
-            n['status'] == 'PENDING' &&
-            n['next_required_level']?.toString().toUpperCase() == 'HR')
-        .length;
-
-    return SingleChildScrollView(
-      padding:
-          EdgeInsets.symmetric(horizontal: Responsive.pagePadding(context)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Filter chips
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _FilterChip(
-                  label: 'All (${state.nominations.length})',
-                  isActive: _nomFilter == 'ALL',
-                  onTap: () => setState(() => _nomFilter = 'ALL')),
-              _FilterChip(
-                  label: 'Pending ($pendingCount)',
-                  isActive: _nomFilter == 'PENDING',
-                  onTap: () => setState(() => _nomFilter = 'PENDING')),
-              _FilterChip(
-                  label: 'Approved',
-                  isActive: _nomFilter == 'APPROVED',
-                  onTap: () => setState(() => _nomFilter = 'APPROVED')),
-              _FilterChip(
-                  label: 'Rejected',
-                  isActive: _nomFilter == 'REJECTED',
-                  onTap: () => setState(() => _nomFilter = 'REJECTED')),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (filtered.isEmpty)
-            EmptyStateView(
-                icon: Icons.inbox_rounded,
-                title: 'No ${_nomFilter.toLowerCase()} nominations'),
-          ...filtered.map((nom) => _buildNominationCard(context, nom, theme)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNominationCard(
-      BuildContext context, Map<String, dynamic> nom, ThemeData theme) {
-    final status = nom['status']?.toString() ?? 'PENDING';
-    final isPending = status == 'PENDING';
-    final isForHR = isPending &&
-        nom['next_required_level']?.toString().toUpperCase() == 'HR';
-    final nomineeName = nom['nominee']?['name'] ??
-        nom['nominee_name'] ??
-        'User #${nom['nominee_id']}';
-    final nominatorName = nom['nominator']?['name'] ??
-        nom['nominator_name'] ??
-        'User #${nom['nominator_id']}';
-    final awardType = nom['award_type']?['name'] ??
-        nom['award_type_name'] ??
-        'Award #${nom['award_type_id']}';
-    final citation = nom['citation']?.toString() ?? '';
-    final points = nom['points_awarded'] ?? nom['award_type']?['points'] ?? 0;
-    final createdAt = nom['created_at']?.toString() ?? '';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-            color: isPending ? Colors.orange.shade100 : Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.emoji_events_rounded,
-                    color: Colors.amber.shade700, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(awardType, style: AppTextStyles.cardTitle()),
-                    const SizedBox(height: 2),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
-                        children: [
-                          TextSpan(
-                              text: nomineeName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
-                          const TextSpan(text: '  nominated by  '),
-                          TextSpan(text: nominatorName),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _NomStatusBadge(nom: nom),
-                  const SizedBox(height: 4),
-                  Text('$points pts',
-                      style: AppTextStyles.smallBold(
-                          color: theme.colorScheme.primary)),
-                ],
-              ),
-            ],
-          ),
-          if (citation.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(citation,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-          ],
-          // Reviewer attribution + comment banner — shown when a previous-level reviewer has acted
-          Builder(builder: (context) {
-            final reviewerComment = nom['reviewer_comment']?.toString() ?? '';
-            final reviewerLevel = nom['reviewer_level']?.toString() ?? '';
-            final reviewerName = nom['reviewer_name']?.toString() ?? '';
-            if (reviewerLevel.isEmpty && reviewerComment.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            final statusColor = status == 'APPROVED'
-                ? Colors.green
-                : status == 'REJECTED'
-                    ? Colors.red
-                    : Colors.orange;
-            return Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: statusColor.withValues(alpha: 0.18)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (reviewerLevel.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          Icon(Icons.person_outline_rounded,
-                              size: 13, color: statusColor),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              (reviewerLevel.toUpperCase() == 'DEPT_HEAD'
-                                      ? 'Dept Head'
-                                      : reviewerLevel.toUpperCase() == 'MANAGER'
-                                          ? 'Manager'
-                                          : reviewerLevel.toUpperCase() == 'HR'
-                                              ? 'HR'
-                                              : reviewerLevel.replaceAll(
-                                                  '_', ' ')) +
-                                  (reviewerName.isNotEmpty
-                                      ? '  ·  $reviewerName'
-                                      : ''),
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: statusColor),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (reviewerComment.isNotEmpty) const SizedBox(height: 5),
-                    ],
-                    if (reviewerComment.isNotEmpty)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.chat_bubble_outline_rounded,
-                              size: 12,
-                              color: statusColor.withValues(alpha: 0.7)),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              reviewerComment,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade700,
-                                  height: 1.4),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.schedule, size: 13, color: Colors.grey.shade400),
-              const SizedBox(width: 4),
-              Text(AppDateFormatter.format(createdAt),
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
-              const Spacer(),
-              if (isForHR) ...[
-                RejectButton(
-                  onPressed: () =>
-                      _showNomActionDialog(context, nom['id'], false),
-                ),
-                const SizedBox(width: 8),
-                ApproveButton(
-                  onPressed: () =>
-                      _showNomActionDialog(context, nom['id'], true),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNomActionDialog(
-      BuildContext context, int nominationId, bool isApprove) {
-    final commentsC = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AppDialog(
-        title: isApprove ? 'Approve Nomination' : 'Reject Nomination',
-        maxWidth: 400,
-        showCloseButton: false,
-        content: TextField(
-          controller: commentsC,
-          decoration: const InputDecoration(
-            labelText: 'Comments (optional)',
-            hintText: 'Add a note...',
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          OutlinedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel')),
-          isApprove
-              ? ApproveButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    context.read<HrApprovalsBloc>().add(ActionNomination(
-                          id: nominationId,
-                          isApprove: isApprove,
-                          comments:
-                              commentsC.text.isNotEmpty ? commentsC.text : null,
-                        ));
-                  },
-                )
-              : RejectButton(
-                  useFilledStyle: true,
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    context.read<HrApprovalsBloc>().add(ActionNomination(
-                          id: nominationId,
-                          isApprove: isApprove,
-                          comments:
-                              commentsC.text.isNotEmpty ? commentsC.text : null,
-                        ));
-                  },
-                ),
-        ],
-      ),
     );
   }
 

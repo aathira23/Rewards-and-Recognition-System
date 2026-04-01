@@ -92,7 +92,7 @@ class _DashboardPageState extends State<DashboardPage> {
           title: 'Awards',
           subtitle: 'View nominations and award status',
           icon: Icons.emoji_events_rounded,
-          page: EmployeeNominationsPage(),
+          page: ManagerApprovalsPage(),
         ),
         const NavDestination(
           title: 'eCards',
@@ -125,8 +125,8 @@ class _DashboardPageState extends State<DashboardPage> {
           page: HrConfigPage(),
         ),
         const NavDestination(
-          title: 'Approvals & Allocation',
-          subtitle: 'Review nominations, conversions & allocate budgets',
+          title: 'Allocations',
+          subtitle: 'Review conversions & allocate budgets',
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
         ),
