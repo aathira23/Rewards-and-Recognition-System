@@ -134,15 +134,51 @@ class RecognitionService:
                     f"(cooldown: {policy.cooldown_days} day(s) between sends)."
                 )
 
+    # ── Persona helpers ─────────────────────────────────────────────
+
+    def _resolve_persona_label(
+        self, sender_id: int, persona_type: str, persona_label: Optional[str]
+    ) -> Optional[str]:
+        """Return the display label for the chosen persona.
+
+        PERSONAL  → None (caller should resolve from user profile as before)
+        DEPARTMENT → user's department name (or the explicit label if given)
+        """
+        if persona_type == "PERSONAL":
+            return None
+
+        if persona_type == "DEPARTMENT":
+            if persona_label:
+                return persona_label
+            # Derive from the sender's department
+            user = self.repository.get_user_by_id(sender_id)
+            if user and user.department_id:
+                from app.models.departments import Department
+                dept = self.db.query(Department).filter(
+                    Department.id == user.department_id
+                ).first()
+                if dept:
+                    return dept.name
+            return "Your Department"
+
+        return None
+
     def send_ecard(
         self,
         sender_id: int,
         receiver_id: int,
         badge_id: int,
         message: Optional[str] = None,
-        token: Optional[str] = None
+        token: Optional[str] = None,
+        persona_type: str = "PERSONAL",
+        persona_label: Optional[str] = None,
     ) -> ECard:
-        """Send an eCard recognition."""
+        """Send an eCard recognition.
+
+        persona_type: PERSONAL (default) — shown as the sender's name.
+                      DEPARTMENT — shown as the sender's department name
+                      (fully anonymous; actual sender_id kept only for audit).
+        """
         if sender_id == receiver_id:
             raise ValueError("You cannot send a recognition to yourself.")
 
@@ -172,16 +208,21 @@ class RecognitionService:
         self._check_monthly_limit(sender_id, policy)
         self._check_cooldown(sender_id, policy)
 
-        # 5. Create eCard record
+        # 5. Resolve persona display label
+        resolved_label = self._resolve_persona_label(sender_id, persona_type, persona_label)
+
+        # 6. Create eCard record (sender_id always stored for audit)
         ecard = self.repository.create_ecard(
             sender_id=sender_id,
             receiver_id=receiver_id,
             badge_id=badge_id,
             points=points,
             message=message,
+            persona_type=persona_type,
+            persona_label=resolved_label,
         )
 
-        # 6. Award points to receiver
+        # 7. Award points to receiver
         self.points_service.award_points(
             user_id=receiver_id,
             points=points,
@@ -189,33 +230,40 @@ class RecognitionService:
             source_id=ecard.id
         )
 
-        # 5. Create recognition feed entry
+        # 8. Create recognition feed entry (actor_label used for anonymous display)
         self.create_feed_entry(
             actor_id=sender_id,
             receiver_id=receiver_id,
             source_type="ECARD",
             source_id=ecard.id,
-            message=message or f"Recognized with {badge.name}"
+            message=message or f"Recognized with {badge.name}",
+            actor_label=resolved_label,
         )
 
-        # 6. Create notification for receiver
-        sender_name = "A colleague"
-        if self._token:
-            from app.services.user_profiles_client import get_user_profile
-            sender_profile = get_user_profile(sender_id, self._token)
-            if sender_profile:
-                sender_name = sender_profile.name
-        if sender_name == "A colleague":
-            sender = self.repository.get_user_by_id(sender_id)
-            if sender:
-                sender_name = sender.name
+        # 9. Build display name for notification / email
+        if resolved_label:
+            # Department persona → fully anonymous; show department name
+            display_name = resolved_label
+        else:
+            # Personal persona → show sender's real name
+            display_name = "A colleague"
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                sender_profile = get_user_profile(sender_id, self._token)
+                if sender_profile:
+                    display_name = sender_profile.name
+            if display_name == "A colleague":
+                sender = self.repository.get_user_by_id(sender_id)
+                if sender:
+                    display_name = sender.name
+
         self.notification_service.create_notification(
             user_id=receiver_id,
-            message=f"{sender_name} appreciated you with a '{badge.name}' badge! {points} points earned.",
+            message=f"{display_name} appreciated you with a '{badge.name}' badge! {points} points earned.",
             source_type=ReferenceType.ECARD.value,
             source_id=ecard.id,
             email_context={
-                "sender_name": sender_name,
+                "sender_name": display_name,
                 "badge_name": badge.name,
                 "recognition_message": message or "",
                 "points": points,
@@ -318,7 +366,8 @@ class RecognitionService:
         receiver_id: Optional[int],
         source_type: str,
         source_id: int,
-        message: str
+        message: str,
+        actor_label: Optional[str] = None,
     ):
         """Create a new entry in the recognition feed."""
         return self.repository.create_feed_entry(
@@ -327,6 +376,7 @@ class RecognitionService:
             source_type=source_type,
             source_id=source_id,
             message=message,
+            actor_label=actor_label,
         )
 
     # --- Automated Logic ---

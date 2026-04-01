@@ -18,4 +18,5 @@ class RecognitionFeed(Base):
     source_type = Column(String, nullable=False)  # ECARD, AWARD, CELEBRATION, MANAGER_REWARD, CONVERSION
     source_id = Column(BigInteger, nullable=False)
     message = Column(Text, nullable=True)
+    actor_label = Column(String(120), nullable=True)  # persona display name override
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -97,12 +97,24 @@ def send_recognition(
             receiver_id=ecard_in.receiver_id,
             badge_id=ecard_in.badge_id,
             message=ecard_in.message,
-            token=token
+            token=token,
+            persona_type=ecard_in.persona_type,
+            persona_label=ecard_in.persona_label,
         )
         data = ECardResponse.model_validate(ecard)
         # Enrich sender/receiver: use local DB in local mode, User Service otherwise
         profiles = _resolve_profiles(db, [ecard.sender_id, ecard.receiver_id], token)
-        data.sender = _enrich_user(profiles, ecard.sender_id)
+        # When persona is DEPARTMENT the sender identity should stay anonymous
+        if ecard.persona_type == "PERSONAL":
+            data.sender = _enrich_user(profiles, ecard.sender_id)
+        else:
+            # Return a synthetic sender with the persona label so the
+            # receiver only sees the department name, not the real person.
+            data.sender = UserShortResponse(
+                id=0,
+                name=ecard.persona_label or "Anonymous",
+                department_name=ecard.persona_label,
+            )
         data.receiver = _enrich_user(profiles, ecard.receiver_id)
         return created(data=data.model_dump(), message=SUCCESS_RECOGNITION_SENT)
     except ValueError as e:
@@ -128,7 +140,15 @@ def get_recognition_feed(
     data = []
     for item in items:
         feed_item = RecognitionFeedResponse.model_validate(item)
-        feed_item.actor = _enrich_user(profiles, item.actor_id)
+        # If actor_label is set (department persona), show anonymous sender
+        if item.actor_label:
+            feed_item.actor = UserShortResponse(
+                id=0,
+                name=item.actor_label,
+                department_name=item.actor_label,
+            )
+        else:
+            feed_item.actor = _enrich_user(profiles, item.actor_id)
         if item.receiver_id:
             feed_item.receiver = _enrich_user(profiles, item.receiver_id)
         data.append(feed_item.model_dump())
@@ -160,7 +180,14 @@ def get_my_appreciation_overview(
     if user_ids:
         profiles = _resolve_profiles(db, list(user_ids), token)
         for ec in all_ecards:
-            if ec.get("sender_id"):
+            # Respect persona anonymity: if DEPARTMENT persona, hide real sender
+            if ec.get("persona_type") == "DEPARTMENT" and ec.get("persona_label"):
+                ec["sender"] = UserShortResponse(
+                    id=0,
+                    name=ec["persona_label"],
+                    department_name=ec["persona_label"],
+                ).model_dump()
+            elif ec.get("sender_id"):
                 ec["sender"] = _enrich_user(profiles, ec["sender_id"]).model_dump()
             if ec.get("receiver_id"):
                 ec["receiver"] = _enrich_user(profiles, ec["receiver_id"]).model_dump()

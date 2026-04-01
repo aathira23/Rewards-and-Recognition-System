@@ -18,6 +18,7 @@ class RecognitionFeedResponse(RecognitionFeedBase):
     id: int
     actor_id: int
     receiver_id: Optional[int] = None
+    actor_label: Optional[str] = None
     created_at: datetime
 
     actor: Optional["UserShortResponse"] = None

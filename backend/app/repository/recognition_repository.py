@@ -55,7 +55,8 @@ class RecognitionRepository:
         return query.order_by(ECard.created_at.desc()).first()
 
     def create_ecard(
-        self, sender_id: int, receiver_id: int, badge_id: int, points: int, message: str = None
+        self, sender_id: int, receiver_id: int, badge_id: int, points: int,
+        message: str = None, persona_type: str = "PERSONAL", persona_label: str = None,
     ) -> ECard:
         ecard = ECard(
             sender_id=sender_id,
@@ -63,6 +64,8 @@ class RecognitionRepository:
             badge_id=badge_id,
             points_awarded=points,
             message=message,
+            persona_type=persona_type,
+            persona_label=persona_label,
         )
         self.db.add(ecard)
         self.db.commit()
@@ -104,7 +107,8 @@ class RecognitionRepository:
 
     # --- Recognition Feed ---
     def create_feed_entry(
-        self, actor_id: int, receiver_id: Optional[int], source_type: str, source_id: int, message: str
+        self, actor_id: int, receiver_id: Optional[int], source_type: str, source_id: int,
+        message: str, actor_label: Optional[str] = None,
     ) -> RecognitionFeed:
         entry = RecognitionFeed(
             actor_id=actor_id,
@@ -112,6 +116,7 @@ class RecognitionRepository:
             source_type=source_type,
             source_id=source_id,
             message=message,
+            actor_label=actor_label,
         )
         self.db.add(entry)
         self.db.commit()

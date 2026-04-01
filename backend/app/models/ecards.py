@@ -1,7 +1,7 @@
 """
 ECard model - Peer-to-peer recognition cards.
 """
-from sqlalchemy import Column, BigInteger, Integer, Text, DateTime, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -19,6 +19,8 @@ class ECard(Base):
     badge_id = Column(BigInteger, ForeignKey("badges.id"), nullable=False)
     points_awarded = Column(Integer, nullable=False)
     message = Column(Text, nullable=True)
+    persona_type = Column(String(20), nullable=False, server_default="PERSONAL")  # PERSONAL | DEPARTMENT
+    persona_label = Column(String(120), nullable=True)  # e.g. "HR Department"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
