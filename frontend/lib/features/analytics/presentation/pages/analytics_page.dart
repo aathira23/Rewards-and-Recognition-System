@@ -87,8 +87,14 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           GestureDetector(
-                            onTap: () => MainLayout.of(context)
-                                ?.selectTabByTitle('Recognitions'),
+                            onTap: () {
+                              final title = (widget.userRole.toUpperCase() ==
+                                          'HR' ||
+                                      widget.userRole.toUpperCase() == 'ADMIN')
+                                  ? 'Dashboard'
+                                  : 'Recognitions';
+                              MainLayout.of(context)?.selectTabByTitle(title);
+                            },
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 12.0),
                               child: Row(

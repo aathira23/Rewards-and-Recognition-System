@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
@@ -100,11 +101,56 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Responsive.pagePadding(context),
                   0,
                 ),
-                child: AppPageHeader(
-                  action: _RefreshBtn(
-                    onTap: () =>
-                        context.read<HrConfigBloc>().add(LoadAllHrConfig()),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () =>
+                          MainLayout.of(context)?.selectTabByTitle('Dashboard'),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_back_rounded,
+                                size: 20, color: Colors.black87),
+                            const SizedBox(width: 8),
+                            Text('Back to Dashboard',
+                                style: AppTextStyles.bodyBold(
+                                    color: Colors.black87)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'System Configuration',
+                                style: AppTextStyles.headline1(
+                                    color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Manage award types, rewards catalog, and points policy',
+                                style: AppTextStyles.body(
+                                    color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _RefreshBtn(
+                          onTap: () => context
+                              .read<HrConfigBloc>()
+                              .add(LoadAllHrConfig()),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),

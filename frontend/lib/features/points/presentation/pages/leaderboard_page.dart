@@ -8,6 +8,8 @@ import 'package:rr_frontend/features/points/presentation/bloc/points_bloc.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_event.dart';
 import 'package:rr_frontend/features/points/presentation/bloc/points_state.dart';
 
+import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:rr_frontend/features/auth/presentation/bloc/auth_state.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
 
 class LeaderboardPage extends StatefulWidget {
@@ -99,8 +101,17 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GestureDetector(
-                onTap: () =>
-                    MainLayout.of(context)?.selectTabByTitle('Recognitions'),
+                onTap: () {
+                  final authState = context.read<AuthBloc>().state;
+                  String title = 'Recognitions';
+                  if (authState is AuthAuthenticated) {
+                    final role = authState.auth.user?.role.toUpperCase();
+                    if (role == 'HR' || role == 'ADMIN') {
+                      title = 'Dashboard';
+                    }
+                  }
+                  MainLayout.of(context)?.selectTabByTitle(title);
+                },
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Row(
