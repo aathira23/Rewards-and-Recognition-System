@@ -1,8 +1,11 @@
 import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../domain/entities/award_type_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/nominations_bloc.dart';
 import '../bloc/nominations_event.dart';
 import '../../../../core/widgets/app_dialog.dart';
@@ -47,10 +50,48 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
 
   String _searchQuery = '';
 
+  // ── Persona ──────────────────────────────────────────────────────────
+  List<Map<String, dynamic>> _personas = [];
+  late Map<String, dynamic> _selectedPersona;
+
   @override
   void initState() {
     super.initState();
     _selectedAwardType = widget.initialAwardType;
+
+    // Build persona list based on the logged-in user's role.
+    _personas = [{'persona_type': 'PERSONAL', 'persona_label': null}];
+
+    // We need the AuthBloc to be in scope — find it via context at build time.
+    // We defer population to the first build via a post-frame callback.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthAuthenticated) {
+        final user = authState.auth.user;
+        final role = user?.role.toUpperCase() ?? '';
+        final deptName = user?.departmentName ?? 'Department';
+        if (role == 'HR' || role == 'MANAGER' || role == 'DEPT_HEAD') {
+          setState(() {
+            _personas = [
+              {'persona_type': 'PERSONAL', 'persona_label': null},
+              {'persona_type': 'DEPARTMENT', 'persona_label': deptName},
+            ];
+            _selectedPersona = _personas.first;
+          });
+        } else if (role == 'ADMIN') {
+          setState(() {
+            _personas = [
+              {'persona_type': 'PERSONAL', 'persona_label': null},
+              {'persona_type': 'Company', 'persona_label': 'Tarento'},
+            ];
+            _selectedPersona = _personas.first;
+          });
+        }
+      }
+    });
+
+    _selectedPersona = _personas.first;
   }
 
   @override
@@ -131,8 +172,14 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
             _sectionLabel('2. Select Nominee'),
             const SizedBox(height: 12),
             _buildNomineeSearch(context),
+            if (_personas.length > 1) ...[
+              const SizedBox(height: 24),
+              _sectionLabel('3. Nominate as'),
+              const SizedBox(height: 12),
+              _buildPersonaSelector(),
+            ],
             const SizedBox(height: 24),
-            _sectionLabel('3. Citation'),
+            _sectionLabel(_personas.length > 1 ? '4. Citation' : '3. Citation'),
             const SizedBox(height: 12),
             _buildCitationField(),
           ],
@@ -190,9 +237,9 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.55,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 2.1,
       ),
       itemCount: allowed.length,
       itemBuilder: (_, i) => _buildAwardCard(context, allowed[i]),
@@ -208,16 +255,16 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
       onTap: () => setState(() => _selectedAwardType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.05)
               : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color:
                 isSelected ? theme.colorScheme.primary : Colors.grey.shade200,
-            width: isSelected ? 1.5 : 1,
+            width: isSelected ? 1.2 : 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -233,14 +280,14 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
             Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(AwardUtils.getIcon(type.awardKey),
-                      color: color, size: 16),
+                      color: color, size: 14),
                 ),
                 const Spacer(),
                 // Radio indicator
@@ -258,26 +305,15 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               type.name,
-              style: AppTextStyles.cardTitle(),
-              maxLines: 2,
+              style: AppTextStyles.bodyBold(),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            if (type.description != null && type.description!.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Expanded(
-                child: Text(
-                  type.description!,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ] else
-              const Spacer(),
-            const SizedBox(height: 6),
+            const Spacer(),
+            const SizedBox(height: 4),
             Row(
               children: [
                 _chip(
@@ -497,6 +533,50 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     );
   }
 
+  // ── Section 4: Persona Selector ──────────────────────────────────────
+  Widget _buildPersonaSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: _selectedPersona,
+          isExpanded: true,
+          icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+          items: _personas.map((persona) {
+            final isPersonal = persona['persona_type'] == 'PERSONAL';
+            final label = isPersonal
+                ? 'Nominate as Myself'
+                : (persona['persona_label'] ?? persona['persona_type'].toString());
+            return DropdownMenuItem<Map<String, dynamic>>(
+              value: persona,
+              child: Row(
+                children: [
+                  Icon(
+                    isPersonal
+                        ? Icons.person_outline
+                        : Icons.business_outlined,
+                    size: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(label, style: AppTextStyles.body()),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedPersona = val);
+          },
+        ),
+      ),
+    );
+  }
+
   // ── Section 3: Citation ──────────────────────────────────────────────
   Widget _buildCitationField() {
     return TextFormField(
@@ -543,10 +623,13 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
     }
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final isPersonal = _selectedPersona['persona_type'] == 'PERSONAL';
     widget.bloc.add(CreateNominationRequested(
       nomineeId: _selectedUser!.id,
       awardTypeId: _selectedAwardType!.id,
       citation: _citationController.text.trim(),
+      personaType: _selectedPersona['persona_type'] as String?,
+      personaLabel: isPersonal ? null : _selectedPersona['persona_label'] as String?,
     ));
     Navigator.pop(context);
   }

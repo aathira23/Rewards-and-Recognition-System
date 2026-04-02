@@ -20,6 +20,8 @@ class Award(Base):
     status = Column(String, nullable=False)  # PENDING, APPROVED, REJECTED
     points_awarded = Column(Integer, nullable=True)
     citation = Column(Text, nullable=True)
+    persona_type = Column(String, nullable=True)   # PERSONAL | DEPARTMENT | Company
+    persona_label = Column(String, nullable=True)  # e.g. "HR Department" / "Tarento"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

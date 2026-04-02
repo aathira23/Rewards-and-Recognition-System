@@ -53,11 +53,14 @@ def _enrich_award_responses(responses: list[AwardResponse], token: str, db: Sess
             name = getattr(p, 'name', None) or (p['name'] if isinstance(p, dict) and 'name' in p else None)
             if name:
                 r.nominee = {"id": r.nominee_id, "name": name}
-        p = profiles.get(r.nominator_id)
-        if p:
-            name = getattr(p, 'name', None) or (p['name'] if isinstance(p, dict) and 'name' in p else None)
-            if name:
-                r.nominator = {"id": r.nominator_id, "name": name}
+        if r.persona_label:
+            r.nominator = {"id": r.nominator_id, "name": r.persona_label}
+        else:
+            p = profiles.get(r.nominator_id)
+            if p:
+                name = getattr(p, 'name', None) or (p['name'] if isinstance(p, dict) and 'name' in p else None)
+                if name:
+                    r.nominator = {"id": r.nominator_id, "name": name}
     return responses
 from app.utils.constants import (
     DEFAULT_PAGE_SIZE, SUCCESS_NOMINATION_SUCCESSFUL, SUCCESS_NOMINATIONS_FETCHED,
@@ -89,7 +92,9 @@ def nominate_for_award(
             nominator_id=current_user.id,
             nominee_id=nomination.nominee_id,
             award_type_id=nomination.award_type_id,
-            citation=nomination.citation
+            citation=nomination.citation,
+            persona_type=nomination.persona_type,
+            persona_label=nomination.persona_label,
         )
         resp = AwardResponse.model_validate(result)
         _enrich_award_responses([resp], token)

@@ -27,6 +27,8 @@ class AwardsRepository:
         status: str,
         points: int,
         citation: Optional[str] = None,
+        persona_type: Optional[str] = None,
+        persona_label: Optional[str] = None,
     ) -> Award:
         award = Award(
             nominee_id=nominee_id,
@@ -35,6 +37,8 @@ class AwardsRepository:
             status=status,
             points_awarded=points,
             citation=citation,
+            persona_type=persona_type,
+            persona_label=persona_label,
         )
         self.db.add(award)
         self.db.flush()

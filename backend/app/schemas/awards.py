@@ -33,6 +33,8 @@ class AwardNominationCreate(AwardBase):
     """Schema for creating an award nomination."""
     nominee_id: int
     citation: Optional[str] = None
+    persona_type: Optional[str] = None   # PERSONAL | DEPARTMENT | Company
+    persona_label: Optional[str] = None  # e.g. "HR Department"
 
 
 class AwardResponse(AwardBase):
@@ -43,6 +45,8 @@ class AwardResponse(AwardBase):
     status: str
     points_awarded: Optional[int]
     citation: Optional[str] = None
+    persona_type: Optional[str] = None
+    persona_label: Optional[str] = None
     next_required_level: Optional[str] = None
     created_at: datetime
 

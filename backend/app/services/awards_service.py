@@ -52,7 +52,9 @@ class AwardsService:
         nominator_id: int,
         nominee_id: int,
         award_type_id: int,
-        citation: Optional[str] = None
+        citation: Optional[str] = None,
+        persona_type: Optional[str] = None,
+        persona_label: Optional[str] = None,
     ) -> Award:
         """
         Create an award nomination.
@@ -64,6 +66,7 @@ class AwardsService:
         if not nominator:
             raise HTTPException(status_code=404, detail="Nominator not found.")
         nominator_name = self._get_user_name(nominator_id)
+        display_nominator_name = persona_label if persona_label else nominator_name
 
         # 1. Verify eligibility rules
         if nominator_id == nominee_id:
@@ -124,6 +127,8 @@ class AwardsService:
             status=AwardStatus.PENDING.value,
             points=award_type.points,
             citation=citation,
+            persona_type=persona_type,
+            persona_label=persona_label,
         )
 
         # 3. Handle Auto-Approval for Nominator's Own Level (Only for Manager+, not Employee)
@@ -153,7 +158,8 @@ class AwardsService:
                 receiver_id=award.nominee_id,
                 source_type=ReferenceType.AWARD.value,
                 source_id=award.id,
-                message=f"Honored with the {award.award_type.name} Award! 🎉"
+                message=f"Honored with the {award.award_type.name} Award! 🎉",
+                actor_label=award.persona_label,
             )
 
             # Award points immediately if HR auto-approved
@@ -167,14 +173,14 @@ class AwardsService:
             # Notify nominee of approval
             self.notification_service.create_notification(
                 user_id=award.nominee_id,
-                message=f"Congratulations! Your {award.award_type.name} award has been fully approved by HR. {award.points_awarded} points awarded!",
+                message=f"Congratulations! Your {award.award_type.name} award has been fully approved. {award.points_awarded} points awarded!",
                 source_type=ReferenceType.AWARD.value,
                 source_id=award.id,
                 email_event_type="AWARD_APPROVED",
                 email_context={
                     "item_type": f"{award.award_type.name} Award",
                     "status": "Approved",
-                    "approver_name": "HR",
+                    "approver_name": display_nominator_name,
                     "comment": "",
                     "points_amount": award.points_awarded,
                     "details_url": "",
@@ -206,7 +212,8 @@ class AwardsService:
                     receiver_id=award.nominee_id,
                     source_type=ReferenceType.AWARD.value,
                     source_id=award.id,
-                    message=f"Honored with the {award.award_type.name} Award! 🎉"
+                    message=f"Honored with the {award.award_type.name} Award! 🎉",
+                    actor_label=award.persona_label,
                 )
 
                 self.points_service.award_points(
@@ -224,7 +231,7 @@ class AwardsService:
                     email_context={
                         "item_type": f"{award.award_type.name} Award",
                         "status": "Approved",
-                        "approver_name": nominator_name,
+                        "approver_name": display_nominator_name,
                         "comment": "",
                         "points_amount": award.points_awarded,
                         "details_url": "",
@@ -243,14 +250,14 @@ class AwardsService:
         if award.status == AwardStatus.PENDING.value:
             self.notification_service.create_notification(
                 user_id=nominee_id,
-                message=f"You have been nominated for a {award_type.name} award by {nominator_name}!",
+                message=f"You have been nominated for a {award_type.name} award by {display_nominator_name}!",
                 source_type=ReferenceType.AWARD.value,
                 source_id=award.id,
                 email_event_type="NOMINATION_SUBMITTED",
                 email_context={
                     "item_type": f"{award_type.name} Award",
                     "status": "Submitted",
-                    "approver_name": nominator_name,
+                    "approver_name": display_nominator_name,
                     "comment": "",
                     "details_url": "",
                 },
@@ -383,7 +390,8 @@ class AwardsService:
                 receiver_id=award.nominee_id,
                 source_type=ReferenceType.AWARD.value,
                 source_id=award.id,
-                message=f"Honored with the {award.award_type.name} Award! 🎉"
+                message=f"Honored with the {award.award_type.name} Award! 🎉",
+                actor_label=award.persona_label,
             )
 
             # Award points to nominee
