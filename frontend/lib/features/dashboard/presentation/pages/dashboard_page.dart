@@ -10,8 +10,7 @@ import 'package:rr_frontend/features/recognitions/presentation/pages/employee_re
 import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
 import 'package:rr_frontend/features/points/presentation/pages/leaderboard_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
-import 'package:rr_frontend/features/nominations/presentation/pages/employee_nominations_page.dart';
-import 'package:rr_frontend/features/nominations/presentation/pages/manager_approvals_page.dart';
+import 'package:rr_frontend/features/nominations/presentation/pages/awards_page.dart';
 import 'package:rr_frontend/features/analytics/presentation/pages/analytics_page.dart';
 import 'package:rr_frontend/features/reports/presentation/pages/reports_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_config_page.dart';
@@ -92,7 +91,7 @@ class _DashboardPageState extends State<DashboardPage> {
           title: 'Awards',
           subtitle: 'View nominations and award status',
           icon: Icons.emoji_events_rounded,
-          page: ManagerApprovalsPage(),
+          page: AwardsPage(),
         ),
         const NavDestination(
           title: 'eCards',
@@ -179,11 +178,11 @@ class _DashboardPageState extends State<DashboardPage> {
           page: EmployeeRewardsPage(),
         ),
         const NavDestination(
-          title: 'Approvals',
-          heading: 'Nomination Approvals',
-          subtitle: 'Review and action pending award nominations',
-          icon: Icons.task_alt_rounded,
-          page: ManagerApprovalsPage(),
+          title: 'Awards',
+          heading: 'Awards & Approvals',
+          subtitle: 'Nominations, awards, and approvals',
+          icon: Icons.emoji_events_rounded,
+          page: AwardsPage(),
         ),
         NavDestination(
           title: 'Analytics',
@@ -233,10 +232,10 @@ class _DashboardPageState extends State<DashboardPage> {
         page: EmployeeRewardsPage(),
       ),
       const NavDestination(
-        title: 'Nominations',
+        title: 'Awards',
         subtitle: 'Nominate a colleague or check your award status',
         icon: Icons.emoji_events_rounded,
-        page: EmployeeNominationsPage(),
+        page: AwardsPage(),
       ),
       const NavDestination(
         title: 'Leaderboard',

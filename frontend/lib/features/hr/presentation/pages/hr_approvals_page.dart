@@ -8,7 +8,6 @@ import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/action_buttons.dart';
 import '../../../../core/widgets/status_badge.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/services/feature_flag_service.dart';
