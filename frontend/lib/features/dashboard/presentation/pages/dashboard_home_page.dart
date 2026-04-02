@@ -616,8 +616,7 @@ class _DashboardHomeView extends StatelessWidget {
                 const Color(0xFFEA580C),
                 cardWidth,
                 onTap: () {
-                  final tab = isManager ? 'Approvals' : 'Nominations';
-                  MainLayout.of(context)?.selectTabByTitle(tab);
+                  MainLayout.of(context)?.selectTabByTitle('Awards');
                 },
               ),
               _buildDynamicModuleCard(
