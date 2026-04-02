@@ -76,7 +76,11 @@ class RecognitionService:
         """Return the generic ECARD policy row from cache (1 h TTL), or None."""
         cache_key = "ecard_policy"
         if cache_key in _ecard_policy_cache:
-            return _ecard_policy_cache[cache_key]
+            policy = _ecard_policy_cache[cache_key]
+            # Ensure the object is bound to the current session to avoid DetachedInstanceError
+            if policy:
+                return self.db.merge(policy, load=False)
+            return None
         policy = self.repository.get_ecard_policy()
         _ecard_policy_cache[cache_key] = policy
         return policy

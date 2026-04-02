@@ -153,12 +153,13 @@ class AwardsService:
                 current_approvals.append(level)
 
             # Create feed entry for Award
+            nominee_name = self._get_user_name(award.nominee_id)
             self.recognition_service.create_feed_entry(
                 actor_id=award.nominator_id,
                 receiver_id=award.nominee_id,
                 source_type=ReferenceType.AWARD.value,
                 source_id=award.id,
-                message=f"Honored with the {award.award_type.name} Award! 🎉",
+                message=f"{nominee_name} received a formal award nominated by {award.persona_label or display_nominator_name}",
                 actor_label=award.persona_label,
             )
 
@@ -207,12 +208,13 @@ class AwardsService:
                 award.status = AwardStatus.APPROVED.value
 
                 # Create feed entry for Award
+                nominee_name = self._get_user_name(award.nominee_id)
                 self.recognition_service.create_feed_entry(
                     actor_id=award.nominator_id,
                     receiver_id=award.nominee_id,
                     source_type=ReferenceType.AWARD.value,
                     source_id=award.id,
-                    message=f"Honored with the {award.award_type.name} Award! 🎉",
+                    message=f"{nominee_name} received a formal award nominated by {award.persona_label or display_nominator_name}",
                     actor_label=award.persona_label,
                 )
 
@@ -385,12 +387,15 @@ class AwardsService:
             award.status = AwardStatus.APPROVED.value
 
             # Create feed entry for Award
+            nominee_name = self._get_user_name(award.nominee_id)
+            nominator_name = self._get_user_name(award.nominator_id)
+            display_nominator_name = award.persona_label if award.persona_label else nominator_name
             self.recognition_service.create_feed_entry(
                 actor_id=award.nominator_id,
                 receiver_id=award.nominee_id,
                 source_type=ReferenceType.AWARD.value,
                 source_id=award.id,
-                message=f"Honored with the {award.award_type.name} Award! 🎉",
+                message=f"{nominee_name} received a formal award nominated by {award.persona_label or display_nominator_name}",
                 actor_label=award.persona_label,
             )
 

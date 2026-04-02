@@ -571,7 +571,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
       if (role == 'MANAGER' || role == 'DEPT_HEAD') {
         _personas.add({
           'persona_type': 'DEPARTMENT',
-          'persona_label': deptName,
+          'persona_label': '$deptName Team',
         });
       } else if (role == 'ADMIN' || role == 'HR') {
         _personas.add({

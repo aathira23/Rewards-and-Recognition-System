@@ -75,7 +75,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
           setState(() {
             _personas = [
               {'persona_type': 'PERSONAL', 'persona_label': null},
-              {'persona_type': 'DEPARTMENT', 'persona_label': deptName},
+              {'persona_type': 'DEPARTMENT', 'persona_label': '$deptName Team'},
             ];
             _selectedPersona = _personas.first;
           });
