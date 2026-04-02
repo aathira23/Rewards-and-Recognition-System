@@ -135,6 +135,12 @@ class RecognitionRepository:
     def get_badge_for_ecard(self, ecard_source_id: int) -> Optional[Badge]:
         return self.db.query(Badge).join(ECard).filter(ECard.id == ecard_source_id).first()
 
+    def get_award_type_for_award(self, award_source_id: int):
+        """Returns the AwardType for a given Award ID."""
+        from app.models.award_types import AwardType
+        from app.models.awards import Award
+        return self.db.query(AwardType).join(Award).filter(Award.id == award_source_id).first()
+
     # --- User lookup ---
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         return self.db.query(User).filter(User.id == user_id).first()

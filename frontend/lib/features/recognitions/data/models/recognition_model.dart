@@ -14,6 +14,7 @@ class RecognitionModel extends RecognitionEntity {
     super.receiverName,
     super.badge,
     super.sourceType,
+    super.actorLabel,
   });
 
   factory RecognitionModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +33,7 @@ class RecognitionModel extends RecognitionEntity {
       receiverName: json['receiver']?['name'],
       badge: json['badge'] != null ? BadgeModel.fromJson(json['badge']) : null,
       sourceType: json['source_type'],
+      actorLabel: json['actor_label'],
     );
   }
 }

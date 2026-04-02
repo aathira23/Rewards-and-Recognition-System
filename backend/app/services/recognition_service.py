@@ -301,12 +301,16 @@ class RecognitionService:
         page, per_page, skip = clamp_pagination(page, per_page)
         total, items = self.repository.get_feed_paginated(skip, per_page)
 
-        # Inflate eCard details (specifically badges) for feed items
+        # Inflate details (badges/award types) for feed items
         for item in items:
             if item.source_type == "ECARD":
                 badge = self.repository.get_badge_for_ecard(item.source_id)
                 if badge:
                     item.badge = badge
+            elif item.source_type == "AWARD":
+                award_type = self.repository.get_award_type_for_award(item.source_id)
+                if award_type:
+                    item.badge = award_type
 
         return total, items
 

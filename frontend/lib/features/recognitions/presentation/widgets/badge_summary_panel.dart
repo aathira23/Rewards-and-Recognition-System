@@ -428,6 +428,7 @@ class _FeedItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final senderName = recognition.senderName ?? 'Someone';
+    final nominator = recognition.actorLabel ?? senderName;
     final receiverName = recognition.receiverName ?? 'Someone';
     final badgeName = recognition.badge?.name ?? 'Badge';
     final info = BadgeUtils.getDisplayInfo(badgeName);
@@ -457,7 +458,7 @@ class _FeedItem extends StatelessWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: info.color.withValues(alpha: 0.12),
-                child: Text(senderName.substring(0, 1).toUpperCase(),
+                child: Text(nominator.substring(0, 1).toUpperCase(),
                     style: TextStyle(
                         color: info.color,
                         fontWeight: FontWeight.w700,
@@ -495,7 +496,7 @@ class _FeedItem extends StatelessWidget {
                         .copyWith(height: 1.4),
                     children: [
                       TextSpan(
-                          text: senderName,
+                          text: nominator,
                           style: const TextStyle(fontWeight: FontWeight.w700)),
                       const TextSpan(text: ' sent a '),
                       TextSpan(

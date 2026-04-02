@@ -68,9 +68,13 @@ class _FeedItem extends StatelessWidget {
       const c = Color(0xFFD97706);
       iconBg = const Color(0xFFFEF3C7);
       iconChild = const Icon(Icons.emoji_events_rounded, color: c, size: 20);
-      titleLine = _nameText(receiverName, ' received a formal award');
+      final nominator = recognition.actorLabel ?? senderName;
+      titleLine = _nameText(
+          receiverName, ' received a formal award nominated by $nominator');
       tagLine = _Tag(
-        label: message.isNotEmpty ? message : 'Award',
+        label: badgeName.isNotEmpty
+            ? 'Honored with the $badgeName Award! 🎊'
+            : 'Award',
         color: c,
         icon: Icons.emoji_events_rounded,
       );

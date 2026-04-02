@@ -16,6 +16,9 @@ class RecognitionEntity extends Equatable {
   /// Source type from the feed: ECARD, AWARD, CELEBRATION
   final String? sourceType;
 
+  /// Persona label (e.g. "Engineering Team")
+  final String? actorLabel;
+
   const RecognitionEntity({
     required this.id,
     required this.senderId,
@@ -28,6 +31,7 @@ class RecognitionEntity extends Equatable {
     this.receiverName,
     this.badge,
     this.sourceType,
+    this.actorLabel,
   });
 
   @override
@@ -43,5 +47,6 @@ class RecognitionEntity extends Equatable {
         receiverName,
         badge,
         sourceType,
+        actorLabel,
       ];
 }
