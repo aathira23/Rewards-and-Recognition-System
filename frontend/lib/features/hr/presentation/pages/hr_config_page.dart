@@ -45,10 +45,10 @@ class _HrConfigViewState extends State<_HrConfigView>
     'MERCHANDISE': 'MERCH',
     // Award eligibility friendly labels
     'Any employee (peer)': 'PEER',
-    'Managers, Dept Heads & HR (manager-only)': 'MANAGER_ONLY',
-    'Dept Heads & HR (senior management)': 'SENIOR_MGMT',
+    'Managers, Department Heads & HR (manager-only)': 'MANAGER_ONLY',
+    'Department Heads & HR (senior management)': 'SENIOR_MGMT',
     // Legacy/short labels (kept for backward compatibility)
-    'Managers, Dept Heads & HR': 'MANAGER_ONLY',
+    'Managers, Department Heads & HR': 'MANAGER_ONLY',
     'MANAGER ONLY': 'MANAGER_ONLY',
     'SENIOR MGMT': 'SENIOR_MGMT',
     'MANAGER->DEPT HEAD': 'MANAGER,DEPT_HEAD',
@@ -340,8 +340,8 @@ class _HrConfigViewState extends State<_HrConfigView>
             controller: eligC,
             dropdownOptions: const [
               'Any employee (peer)',
-              'Managers, Dept Heads & HR (manager-only)',
-              'Dept Heads & HR (senior management)',
+              'Managers, Department Heads & HR (manager-only)',
+              'Department Heads & HR (senior management)',
             ]),
         _Field(
             label: 'Approval Workflow',

@@ -317,7 +317,8 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                     ),
                     StatusBadge(
                       status: n.status,
-                      label: _statusLabel(n),
+                      label:
+                          n.status == 'APPROVED' ? 'Awarded' : _statusLabel(n),
                     ),
                   ],
                 ),
@@ -376,6 +377,70 @@ class _ApprovalsViewState extends State<_ApprovalsView>
                     ],
                   ],
                 ),
+                // ── Rejection detail ─────────────────────────────────────
+                if (n.status == 'REJECTED' && n.reviewerLevel != null) ...[
+                  const SizedBox(height: 8),
+                  Divider(height: 1, color: Colors.grey.shade100),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.cancel_outlined,
+                          size: 13, color: Colors.red.shade600),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              () {
+                                final level = n.reviewerLevel!.toUpperCase();
+                                final roleLabel = level == 'DEPT_HEAD'
+                                    ? 'Department Head'
+                                    : level == 'MANAGER'
+                                        ? 'Manager'
+                                        : level == 'HR'
+                                            ? 'HR'
+                                            : n.reviewerLevel!
+                                                .replaceAll('_', ' ');
+                                final name = n.reviewerName != null &&
+                                        n.reviewerName!.isNotEmpty
+                                    ? ' (${n.reviewerName})'
+                                    : '';
+                                return '$roleLabel$name';
+                              }(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              n.reviewerComment != null &&
+                                      n.reviewerComment!.isNotEmpty
+                                  ? n.reviewerComment!
+                                  : 'No comment provided',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: n.reviewerComment != null &&
+                                        n.reviewerComment!.isNotEmpty
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade400,
+                                fontStyle: n.reviewerComment != null &&
+                                        n.reviewerComment!.isNotEmpty
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

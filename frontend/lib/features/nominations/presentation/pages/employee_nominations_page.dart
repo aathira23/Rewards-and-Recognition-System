@@ -295,8 +295,8 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
               child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
                 builder: (context, state) {
                   final awardsFeed = state.feed
-                      .where((r) =>
-                          (r.sourceType ?? '').toUpperCase() == 'AWARD')
+                      .where(
+                          (r) => (r.sourceType ?? '').toUpperCase() == 'AWARD')
                       .toList();
                   if (state.status == RecognitionStatus.loading &&
                       state.feed.isEmpty) {
@@ -642,16 +642,30 @@ class _EmployeeNominationsViewState extends State<_EmployeeNominationsView>
                                 ? Colors.green.shade800
                                 : Colors.red.shade800),
                       ),
-                      if (nom.reviewerName != null) ...[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text('-',
-                              style:
-                                  AppTextStyles.small(color: Colors.black54)),
+                      if (nom.reviewerLevel != null ||
+                          (nom.reviewerName != null &&
+                              nom.reviewerName!.isNotEmpty)) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          (nom.reviewerLevel != null
+                                  ? (nom.reviewerLevel!.toUpperCase() ==
+                                          'DEPT_HEAD'
+                                      ? 'Department Head'
+                                      : nom.reviewerLevel!.toUpperCase() ==
+                                              'MANAGER'
+                                          ? 'Manager'
+                                          : nom.reviewerLevel!.toUpperCase() ==
+                                                  'HR'
+                                              ? 'HR'
+                                              : nom.reviewerLevel!
+                                                  .replaceAll('_', ' '))
+                                  : '') +
+                              (nom.reviewerName != null &&
+                                      nom.reviewerName!.isNotEmpty
+                                  ? ' (${nom.reviewerName})'
+                                  : ''),
+                          style: AppTextStyles.smallBold(color: Colors.black87),
                         ),
-                        Text(nom.reviewerName!,
-                            style:
-                                AppTextStyles.smallBold(color: Colors.black87)),
                       ],
                     ],
                   ),

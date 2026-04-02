@@ -654,16 +654,62 @@ class AwardsService:
         Return all nominations where the current user has an AwardApproval record.
         Reads directly from award_approvals joined with awards — no filtering
         on nomination status so the user sees both in-progress and finalised ones.
+        Also includes the actions of other approvers on the same nomination so the
+        caller can render the full approval chain (who else approved/rejected and why).
         """
         approvals = self.repository.get_approvals_by_user(user_id)
-        # Batch-fetch user names for nominees and nominators
-        _user_id_set = {ap.award.nominee_id for ap in approvals if ap.award} | {ap.award.nominator_id for ap in approvals if ap.award}
+
+        # Batch-fetch ALL approval rows for the same nominations so we can show
+        # the full chain (e.g. Manager approved → Dept Head rejected with reason).
+        award_ids = [ap.award_id for ap in approvals if ap.award_id]
+        all_chain_aps = self.repository.get_approvals_for_awards(award_ids) if award_ids else []
+
+        # Group other-approver rows by nomination (excluding the current user's own rows),
+        # sorted oldest-first so the chain renders top-to-bottom in chronological order.
+        chain_by_award: Dict[int, list] = {}
+        for cap in all_chain_aps:
+            if cap.approver_id == user_id:
+                continue  # own action is already surfaced as my_action
+            chain_by_award.setdefault(cap.award_id, []).append(cap)
+        for v in chain_by_award.values():
+            v.sort(key=lambda x: x.created_at or '')
+
+        # Batch-resolve ALL required user names in a single query
+        _user_id_set: set = set()
+        for ap in approvals:
+            if ap.award:
+                _user_id_set.add(ap.award.nominee_id)
+                _user_id_set.add(ap.award.nominator_id)
+        for cap in all_chain_aps:
+            if cap.approver_id:
+                _user_id_set.add(cap.approver_id)
         _users_map = self._get_user_names_batch(_user_id_set)
+
         result = []
         for ap in approvals:
             award = ap.award
             if not award:
                 continue
+
+            # Build compact chain entries for approvers other than the current user
+            other_approvals = []
+            for cap in chain_by_award.get(award.id, []):
+                c = cap.comments or ''
+                cl = c.lower()
+                is_system = (
+                    cl.startswith('auto-approved by')
+                    or cl.startswith('approved by ')
+                    or cl.startswith('rejected by ')
+                )
+                other_approvals.append({
+                    'level':         cap.approval_level,
+                    'approver_name': _users_map.get(cap.approver_id, f'User #{cap.approver_id}')
+                                     if cap.approver_id else None,
+                    'action':        cap.status,
+                    'comment':       c if (c and not is_system) else None,
+                    'action_at':     cap.created_at,
+                })
+
             result.append({
                 'my_action':          ap.status,
                 'my_action_at':       ap.created_at,
@@ -679,6 +725,7 @@ class AwardsService:
                 'nominee_name':       _users_map.get(award.nominee_id, f'User #{award.nominee_id}'),
                 'nominator_name':     _users_map.get(award.nominator_id, f'User #{award.nominator_id}'),
                 'created_at':         award.created_at,
+                'other_approvals':    other_approvals,
             })
         return result
 

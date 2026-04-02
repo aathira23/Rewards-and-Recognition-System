@@ -568,12 +568,12 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
       final defaultDeptLabel = 'Department';
       final deptName = user?.departmentName ?? defaultDeptLabel;
 
-      if (role == 'HR' || role == 'MANAGER' || role == 'DEPT_HEAD') {
+      if (role == 'MANAGER' || role == 'DEPT_HEAD') {
         _personas.add({
           'persona_type': 'DEPARTMENT',
           'persona_label': deptName,
         });
-      } else if (role == 'ADMIN') {
+      } else if (role == 'ADMIN' || role == 'HR') {
         _personas.add({
           'persona_type': 'Company',
           'persona_label': 'Tarento',

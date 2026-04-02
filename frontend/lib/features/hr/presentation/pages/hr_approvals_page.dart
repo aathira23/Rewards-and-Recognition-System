@@ -417,7 +417,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                       dropdownMenuEntries: const [
                         DropdownMenuEntry(value: 'MANAGER', label: 'Manager'),
                         DropdownMenuEntry(
-                            value: 'DEPT_HEAD', label: 'Dept Head'),
+                            value: 'DEPT_HEAD', label: 'Department Head'),
                       ],
                       onSelected: (v) => setLocal(() => selectedRole = v),
                     );
@@ -616,7 +616,8 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
                   OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
-            onChanged: (v) => setState(() => _empSearch = v.trim().toLowerCase()),
+            onChanged: (v) =>
+                setState(() => _empSearch = v.trim().toLowerCase()),
           ),
           const SizedBox(height: 16),
 

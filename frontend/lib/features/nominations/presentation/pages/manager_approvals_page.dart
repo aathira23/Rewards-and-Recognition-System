@@ -46,8 +46,8 @@ class ManagerApprovalsPage extends StatelessWidget {
             ..add(nom.GetApprovalHistoryRequested()),
         ),
         BlocProvider(
-          create: (_) => sl<RecognitionsBloc>()
-            ..add(rec.GetRecognitionFeedRequested()),
+          create: (_) =>
+              sl<RecognitionsBloc>()..add(rec.GetRecognitionFeedRequested()),
         ),
       ],
       child: const _ManagerApprovalsView(),
@@ -94,7 +94,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     }
     final level = n.nextRequiredLevel!.toUpperCase();
     const levelNames = {
-      'DEPT_HEAD': 'Dept Head',
+      'DEPT_HEAD': 'Department Head',
       'MANAGER': 'Manager',
       'HR': 'HR',
       'ADMIN': 'Admin'
@@ -176,8 +176,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                   }
 
                   return GestureDetector(
-                    onTap: () => MainLayout.of(context)
-                        ?.selectTabByTitle(destination),
+                    onTap: () =>
+                        MainLayout.of(context)?.selectTabByTitle(destination),
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: Row(
@@ -364,8 +364,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
               child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
                 builder: (context, state) {
                   final awardsFeed = state.feed
-                      .where((r) =>
-                          (r.sourceType ?? '').toUpperCase() == 'AWARD')
+                      .where(
+                          (r) => (r.sourceType ?? '').toUpperCase() == 'AWARD')
                       .toList();
                   if (state.status == RecognitionStatus.loading &&
                       state.feed.isEmpty) {
@@ -508,12 +508,14 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
         submissions.where((n) => n.status.toUpperCase() == 'REJECTED').length;
 
     final cards = [
-      _buildSummaryCard('Total Sent', total, Icons.send_outlined, Colors.indigo),
+      _buildSummaryCard(
+          'Total Sent', total, Icons.send_outlined, Colors.indigo),
       _buildSummaryCard(
           'Pending', pending, Icons.hourglass_empty_rounded, Colors.orange),
+      _buildSummaryCard('Approved', approved,
+          Icons.check_circle_outline_rounded, Colors.green),
       _buildSummaryCard(
-          'Approved', approved, Icons.check_circle_outline_rounded, Colors.green),
-      _buildSummaryCard('Rejected', rejected, Icons.cancel_outlined, Colors.red),
+          'Rejected', rejected, Icons.cancel_outlined, Colors.red),
     ];
 
     if (Responsive.isMobile(context)) {
@@ -639,7 +641,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                             size: 14, color: Colors.grey.shade400),
                         const SizedBox(width: 6),
                         Text('Nominee',
-                            style: AppTextStyles.small(color: Colors.grey.shade500)),
+                            style: AppTextStyles.small(
+                                color: Colors.grey.shade500)),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -658,7 +661,8 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                             size: 14, color: Colors.grey.shade400),
                         const SizedBox(width: 6),
                         Text('Nominated by',
-                            style: AppTextStyles.small(color: Colors.grey.shade500)),
+                            style: AppTextStyles.small(
+                                color: Colors.grey.shade500)),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -793,13 +797,18 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
           children: [
             Icon(icon, size: 12, color: Colors.grey.shade400),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text(label,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
           ],
         ),
         const SizedBox(height: 2),
-        Text(value, 
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(value,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
       ],
     );
   }
@@ -836,8 +845,17 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
     final nominatorName = item['nominator_name']?.toString() ?? '';
     final pts = item['points_awarded'];
     final citation = item['citation']?.toString() ?? '';
-    final myComments = item['my_comments']?.toString() ?? '';
+    final _rawMyComments = item['my_comments']?.toString() ?? '';
+    // Strip system-generated comments so only human-written ones are shown
+    final _myCommentLower = _rawMyComments.toLowerCase();
+    final bool _isSystemComment =
+        _myCommentLower.startsWith('auto-approved by') ||
+            _myCommentLower.startsWith('approved by ') ||
+            _myCommentLower.startsWith('rejected by ');
+    final myComments = _isSystemComment ? '' : _rawMyComments;
     final actionAt = item['my_action_at']?.toString() ?? '';
+    final otherApprovals =
+        (item['other_approvals'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
     // Overall status colour
     Color statusColor;
@@ -899,6 +917,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         ),
                         StatusBadge(
                           status: nomStatus,
+                          label: nomStatus == 'APPROVED' ? 'Awarded' : null,
                         ),
                       ],
                     ),
@@ -1004,6 +1023,87 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         ],
                       ],
                     ),
+                    // ── Rejection detail (only shown when nomination was rejected by someone else) ──
+                    if (nomStatus == 'REJECTED' &&
+                        otherApprovals.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Divider(height: 1, color: Colors.grey.shade100),
+                      const SizedBox(height: 8),
+                      ...otherApprovals
+                          .where((oa) => oa['action']?.toString() == 'REJECTED')
+                          .map((oa) {
+                        final oaAction = oa['action']?.toString() ?? '';
+                        final isOaApproved = oaAction == 'APPROVED';
+                        final oaLevel = oa['level']?.toString() ?? '';
+                        final oaApproverName = oa['approver_name']?.toString();
+                        final oaComment = oa['comment']?.toString();
+                        final oaRoleLabel = oaLevel.toUpperCase() == 'DEPT_HEAD'
+                            ? 'Department Head'
+                            : oaLevel.toUpperCase() == 'MANAGER'
+                                ? 'Manager'
+                                : oaLevel.toUpperCase() == 'HR'
+                                    ? 'HR'
+                                    : oaLevel.replaceAll('_', ' ');
+                        final oaFullLabel =
+                            oaApproverName != null && oaApproverName.isNotEmpty
+                                ? '$oaRoleLabel ($oaApproverName)'
+                                : oaRoleLabel;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                isOaApproved
+                                    ? Icons.check_circle_outline_rounded
+                                    : Icons.cancel_outlined,
+                                size: 13,
+                                color: isOaApproved
+                                    ? Colors.green.shade600
+                                    : Colors.red.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      oaFullLabel,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isOaApproved
+                                            ? Colors.green.shade700
+                                            : Colors.red.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      oaComment != null && oaComment.isNotEmpty
+                                          ? oaComment
+                                          : 'No comment provided',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: oaComment != null &&
+                                                oaComment.isNotEmpty
+                                            ? Colors.grey.shade700
+                                            : Colors.grey.shade400,
+                                        fontStyle: oaComment != null &&
+                                                oaComment.isNotEmpty
+                                            ? FontStyle.normal
+                                            : FontStyle.italic,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                   ],
                 ),
               ),
@@ -1123,7 +1223,9 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                         ),
                         StatusBadge(
                           status: n.status,
-                          label: _statusLabel(n),
+                          label: n.status == 'APPROVED'
+                              ? 'Awarded'
+                              : _statusLabel(n),
                         ),
                       ],
                     ),
@@ -1211,7 +1313,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                     child: Text(
                                       (n.reviewerLevel!.toUpperCase() ==
                                                   'DEPT_HEAD'
-                                              ? 'Dept Head'
+                                              ? 'Department Head'
                                               : n.reviewerLevel!
                                                           .toUpperCase() ==
                                                       'MANAGER'
@@ -1225,7 +1327,7 @@ class _ManagerApprovalsViewState extends State<_ManagerApprovalsView>
                                                               '_', ' ')) +
                                           (n.reviewerName != null &&
                                                   n.reviewerName!.isNotEmpty
-                                              ? '  ·  ${n.reviewerName}'
+                                              ? ' (${n.reviewerName})'
                                               : ''),
                                       style: TextStyle(
                                           fontSize: 11,
