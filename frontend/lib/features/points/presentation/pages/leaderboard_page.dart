@@ -47,11 +47,14 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 16 : 32,
+                ),
                 child: BlocBuilder<PointsBloc, PointsState>(
                   builder: (context, state) {
                     if (state.status == PointsStatus.loading &&
@@ -91,13 +94,17 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
+      width: double.infinity,
       color: Colors.transparent,
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Column(
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.of(context).size.width < 600 ? 16 : 32,
+        vertical: 24,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+
+          final titleColumn = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GestureDetector(
@@ -136,8 +143,9 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                 style: AppTextStyles.body(color: Colors.grey[600]),
               ),
             ],
-          ),
-          Container(
+          );
+
+          final togglePill = Container(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
@@ -152,8 +160,28 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                 _buildToggleButton('All Time', 'ALL_TIME'),
               ],
             ),
-          ),
-        ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                titleColumn,
+                const SizedBox(height: 16),
+                togglePill,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(child: titleColumn),
+              const SizedBox(width: 16),
+              togglePill,
+            ],
+          );
+        },
       ),
     );
   }
@@ -167,7 +195,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       },
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.brandBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -190,7 +218,10 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
     return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        padding: EdgeInsets.symmetric(
+          vertical: 32,
+          horizontal: MediaQuery.of(context).size.width < 600 ? 12 : 24,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -287,8 +318,11 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
               Icon(Icons.star, color: medalColor, size: 14),
               const SizedBox(width: 4),
             ],
-            Text('${entry.score} pts',
-                style: AppTextStyles.bodyBold(color: AppTheme.brandBlue)),
+            Flexible(
+              child: Text('${entry.score} pts',
+                  style: AppTextStyles.bodyBold(color: AppTheme.brandBlue),
+                  overflow: TextOverflow.ellipsis),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -317,7 +351,10 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+      padding: EdgeInsets.symmetric(
+        vertical: 24,
+        horizontal: MediaQuery.of(context).size.width < 600 ? 16 : 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -387,21 +424,24 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(entry.name,
-                  style: AppTextStyles.bodyBold(color: Colors.black87)),
+                  style: AppTextStyles.bodyBold(color: Colors.black87),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
               if (entry.departmentName != null &&
                   entry.departmentName!.isNotEmpty)
                 Text(entry.departmentName!,
-                    style: AppTextStyles.small(color: Colors.grey.shade500)),
+                    style: AppTextStyles.small(color: Colors.grey.shade500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
+        const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text('${entry.score} pts',
                 style: AppTextStyles.bodyBold(color: AppTheme.brandBlue)),
-            // Placeholder for up/down spots if supported
-            // Row(children: [ Icon(Icons.trending_up, size: 12, color: Colors.green), Text(' Up 2 spots', style: AppTextStyles.small(color: Colors.green)) ])
           ],
         ),
       ],

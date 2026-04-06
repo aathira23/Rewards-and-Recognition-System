@@ -594,7 +594,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
   Widget build(BuildContext context) {
     return AppDialog(
       title: _selected == null ? 'Choose a Badge' : 'Send Appreciation',
-      maxWidth: 600,
+      maxWidth: 480,
       showCloseButton: false,
       content: _selected == null ? _buildBadgeGrid() : _buildSendForm(context),
       actions: _selected == null
@@ -612,23 +612,27 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
     final sortedBadges = List<BadgeEntity>.from(widget.badges)
       ..sort((a, b) => a.name.compareTo(b.name));
 
-    return SizedBox(
-      height: 400, // Reduced from 480 to be even more compact
-      child: GridView.builder(
+    return LayoutBuilder(builder: (context, constraints) {
+      final isNarrow = constraints.maxWidth < 350;
+      final crossAxisCount = isNarrow ? 2 : 3;
+
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 16),
         itemCount: sortedBadges.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4, // More columns = smaller badges
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: 0.75, // Adjusted for smaller width
+          childAspectRatio: 1.0,
         ),
         itemBuilder: (ctx, i) => _PickerBadgeCard(
           badge: sortedBadges[i],
           onTap: () => setState(() => _selected = sortedBadges[i]),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildSendForm(BuildContext ctx) {
@@ -643,10 +647,10 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
           children: [
             // ── Badge Banner ────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: info.color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: info.color.withValues(alpha: 0.2)),
               ),
               child: Row(
@@ -696,8 +700,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // ── Main Form with Floating Overlay ──────────────────────
             Stack(
@@ -718,9 +721,9 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                     const SizedBox(height: 8),
 
                     // Placeholder for TextField height to keep layout stable
-                    const SizedBox(height: 52),
+                    const SizedBox(height: 44),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Send As Persona Selector
                     if (_personas.length > 1) ...[
@@ -755,7 +758,11 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                       '${persona['persona_type']}';
                               return DropdownMenuItem(
                                 value: persona,
-                                child: Text(label, style: AppTextStyles.body()),
+                                child: Text(
+                                  label,
+                                  style: AppTextStyles.body(),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }).toList(),
                             onChanged: (val) {
@@ -766,7 +773,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                     ],
 
                     // Message Section
@@ -806,8 +813,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                       maxLines: 3,
                       onChanged: (v) => _message = v,
                     ),
-
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Action Row
                     Row(
@@ -1056,7 +1062,7 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _hovered
                 ? info.color.withValues(alpha: 0.07)
@@ -1078,50 +1084,53 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
                 ),
             ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 44, // Reduced from 52
-                height: 44, // Reduced from 52
-                decoration: BoxDecoration(
-                  color: info.color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: info.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: widget.badge.iconUrl != null
+                        ? Image.network(
+                            widget.badge.iconUrl!,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => info.hasEmoji
+                                ? Text(info.emoji!,
+                                    style: AppTextStyles.emoji(size: 20))
+                                : Icon(info.icon, color: info.color, size: 22),
+                          )
+                        : (info.hasEmoji
+                            ? Text(info.emoji!,
+                                style: AppTextStyles.emoji(size: 20))
+                            : Icon(info.icon, color: info.color, size: 22)),
+                  ),
                 ),
-                child: Center(
-                  child: widget.badge.iconUrl != null
-                      ? Image.network(
-                          widget.badge.iconUrl!,
-                          width: 26, // Reduced from 32
-                          height: 26, // Reduced from 32
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => info.hasEmoji
-                              ? Text(info.emoji!,
-                                  style: AppTextStyles.emoji(size: 20))
-                              : Icon(info.icon, color: info.color, size: 22),
-                        )
-                      : (info.hasEmoji
-                          ? Text(info.emoji!,
-                              style: AppTextStyles.emoji(size: 20))
-                          : Icon(info.icon, color: info.color, size: 22)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.badge.name,
-                style: AppTextStyles.small(color: Colors.grey[700]),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (widget.badge.points != null && widget.badge.points! > 0) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
-                  '+${widget.badge.points} pts',
-                  style: AppTextStyles.captionBold(color: info.color),
+                  widget.badge.name,
+                  style: AppTextStyles.small(color: Colors.grey[700]),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                if (widget.badge.points != null && widget.badge.points! > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '+${widget.badge.points} pts',
+                    style: AppTextStyles.captionBold(color: info.color),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

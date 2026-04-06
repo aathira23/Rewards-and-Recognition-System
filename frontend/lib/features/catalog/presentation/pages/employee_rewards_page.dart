@@ -1196,56 +1196,55 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 20),
-                child: Row(
-                  children: [
-                    // Category chip pills on the left
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: _validCategories.map((cat) {
-                            final isActive = effectiveCategory == cat;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _selectedCategory = cat),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 600;
+
+                    // Shared: category chip scroll row
+                    final chipRow = SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _validCategories.map((cat) {
+                          final isActive = effectiveCategory == cat;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () =>
+                                  setState(() => _selectedCategory = cat),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? const Color(0xFF3B31A5)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
                                     color: isActive
                                         ? const Color(0xFF3B31A5)
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: isActive
-                                          ? const Color(0xFF3B31A5)
-                                          : const Color(0xFFE0E0E0),
-                                    ),
+                                        : const Color(0xFFE0E0E0),
                                   ),
-                                  child: Text(
-                                    cat,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: isActive
-                                          ? Colors.white
-                                          : const Color(0xFF757575),
-                                    ),
+                                ),
+                                child: Text(
+                                  cat,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isActive
+                                        ? Colors.white
+                                        : const Color(0xFF757575),
                                   ),
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
+                            ),
+                          );
+                        }).toList(),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Search field — fixed width on the right
-                    SizedBox(
-                      width: 200,
+                    );
+
+                    // Shared: search field
+                    final searchField = SizedBox(
                       height: 42,
                       child: TextField(
                         controller: _searchController,
@@ -1276,10 +1275,10 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Filter icon button
-                    Container(
+                    );
+
+                    // Shared: filter icon
+                    final filterBtn = Container(
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
@@ -1289,8 +1288,35 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                       ),
                       child: const Icon(Icons.tune_rounded,
                           color: Color(0xFF757575), size: 18),
-                    ),
-                  ],
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          chipRow,
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(child: searchField),
+                              const SizedBox(width: 8),
+                              filterBtn,
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: chipRow),
+                        const SizedBox(width: 12),
+                        SizedBox(width: 200, child: searchField),
+                        const SizedBox(width: 8),
+                        filterBtn,
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

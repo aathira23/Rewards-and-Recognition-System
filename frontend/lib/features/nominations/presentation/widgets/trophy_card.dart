@@ -37,47 +37,55 @@ class TrophyCard extends StatelessWidget {
         children: [
           // Top section (Icon + Title + Points)
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orange.withValues(alpha: 0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.emoji_events_rounded,
+                          color: Colors.orange, size: 28),
                     ),
-                    child: const Icon(Icons.emoji_events_rounded, color: Colors.orange, size: 28),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: AppTextStyles.headline2(color: Colors.black87),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7), // Light green
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      style: AppTextStyles.headline2(color: Colors.black87)
+                          .copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
                     ),
-                    child: Text(
-                      points,
-                      style: AppTextStyles.smallBold(color: const Color(0xFF166534)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7), // Light green
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF86EFAC)),
+                      ),
+                      child: Text(
+                        points,
+                        style: AppTextStyles.smallBold(
+                            color: const Color(0xFF166534)),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

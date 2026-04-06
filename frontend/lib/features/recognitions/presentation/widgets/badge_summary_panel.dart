@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/recognition_entity.dart';
@@ -564,33 +565,62 @@ class SendEcardPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (Responsive.isMobile(context))
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Send an eCard', style: AppTextStyles.pageTitle()),
+                const SizedBox(height: 8),
+                Text('Select a badge to start creating your eCard',
+                    style: AppTextStyles.body(color: Colors.grey[500])),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('Send an eCard', style: AppTextStyles.pageTitle()),
-                    const SizedBox(height: 8),
-                    Text('Select a badge to start creating your eCard',
-                        style: AppTextStyles.body(color: Colors.grey[500])),
+                    StatusPills(
+                      monthlyLimit: monthlyLimit,
+                      monthlySent: monthlySent,
+                      limitReached: limitReached,
+                      onCooldown: onCooldown,
+                      nextAvailableAt: nextAvailableAt,
+                      brandColor: brandColor,
+                    ),
+                    Text('$sentCount eCards Sent',
+                        style: AppTextStyles.bodyBold(color: const Color(0xFF4636A6))),
                   ],
                 ),
-              ),
-              StatusPills(
-                monthlyLimit: monthlyLimit,
-                monthlySent: monthlySent,
-                limitReached: limitReached,
-                onCooldown: onCooldown,
-                nextAvailableAt: nextAvailableAt,
-                brandColor: brandColor,
-              ),
-              const SizedBox(width: 8),
-              Text('$sentCount eCards Sent',
-                  style:
-                      AppTextStyles.bodyBold(color: const Color(0xFF4636A6))),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Send an eCard', style: AppTextStyles.pageTitle()),
+                      const SizedBox(height: 8),
+                      Text('Select a badge to start creating your eCard',
+                          style: AppTextStyles.body(color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+                StatusPills(
+                  monthlyLimit: monthlyLimit,
+                  monthlySent: monthlySent,
+                  limitReached: limitReached,
+                  onCooldown: onCooldown,
+                  nextAvailableAt: nextAvailableAt,
+                  brandColor: brandColor,
+                ),
+                const SizedBox(width: 8),
+                Text('$sentCount eCards Sent',
+                    style:
+                        AppTextStyles.bodyBold(color: const Color(0xFF4636A6))),
+              ],
+            ),
           const SizedBox(height: 40),
           // Badge grid
           if (badges.isEmpty)
@@ -671,37 +701,40 @@ class _SendBadgeCardState extends State<_SendBadgeCard> {
                   : Colors.grey.shade200,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: info.color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: info.color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: widget.badge.iconUrl != null
+                        ? Image.network(widget.badge.iconUrl!,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => _fallback(info))
+                        : _fallback(info),
+                  ),
                 ),
-                child: Center(
-                  child: widget.badge.iconUrl != null
-                      ? Image.network(widget.badge.iconUrl!,
-                          width: 24,
-                          height: 24,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => _fallback(info))
-                      : _fallback(info),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text('${widget.badge.name} !!!',
-                  style: AppTextStyles.small(color: Colors.grey[800]),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 6),
-              if (pts != null && pts > 0)
-                Text('$pts pts',
-                    style: AppTextStyles.caption(color: Colors.grey[500])),
-            ],
+                const SizedBox(height: 8),
+                Text('${widget.badge.name} !!!',
+                    style: AppTextStyles.small(color: Colors.grey[800]),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                if (pts != null && pts > 0)
+                  Text('$pts pts',
+                      style: AppTextStyles.caption(color: Colors.grey[500])),
+              ],
+            ),
           ),
         ),
       ),
@@ -769,30 +802,69 @@ class _EcardHistoryTableState extends State<EcardHistoryTable> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header with tabs
-          Row(
-            children: [
-              Text('eCard History', style: AppTextStyles.pageTitle()),
-              const Spacer(),
-              _tabBtn('All', 0),
-              const SizedBox(width: 4),
-              _tabBtn('Received', 1),
-              const SizedBox(width: 4),
-              _tabBtn('Sent', 2),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Table header
-          _headerRow(),
-          const SizedBox(height: 4),
-          if (pageItems.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                  child: Text('No eCards yet',
-                      style: AppTextStyles.body(color: Colors.grey[400]))),
+          if (Responsive.isMobile(context))
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('eCard History', style: AppTextStyles.pageTitle()),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _tabBtn('All', 0),
+                    _tabBtn('Received', 1),
+                    _tabBtn('Sent', 2),
+                  ],
+                ),
+              ],
             )
           else
-            ...pageItems.map(_buildRow),
+            Row(
+              children: [
+                Text('eCard History', style: AppTextStyles.pageTitle()),
+                const Spacer(),
+                _tabBtn('All', 0),
+                const SizedBox(width: 4),
+                _tabBtn('Received', 1),
+                const SizedBox(width: 4),
+                _tabBtn('Sent', 2),
+              ],
+            ),
+          const SizedBox(height: 20),
+          // Table header & rows
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double tableWidth = constraints.maxWidth < 650 ? 650.0 : constraints.maxWidth;
+              
+              final contentColumn = SizedBox(
+                width: tableWidth,
+                child: Column(
+                  children: [
+                    _headerRow(tableWidth),
+                    const SizedBox(height: 4),
+                    if (pageItems.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                            child: Text('No eCards yet',
+                                style: AppTextStyles.body(color: Colors.grey[400]))),
+                      )
+                    else
+                      ...pageItems.map((item) => _buildRow(item, tableWidth)),
+                  ],
+                ),
+              );
+
+              if (constraints.maxWidth < 650) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: contentColumn,
+                );
+              }
+              return contentColumn;
+            },
+          ),
           // Pagination footer
           if (total > _perPage) ...[
             const SizedBox(height: 8),
@@ -850,40 +922,35 @@ class _EcardHistoryTableState extends State<EcardHistoryTable> {
     );
   }
 
-  Widget _headerRow() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              SizedBox(
-                  width: w * 0.10, child: Text('TYPE', style: _headerStyle())),
-              SizedBox(
-                  width: w * 0.28,
-                  child: Text('BADGE (ECARD)', style: _headerStyle())),
-              SizedBox(
-                  width: w * 0.28,
-                  child: Text('PERSON', style: _headerStyle())),
-              SizedBox(
-                  width: w * 0.18, child: Text('DATE', style: _headerStyle())),
-              SizedBox(
-                  width: w * 0.10,
-                  child: Text('POINTS',
-                      style: _headerStyle(), textAlign: TextAlign.right)),
-            ],
-          ),
-        );
-      },
+  Widget _headerRow(double w) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+              width: w * 0.10, child: Text('TYPE', style: _headerStyle())),
+          SizedBox(
+              width: w * 0.28,
+              child: Text('BADGE (ECARD)', style: _headerStyle())),
+          SizedBox(
+              width: w * 0.28,
+              child: Text('PERSON', style: _headerStyle())),
+          SizedBox(
+              width: w * 0.18, child: Text('DATE', style: _headerStyle())),
+          SizedBox(
+              width: w * 0.10,
+              child: Text('POINTS',
+                  style: _headerStyle(), textAlign: TextAlign.right)),
+        ],
+      ),
     );
   }
 
-  Widget _buildRow(_HistoryEntry item) {
+  Widget _buildRow(_HistoryEntry item, double w) {
     final r = item.recognition;
     final badgeName = r.badge?.name ?? 'Badge';
     final info = BadgeUtils.getDisplayInfo(badgeName);
@@ -895,105 +962,100 @@ class _EcardHistoryTableState extends State<EcardHistoryTable> {
     final date = DateFormat('MMM d, yyyy').format(r.createdAt);
     final points = r.pointsAwarded;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-          ),
-          child: Row(
-            children: [
-              // Type pill
-              SizedBox(
-                width: w * 0.10,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Row(
+        children: [
+          // Type pill
+          SizedBox(
+            width: w * 0.10,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isReceived
+                      ? const Color(0xFFDCFCE7)
+                      : const Color(0xFFDBEAFE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  item.type,
+                  style: AppTextStyles.captionBold(
                       color: isReceived
-                          ? const Color(0xFFDCFCE7)
-                          : const Color(0xFFDBEAFE),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      item.type,
-                      style: AppTextStyles.captionBold(
-                          color: isReceived
-                              ? const Color(0xFF16A34A)
-                              : const Color(0xFF2563EB)),
-                      textAlign: TextAlign.center,
-                    ),
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF2563EB)),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+          // Badge
+          SizedBox(
+            width: w * 0.28,
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: info.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: r.badge?.iconUrl != null
+                        ? Image.network(r.badge!.iconUrl!,
+                            width: 16,
+                            height: 16,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(
+                                pillStyle.icon,
+                                size: 14,
+                                color: info.color))
+                        : Icon(pillStyle.icon, size: 14, color: info.color),
                   ),
                 ),
-              ),
-              // Badge
-              SizedBox(
-                width: w * 0.28,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: info.color.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: r.badge?.iconUrl != null
-                            ? Image.network(r.badge!.iconUrl!,
-                                width: 16,
-                                height: 16,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => Icon(
-                                    pillStyle.icon,
-                                    size: 14,
-                                    color: info.color))
-                            : Icon(pillStyle.icon, size: 14, color: info.color),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(badgeName,
-                          style: AppTextStyles.smallMedium(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(badgeName,
+                      style: AppTextStyles.smallMedium(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ),
-              ),
-              // Person
-              SizedBox(
-                width: w * 0.28,
-                child: Text(personLabel,
-                    style: AppTextStyles.small(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-              // Date
-              SizedBox(
-                  width: w * 0.18,
-                  child: Text(date,
-                      style: AppTextStyles.small(color: Colors.grey[600]))),
-              // Points
-              SizedBox(
-                width: w * 0.10,
-                child: Text(
-                  isReceived && points > 0 ? '+$points' : '-',
-                  style: AppTextStyles.smallMedium(
-                      color: isReceived && points > 0
-                          ? const Color(0xFF16A34A)
-                          : Colors.grey[400]),
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+          // Person
+          SizedBox(
+            width: w * 0.28,
+            child: Text(personLabel,
+                style: AppTextStyles.small(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ),
+          // Date
+          SizedBox(
+              width: w * 0.18,
+              child: Text(date,
+                  style: AppTextStyles.small(color: Colors.grey[600]))),
+          // Points
+          SizedBox(
+            width: w * 0.10,
+            child: Text(
+              isReceived && points > 0 ? '+$points' : '-',
+              style: AppTextStyles.smallMedium(
+                  color: isReceived && points > 0
+                      ? const Color(0xFF16A34A)
+                      : Colors.grey[400]),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

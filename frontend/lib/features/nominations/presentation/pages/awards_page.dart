@@ -153,7 +153,6 @@ class _AwardsViewState extends State<_AwardsView>
                 children: [
                   // Main Content
                   Expanded(
-                    flex: 3,
                     child: TabBarView(
                       controller: _tabController,
                       children: [
@@ -164,9 +163,9 @@ class _AwardsViewState extends State<_AwardsView>
                     ),
                   ),
                   // Right Sidebar: Company Feed (Awards Only)
-                  if (!isMobile)
-                    Expanded(
-                      flex: 1,
+                  if (MediaQuery.of(context).size.width > 950)
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width * 0.3).clamp(320.0, 450.0).toDouble(),
                       child: _buildCompanyFeed(context),
                     ),
                 ],
@@ -180,58 +179,52 @@ class _AwardsViewState extends State<_AwardsView>
 
   // ── Header ────────────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, authState) {
-                  String destination = 'Recognitions';
-                  if (authState is AuthAuthenticated) {
-                    final role = authState.auth.user?.role.toUpperCase();
-                    if (role == 'HR' || role == 'ADMIN') {
-                      destination = 'Dashboard';
-                    }
-                  }
+    final isMobile = Responsive.isMobile(context);
 
-                  return GestureDetector(
-                    onTap: () =>
-                        MainLayout.of(context)?.selectTabByTitle(destination),
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.arrow_back_rounded,
-                              size: 20, color: Colors.black87),
-                          const SizedBox(width: 8),
-                          Text('Back to Dashboard',
-                              style: AppTextStyles.bodyBold(
-                                  color: Colors.black87)),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+    final leftContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            String destination = 'Recognitions';
+            if (authState is AuthAuthenticated) {
+              final role = authState.auth.user?.role.toUpperCase();
+              if (role == 'HR' || role == 'ADMIN') {
+                destination = 'Dashboard';
+              }
+            }
+
+            return GestureDetector(
+              onTap: () => MainLayout.of(context)?.selectTabByTitle(destination),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.arrow_back_rounded,
+                        size: 20, color: Colors.black87),
+                    const SizedBox(width: 8),
+                    Text('Back to Dashboard',
+                        style: AppTextStyles.bodyBold(color: Colors.black87)),
+                  ],
+                ),
               ),
-              Text(
-                'Awards',
-                style: AppTextStyles.headline1(color: Colors.black87),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Celebrate achievements and recognize the people who make a difference.',
-                style: AppTextStyles.body(color: Colors.grey[600]),
-              ),
-            ],
-          ),
-          BlocBuilder<AuthBloc, AuthState>(
+            );
+          },
+        ),
+        Text(
+          'Awards',
+          style: AppTextStyles.headline1(color: Colors.black87),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Celebrate achievements and recognize the people who make a difference.',
+          style: AppTextStyles.body(color: Colors.grey[600]),
+        ),
+      ],
+    );
+
+    final rightButton = BlocBuilder<AuthBloc, AuthState>(
             builder: (context, authState) {
               UserEntity? currentUser;
               if (authState is AuthAuthenticated) {
@@ -266,7 +259,33 @@ class _AwardsViewState extends State<_AwardsView>
                 },
               );
             },
-          ),
+          );
+
+    if (isMobile) {
+      return Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            leftContent,
+            const SizedBox(height: 24),
+            rightButton,
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: leftContent),
+          const SizedBox(width: 24),
+          rightButton,
         ],
       ),
     );
@@ -369,52 +388,55 @@ class _AwardsViewState extends State<_AwardsView>
   }
 
   // ── Company Feed Sidebar ──────────────────────────────────────────
-  Widget _buildCompanyFeed(BuildContext context) {
+  Widget _buildCompanyFeed(BuildContext context, {bool useExpanded = true, EdgeInsetsGeometry? customMargin}) {
+    final feedContent = Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
+        builder: (context, state) {
+          final awardsFeed = state.feed
+              .where((r) => (r.sourceType ?? '').toUpperCase() == 'AWARD')
+              .toList();
+          if (state.status == RecognitionStatus.loading && state.feed.isEmpty) {
+            return const Center(child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(),
+            ));
+          }
+          if (awardsFeed.isEmpty) {
+            return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Text('No recent awards',
+                      style: AppTextStyles.body(color: Colors.grey[500])),
+                ));
+          }
+          return RecognitionFeedList(
+            feed: awardsFeed,
+            shrinkWrap: true,
+            physics: useExpanded ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
+          );
+        },
+      ),
+    );
+
     return Container(
-      margin: const EdgeInsets.only(left: 24, right: 32, top: 32, bottom: 24),
+      margin: customMargin ?? const EdgeInsets.only(left: 24, right: 32, top: 32, bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Company Feed',
-              style: AppTextStyles.headline1(color: Colors.black87)),
+          Text('Company Feed', style: AppTextStyles.headline1(color: Colors.black87)),
           const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: BlocBuilder<RecognitionsBloc, RecognitionsState>(
-                builder: (context, state) {
-                  final awardsFeed = state.feed
-                      .where(
-                          (r) => (r.sourceType ?? '').toUpperCase() == 'AWARD')
-                      .toList();
-                  if (state.status == RecognitionStatus.loading &&
-                      state.feed.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (awardsFeed.isEmpty) {
-                    return Center(
-                        child: Text('No recent awards',
-                            style:
-                                AppTextStyles.body(color: Colors.grey[500])));
-                  }
-                  return RecognitionFeedList(
-                    feed: awardsFeed,
-                    shrinkWrap: true,
-                  );
-                },
-              ),
-            ),
-          ),
+          useExpanded ? Expanded(child: feedContent) : feedContent,
         ],
       ),
     );
@@ -438,11 +460,36 @@ class _AwardsViewState extends State<_AwardsView>
           return const Center(child: CircularProgressIndicator());
         }
 
+        Widget mainContent;
         if (myAwards.isEmpty) {
-          return const EmptyStateView(
+          mainContent = const EmptyStateView(
             icon: Icons.workspace_premium_rounded,
             title: 'No awards received yet',
             message: 'Keep contributing—your moment is coming!',
+          );
+        } else {
+          mainContent = GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 320,
+              crossAxisSpacing: 24,
+              mainAxisSpacing: 24,
+              childAspectRatio: 0.9,
+            ),
+            itemCount: myAwards.length,
+            itemBuilder: (context, index) {
+              final award = myAwards[index];
+              return TrophyCard(
+                title: award.awardTypeName,
+                points: '+${award.pointsAwarded ?? 0} pts',
+                citation: award.citation.isNotEmpty
+                    ? award.citation
+                    : award.reviewerComment ?? 'Excellent performance',
+                from: award.nominatorName,
+                date: AppDateFormatter.format(award.createdAt),
+              );
+            },
           );
         }
 
@@ -454,29 +501,15 @@ class _AwardsViewState extends State<_AwardsView>
               Text('Your Trophies',
                   style: AppTextStyles.headline1(color: Colors.black87)),
               const SizedBox(height: 24),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 320,
-                  crossAxisSpacing: 24,
-                  mainAxisSpacing: 24,
-                  childAspectRatio: 0.9,
-                ),
-                itemCount: myAwards.length,
-                itemBuilder: (context, index) {
-                  final award = myAwards[index];
-                  return TrophyCard(
-                    title: award.awardTypeName,
-                    points: '+${award.pointsAwarded ?? 0} pts',
-                    citation: award.citation.isNotEmpty
-                        ? award.citation
-                        : award.reviewerComment ?? 'Excellent performance',
-                    from: award.nominatorName,
-                    date: AppDateFormatter.format(award.createdAt),
-                  );
-                },
-              ),
+              mainContent,
+              if (MediaQuery.of(context).size.width <= 950) ...[
+                const SizedBox(height: 48),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildCompanyFeed(context, 
+                    useExpanded: false, 
+                    customMargin: EdgeInsets.zero),
+              ]
             ],
           ),
         );
@@ -502,18 +535,15 @@ class _AwardsViewState extends State<_AwardsView>
           return const Center(child: CircularProgressIndicator());
         }
 
+        Widget mainContent;
         if (mySubmissions.isEmpty) {
-          return const EmptyStateView(
+          mainContent = const EmptyStateView(
             icon: Icons.send_rounded,
             title: 'No nominations sent yet',
             message: 'Tap "View & Nominate" to recognize a colleague!',
           );
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        } else {
+          mainContent = Column(
             children: [
               _buildSummaryCards(context, mySubmissions),
               const SizedBox(height: 32),
@@ -526,6 +556,24 @@ class _AwardsViewState extends State<_AwardsView>
                   return _buildNominationCard(mySubmissions[index]);
                 },
               ),
+            ],
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              mainContent,
+              if (MediaQuery.of(context).size.width <= 950) ...[
+                const SizedBox(height: 48),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildCompanyFeed(context, 
+                    useExpanded: false, 
+                    customMargin: EdgeInsets.zero),
+              ]
             ],
           ),
         );
@@ -645,23 +693,31 @@ class _AwardsViewState extends State<_AwardsView>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      shape: BoxShape.circle,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.emoji_events_outlined,
+                          color: Colors.orange.shade700, size: 20),
                     ),
-                    child: Icon(Icons.emoji_events_outlined,
-                        color: Colors.orange.shade700, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(nom.awardTypeName,
-                      style: AppTextStyles.sectionTitle(color: Colors.black87)),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(nom.awardTypeName,
+                          style: AppTextStyles.sectionTitle(color: Colors.black87),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
               ),
-              if (isPending) _buildStatusPill(statusText, Colors.orange),
+              if (isPending) ...[
+                const SizedBox(width: 8),
+                _buildStatusPill(statusText, Colors.orange),
+              ]
             ],
           ),
           const SizedBox(height: 24),
@@ -729,51 +785,56 @@ class _AwardsViewState extends State<_AwardsView>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isApproved
-                            ? Icons.check_circle_outline
-                            : Icons.cancel_outlined,
-                        size: 16,
-                        color: isApproved
-                            ? Colors.green.shade700
-                            : Colors.red.shade700,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isApproved ? 'Approved by' : 'Rejected by',
-                        style: AppTextStyles.smallBold(
-                            color: isApproved
-                                ? Colors.green.shade800
-                                : Colors.red.shade800),
-                      ),
-                      if (nom.reviewerLevel != null ||
-                          (nom.reviewerName != null &&
-                              nom.reviewerName!.isNotEmpty)) ...[
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          isApproved
+                              ? Icons.check_circle_outline
+                              : Icons.cancel_outlined,
+                          size: 16,
+                          color: isApproved
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          (nom.reviewerLevel != null
-                                  ? (nom.reviewerLevel!.toUpperCase() ==
-                                          'DEPT_HEAD'
-                                      ? 'Department Head'
-                                      : nom.reviewerLevel!.toUpperCase() ==
-                                              'MANAGER'
-                                          ? 'Manager'
-                                          : nom.reviewerLevel!.toUpperCase() ==
-                                                  'HR'
-                                              ? 'HR'
-                                              : nom.reviewerLevel!
-                                                  .replaceAll('_', ' '))
-                                  : '') +
-                              (nom.reviewerName != null &&
-                                      nom.reviewerName!.isNotEmpty
-                                  ? ' (${nom.reviewerName})'
-                                  : ''),
-                          style: AppTextStyles.smallBold(color: Colors.black87),
+                          isApproved ? 'Approved by' : 'Rejected by',
+                          style: AppTextStyles.smallBold(
+                              color: isApproved
+                                  ? Colors.green.shade800
+                                  : Colors.red.shade800),
                         ),
+                        if (nom.reviewerLevel != null ||
+                            (nom.reviewerName != null &&
+                                nom.reviewerName!.isNotEmpty)) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              (nom.reviewerLevel != null
+                                      ? (nom.reviewerLevel!.toUpperCase() ==
+                                              'DEPT_HEAD'
+                                          ? 'Department Head'
+                                          : nom.reviewerLevel!.toUpperCase() ==
+                                                  'MANAGER'
+                                              ? 'Manager'
+                                              : nom.reviewerLevel!.toUpperCase() ==
+                                                      'HR'
+                                                  ? 'HR'
+                                                  : nom.reviewerLevel!
+                                                      .replaceAll('_', ' '))
+                                      : '') +
+                                  (nom.reviewerName != null &&
+                                          nom.reviewerName!.isNotEmpty
+                                      ? ' (${nom.reviewerName})'
+                                      : ''),
+                              style: AppTextStyles.smallBold(color: Colors.black87),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                   Row(
                     children: [
@@ -886,23 +947,43 @@ class _AwardsViewState extends State<_AwardsView>
     String userRole = 'MANAGER',
     int? myId,
   }) {
+    Widget content;
     if (items.isEmpty) {
-      return EmptyStateView(
+      content = EmptyStateView(
         icon: emptyIcon,
         title: emptyMsg,
       );
+    } else {
+      content = ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, i) => _buildApprovalCard(
+          items[i],
+          users,
+          showActions: showActions,
+          userRole: userRole,
+          myId: myId,
+        ),
+      );
     }
 
-    return ListView.separated(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => _buildApprovalCard(
-        items[i],
-        users,
-        showActions: showActions,
-        userRole: userRole,
-        myId: myId,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          content,
+          if (MediaQuery.of(context).size.width <= 950) ...[
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            _buildCompanyFeed(context, 
+                useExpanded: false, 
+                customMargin: EdgeInsets.zero),
+          ]
+        ],
       ),
     );
   }
@@ -1193,17 +1274,38 @@ class _AwardsViewState extends State<_AwardsView>
         if (state.historyLoading) {
           return const Center(child: CircularProgressIndicator());
         }
+        Widget content;
         if (state.approvalHistory.isEmpty) {
-          return const EmptyStateView(
+          content = const EmptyStateView(
             icon: Icons.inbox_rounded,
             title: 'No approvals given yet',
           );
+        } else {
+          content = ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: state.approvalHistory.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) => _buildHistoryCard(state.approvalHistory[i]),
+          );
         }
-        return ListView.separated(
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(14),
-          itemCount: state.approvalHistory.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) => _buildHistoryCard(state.approvalHistory[i]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              content,
+              if (MediaQuery.of(context).size.width <= 950) ...[
+                const SizedBox(height: 32),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildCompanyFeed(context, 
+                    useExpanded: false, 
+                    customMargin: EdgeInsets.zero),
+              ]
+            ],
+          ),
         );
       },
     );

@@ -232,18 +232,21 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
       );
     }
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 2.1,
-      ),
-      itemCount: allowed.length,
-      itemBuilder: (_, i) => _buildAwardCard(context, allowed[i]),
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final isNarrow = constraints.maxWidth < 450;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: isNarrow ? 1 : 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: isNarrow ? 3.5 : 2.1,
+        ),
+        itemCount: allowed.length,
+        itemBuilder: (_, i) => _buildAwardCard(context, allowed[i]),
+      );
+    });
   }
 
   Widget _buildAwardCard(BuildContext context, AwardTypeEntity type) {
@@ -276,6 +279,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
@@ -289,7 +293,16 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                   child: Icon(AwardUtils.getIcon(type.awardKey),
                       color: color, size: 14),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    type.name,
+                    style: AppTextStyles.bodyBold(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 // Radio indicator
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 150),
@@ -305,15 +318,6 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              type.name,
-              style: AppTextStyles.bodyBold(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const Spacer(),
-            const SizedBox(height: 4),
             Row(
               children: [
                 _chip(
@@ -322,11 +326,13 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                   bgColor: Colors.amber.shade50,
                 ),
                 const SizedBox(width: 6),
-                _chip(
-                  icon: Icons.schedule_rounded,
-                  label: type.frequency.toUpperCase(),
-                  color: Colors.grey.shade600,
-                  bgColor: Colors.grey.shade100,
+                Flexible(
+                  child: _chip(
+                    icon: Icons.schedule_rounded,
+                    label: type.frequency.toUpperCase(),
+                    color: Colors.grey.shade600,
+                    bgColor: Colors.grey.shade100,
+                  ),
                 ),
               ],
             ),
@@ -564,7 +570,11 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                     color: Colors.grey.shade600,
                   ),
                   const SizedBox(width: 10),
-                  Text(label, style: AppTextStyles.body()),
+                  Text(
+                    label,
+                    style: AppTextStyles.body(),
+                    // Dropped Expanded because DropdownMenuItem uses IntrinsicWidth, which cannot handle unbounded flex children.
+                  ),
                 ],
               ),
             );

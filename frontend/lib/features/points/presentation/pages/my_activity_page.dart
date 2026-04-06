@@ -175,50 +175,71 @@ class _MyActivityPageState extends State<MyActivityPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 600;
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTitleColumn(),
+                  if (isManager) ...[
+                    const SizedBox(height: 16),
+                    _buildTogglePill(),
+                  ],
+                ],
+              );
+            }
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    final role = widget.userRole.toUpperCase();
-                    final destination = (role == 'HR' || role == 'ADMIN')
-                        ? 'Dashboard'
-                        : 'Recognitions';
-                    MainLayout.of(context)?.selectTabByTitle(destination);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.arrow_back,
-                            color: Color(0xFF64748B), size: 18),
-                        const SizedBox(width: 8),
-                        Text('Back to Dashboard',
-                            style: AppTextStyles.body(
-                                color: const Color(0xFF64748B))),
-                      ],
-                    ),
-                  ),
-                ),
-                Text('My Activity',
-                    style: AppTextStyles.headline1(
-                        color: const Color(0xFF1E293B))),
-                const SizedBox(height: 4),
-                Text(
-                  _walletType == 'EMPLOYEE'
-                      ? 'Track your point earnings, redemptions, and conversions'
-                      : 'Manage your team budget and track allocations',
-                  style: AppTextStyles.body(color: const Color(0xFF64748B)),
-                ),
+                Expanded(child: _buildTitleColumn()),
+                if (isManager) _buildTogglePill(),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTitleColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () {
+            final role = widget.userRole.toUpperCase();
+            final destination = (role == 'HR' || role == 'ADMIN')
+                ? 'Dashboard'
+                : 'Recognitions';
+            MainLayout.of(context)?.selectTabByTitle(destination);
+          },
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_back,
+                    color: Color(0xFF64748B), size: 18),
+                const SizedBox(width: 8),
+                Text('Back to Dashboard',
+                    style: AppTextStyles.body(
+                        color: const Color(0xFF64748B))),
               ],
             ),
-            if (isManager) _buildTogglePill(),
-          ],
+          ),
+        ),
+        Text('My Activity',
+            style: AppTextStyles.headline1(
+                color: const Color(0xFF1E293B))),
+        const SizedBox(height: 4),
+        Text(
+          _walletType == 'EMPLOYEE'
+              ? 'Track your point earnings, redemptions, and conversions'
+              : 'Manage your team budget and track allocations',
+          style: AppTextStyles.body(color: const Color(0xFF64748B)),
         ),
       ],
     );
@@ -538,8 +559,9 @@ class _MyActivityPageState extends State<MyActivityPage> {
   }
 
   Widget _buildBudgetStatsRow(int allocated, int rewarded, int balance) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      spacing: 24,
+      runSpacing: 16,
       children: [
         _buildStatItem(
             Icons.add_chart_rounded, 'TOTAL ALLOCATED', '$allocated'),
@@ -677,8 +699,9 @@ class _MyActivityPageState extends State<MyActivityPage> {
     final expiringSoon =
         (summary.expiringToday ?? 0) + (summary.expiringThisMonth ?? 0);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      spacing: 24,
+      runSpacing: 16,
       children: [
         _buildStatItem(
             Icons.north_east_rounded, 'TOTAL EARNED', '${summary.totalEarned}'),
@@ -736,27 +759,50 @@ class _MyActivityPageState extends State<MyActivityPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildFilterBar(historyTitle),
-          _buildTableHeader(),
-          if (state.status == PointsStatus.loading && state.history.isEmpty)
-            const Padding(
-                padding: EdgeInsets.all(40),
-                child: Center(child: CircularProgressIndicator()))
-          else if (state.history.isEmpty)
-            const Padding(
-                padding: EdgeInsets.all(40),
-                child: Center(
-                    child: EmptyStateView(
-                        icon: Icons.history_rounded,
-                        title: 'No transactions found')))
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: state.history.length,
-              separatorBuilder: (_, __) =>
-                  const Divider(height: 1, indent: 24, endIndent: 24),
-              itemBuilder: (ctx, idx) => _buildRow(state.history[idx]),
-            ),
+          // ── Table: header + rows share one horizontal scroll ──
+          LayoutBuilder(builder: (context, constraints) {
+            const double minTableWidth = 600.0; // Slightly wider for better breathing room
+            
+            Widget tableContent = Column(
+              children: [
+                _buildTableHeaderInner(constraints.maxWidth > minTableWidth ? constraints.maxWidth : minTableWidth),
+                if (state.status == PointsStatus.loading && state.history.isEmpty)
+                  const Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Center(child: CircularProgressIndicator()))
+                else if (state.history.isEmpty)
+                  const Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Center(
+                          child: EmptyStateView(
+                              icon: Icons.history_rounded,
+                              title: 'No transactions found')))
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: state.history.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 24, endIndent: 24),
+                    itemBuilder: (ctx, idx) => _buildRow(state.history[idx]),
+                  ),
+              ],
+            );
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth,
+                  maxWidth: double.infinity,
+                ),
+                child: SizedBox(
+                   width: constraints.maxWidth > minTableWidth ? constraints.maxWidth : minTableWidth,
+                   child: tableContent,
+                ),
+              ),
+            );
+          }),
           _buildFooter(state),
         ],
       ),
@@ -766,63 +812,89 @@ class _MyActivityPageState extends State<MyActivityPage> {
   Widget _buildFilterBar(String title) {
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          Text(title, style: AppTextStyles.sectionTitle()),
-          const Spacer(),
-          _DateChip(
-            label: _startDate != null
-                ? AppDateFormatter.short(_startDate)
-                : 'Start Date',
-            isSet: _startDate != null,
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _startDate ?? DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (d != null) {
-                setState(() => _startDate = d);
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 560;
+
+          final chips = [
+            _DateChip(
+              label: _startDate != null
+                  ? AppDateFormatter.short(_startDate)
+                  : 'Start Date',
+              isSet: _startDate != null,
+              onTap: () async {
+                final d = await showDatePicker(
+                  context: context,
+                  initialDate: _startDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (d != null) {
+                  setState(() => _startDate = d);
+                  _fetchHistory();
+                }
+              },
+            ),
+            const SizedBox(width: 12, height: 12),
+            _DateChip(
+              label: _endDate != null
+                  ? AppDateFormatter.short(_endDate)
+                  : 'End Date',
+              isSet: _endDate != null,
+              onTap: () async {
+                final d = await showDatePicker(
+                  context: context,
+                  initialDate: _endDate ?? DateTime.now(),
+                  firstDate: _startDate ?? DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (d != null) {
+                  setState(() => _endDate = d);
+                  _fetchHistory();
+                }
+              },
+            ),
+            const SizedBox(width: 12, height: 12),
+            _TypeDropdown(
+              value: _category,
+              onChanged: (v) {
+                setState(() => _category = v);
                 _fetchHistory();
-              }
-            },
-          ),
-          const SizedBox(width: 12),
-          _DateChip(
-            label: _endDate != null
-                ? AppDateFormatter.short(_endDate)
-                : 'End Date',
-            isSet: _endDate != null,
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _endDate ?? DateTime.now(),
-                firstDate: _startDate ?? DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (d != null) {
-                setState(() => _endDate = d);
-                _fetchHistory();
-              }
-            },
-          ),
-          const SizedBox(width: 12),
-          _TypeDropdown(
-            value: _category,
-            onChanged: (v) {
-              setState(() => _category = v);
-              _fetchHistory();
-            },
-          ),
-        ],
+              },
+            ),
+          ];
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.sectionTitle()),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 0,
+                  runSpacing: 8,
+                  children: chips,
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Text(title, style: AppTextStyles.sectionTitle()),
+              const Spacer(),
+              ...chips,
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTableHeader() {
+  Widget _buildTableHeaderInner(double width) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(32, 12, 32, 12),
+      width: width,
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         border: Border.all(color: const Color(0xFFF1F5F9)),
@@ -850,7 +922,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
     return InkWell(
       onTap: () => _showTransactionDetails(tx),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
             Expanded(
@@ -858,6 +930,8 @@ class _MyActivityPageState extends State<MyActivityPage> {
               child: Text(
                 AppDateFormatter.format(tx.date),
                 style: AppTextStyles.body(color: const Color(0xFF64748B)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             Expanded(
@@ -883,8 +957,8 @@ class _MyActivityPageState extends State<MyActivityPage> {
                   child: Text(
                     tx.type,
                     style: AppTextStyles.captionBold(
-                            color: const Color(0xFF475569))
-                        .copyWith(fontSize: 10),
+                                color: const Color(0xFF475569))
+                            .copyWith(fontSize: 10),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

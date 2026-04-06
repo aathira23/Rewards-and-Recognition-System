@@ -121,7 +121,7 @@ class _DashboardHomeView extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 25, child: _buildStatsBanner(context)),
+              Expanded(flex: 25, child: _buildStatsBanner(context, isMobile: false)),
               const SizedBox(width: 24),
               Expanded(flex: 10, child: _buildQuickActions(context)),
             ],
@@ -131,7 +131,7 @@ class _DashboardHomeView extends StatelessWidget {
 
       return Column(
         children: [
-          _buildStatsBanner(context),
+          _buildStatsBanner(context, isMobile: constraints.maxWidth < 650),
           const SizedBox(height: 24),
           _buildQuickActions(context),
         ],
@@ -139,7 +139,7 @@ class _DashboardHomeView extends StatelessWidget {
     });
   }
 
-  Widget _buildStatsBanner(BuildContext context) {
+  Widget _buildStatsBanner(BuildContext context, {required bool isMobile}) {
     return BlocBuilder<RecognitionsBloc, RecognitionsState>(
       buildWhen: (prev, curr) =>
           prev.stats?.receivedCount != curr.stats?.receivedCount,
@@ -155,171 +155,95 @@ class _DashboardHomeView extends StatelessWidget {
                   buildWhen: (prev, curr) =>
                       prev.nominations != curr.nominations,
                   builder: (context, nomState) {
-                    final balance = ptsState.summary?.balance ?? 0;
-                    final level = LevelingUtils.getLevel(balance);
-                    final pointsToNext =
-                        LevelingUtils.getPointsToNextLevel(balance);
-                    final progress = LevelingUtils.getProgress(balance);
+                        final balance = ptsState.summary?.balance ?? 0;
+                        final level = LevelingUtils.getLevel(balance);
+                        final pointsToNext =
+                            LevelingUtils.getPointsToNextLevel(balance);
+                        final progress = LevelingUtils.getProgress(balance);
 
-                    // Awards Won = approved nominations where current user is the nominee
-                    int currentUserId = -1;
-                    if (authState is AuthAuthenticated) {
-                      currentUserId = authState.auth.user?.id ?? -1;
-                    }
-                    final awardsCount = nomState.nominations
-                        .where((n) =>
-                            n.nomineeId == currentUserId &&
-                            n.status.toLowerCase() == 'approved')
-                        .length;
+                        int currentUserId = -1;
+                        if (authState is AuthAuthenticated) {
+                          currentUserId = authState.auth.user?.id ?? -1;
+                        }
+                        final awardsCount = nomState.nominations
+                            .where((n) =>
+                                n.nomineeId == currentUserId &&
+                                n.status.toLowerCase() == 'approved')
+                            .length;
 
-                    // eCards Earned = eCards received by the current user
-                    final ecardsCount = recState.stats?.receivedCount ?? 0;
+                        final ecardsCount = recState.stats?.receivedCount ?? 0;
+                        const bannerColor = AppTheme.brandBlue;
 
-                    const bannerColor = AppTheme.brandBlue;
-
-                    return Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: bannerColor,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatSmallCard(
-                              'Awards Won',
-                              awardsCount.toString(),
-                              Icons.emoji_events_outlined,
-                              const Color(0xFFFFF7ED),
-                              const Color(0xFFEA580C),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildStatSmallCard(
-                              'eCards Earned',
-                              ecardsCount.toString(),
-                              Icons.favorite_outline_rounded,
-                              const Color(0xFFFFF1F2),
-                              const Color(0xFFE11D48),
-                            ),
-                          ),
-                          const SizedBox(width: 48),
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        Widget buildContent() {
+                          if (isMobile) {
+                            return Column(
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.star_rounded,
-                                        color: AppTheme.accentYellow, size: 24),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'CURRENT STANDING',
-                                      style: AppTextStyles.captionStrong(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.7)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 68,
-                                      height: 68,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.accentYellow,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.shield_rounded,
-                                            size: 52,
-                                            color: Colors.black
-                                                .withValues(alpha: 0.12),
-                                          ),
-                                          Text(
-                                            level.toString(),
-                                            style: AppTextStyles.headline1(
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.55)),
-                                          ),
-                                        ],
+                                    Expanded(
+                                      child: _buildStatSmallCard(
+                                        'Awards Won',
+                                        awardsCount.toString(),
+                                        Icons.emoji_events_outlined,
+                                        const Color(0xFFFFF7ED),
+                                        const Color(0xFFEA580C),
                                       ),
                                     ),
-                                    const SizedBox(width: 24),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.baseline,
-                                          textBaseline: TextBaseline.alphabetic,
-                                          children: [
-                                            Text(
-                                              balance.toString(),
-                                              style: AppTextStyles.display(
-                                                  color: Colors.white),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Text(
-                                              'pts',
-                                              style: AppTextStyles.sectionTitle(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.85)),
-                                            ),
-                                          ],
-                                        ),
-                                        Text(
-                                          'Available Balance',
-                                          style: AppTextStyles.bodyLarge(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.7)),
-                                        ),
-                                      ],
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildStatSmallCard(
+                                        'eCards Earned',
+                                        ecardsCount.toString(),
+                                        Icons.favorite_outline_rounded,
+                                        const Color(0xFFFFF1F2),
+                                        const Color(0xFFE11D48),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Level $level',
-                                        style: AppTextStyles.smallBold(
-                                            color: Colors.white)),
-                                    if (pointsToNext != null)
-                                      Text(
-                                          '$pointsToNext pts to Level ${level + 1}',
-                                          style: AppTextStyles.smallMedium(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.9))),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.12),
-                                    valueColor:
-                                        const AlwaysStoppedAnimation<Color>(
-                                            AppTheme.accentYellow),
-                                    minHeight: 12,
-                                  ),
-                                ),
+                                const SizedBox(height: 24),
+                                _buildStandingSection(
+                                    level, balance, pointsToNext, progress),
                               ],
-                            ),
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              _buildStatSmallCard(
+                                'Awards Won',
+                                awardsCount.toString(),
+                                Icons.emoji_events_outlined,
+                                const Color(0xFFFFF7ED),
+                                const Color(0xFFEA580C),
+                                width: 140,
+                              ),
+                              const SizedBox(width: 16),
+                              _buildStatSmallCard(
+                                'eCards Earned',
+                                ecardsCount.toString(),
+                                Icons.favorite_outline_rounded,
+                                const Color(0xFFFFF1F2),
+                                const Color(0xFFE11D48),
+                                width: 140,
+                              ),
+                              const SizedBox(width: 24),
+                              Expanded(
+                                child: _buildStandingSection(
+                                    level, balance, pointsToNext, progress),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Container(
+                          padding: EdgeInsets.all(isMobile ? 24 : 32),
+                          decoration: BoxDecoration(
+                            color: bannerColor,
+                            borderRadius: BorderRadius.circular(24),
                           ),
-                        ],
-                      ),
-                    );
+                          child: buildContent(),
+                        );
                   },
                 );
               },
@@ -331,9 +255,10 @@ class _DashboardHomeView extends StatelessWidget {
   }
 
   Widget _buildStatSmallCard(String label, String value, IconData icon,
-      Color bgColor, Color iconColor) {
+      Color bgColor, Color iconColor,
+      {double? width}) {
     return Container(
-      width: 140,
+      width: width,
       clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -364,14 +289,128 @@ class _DashboardHomeView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(value,
-                  style: AppTextStyles.displayMedium(color: Colors.black87)),
+                  style: AppTextStyles.displayMedium(color: Colors.black87),
+                  overflow: TextOverflow.ellipsis),
               const SizedBox(height: 4),
               Text(label,
-                  style: AppTextStyles.caption(color: Colors.grey[600])),
+                  style: AppTextStyles.caption(color: Colors.grey[600]),
+                  overflow: TextOverflow.ellipsis),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStandingSection(
+      int level, int balance, int? pointsToNext, double progress) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.star_rounded,
+                color: AppTheme.accentYellow, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'CURRENT STANDING',
+                style: AppTextStyles.captionStrong(
+                    color: Colors.white.withValues(alpha: 0.7)),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: AppTheme.accentYellow,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    Icons.shield_rounded,
+                    size: 52,
+                    color: Colors.black.withValues(alpha: 0.12),
+                  ),
+                  Text(
+                    level.toString(),
+                    style: AppTextStyles.headline1(
+                        color: Colors.black.withValues(alpha: 0.55)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          balance.toString(),
+                          style: AppTextStyles.display(color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'pts',
+                        style: AppTextStyles.sectionTitle(
+                            color: Colors.white.withValues(alpha: 0.85)),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Available Balance',
+                    style: AppTextStyles.bodyLarge(
+                        color: Colors.white.withValues(alpha: 0.7)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Level $level',
+                style: AppTextStyles.smallBold(color: Colors.white)),
+            if (pointsToNext != null)
+              Flexible(
+                child: Text('$pointsToNext pts to Level ${level + 1}',
+                    style: AppTextStyles.smallMedium(
+                        color: Colors.white.withValues(alpha: 0.9)),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.white.withValues(alpha: 0.12),
+            valueColor:
+                const AlwaysStoppedAnimation<Color>(AppTheme.accentYellow),
+            minHeight: 12,
+          ),
+        ),
+      ],
     );
   }
 
