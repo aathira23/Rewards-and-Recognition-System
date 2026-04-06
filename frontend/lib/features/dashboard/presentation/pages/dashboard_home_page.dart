@@ -121,7 +121,10 @@ class _DashboardHomeView extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 25, child: _buildStatsBanner(context, isMobile: false)),
+              Expanded(
+                  flex: 25,
+                  child: _buildStatsBanner(context,
+                      isMobile: false, maxWidth: constraints.maxWidth)),
               const SizedBox(width: 24),
               Expanded(flex: 10, child: _buildQuickActions(context)),
             ],
@@ -131,7 +134,9 @@ class _DashboardHomeView extends StatelessWidget {
 
       return Column(
         children: [
-          _buildStatsBanner(context, isMobile: constraints.maxWidth < 650),
+          _buildStatsBanner(context,
+              isMobile: constraints.maxWidth < 650,
+              maxWidth: constraints.maxWidth),
           const SizedBox(height: 24),
           _buildQuickActions(context),
         ],
@@ -139,7 +144,8 @@ class _DashboardHomeView extends StatelessWidget {
     });
   }
 
-  Widget _buildStatsBanner(BuildContext context, {required bool isMobile}) {
+  Widget _buildStatsBanner(BuildContext context,
+      {required bool isMobile, required double maxWidth}) {
     return BlocBuilder<RecognitionsBloc, RecognitionsState>(
       buildWhen: (prev, curr) =>
           prev.stats?.receivedCount != curr.stats?.receivedCount,
@@ -208,7 +214,12 @@ class _DashboardHomeView extends StatelessWidget {
                             );
                           }
 
+                          final cardWidth = isMobile
+                              ? double.infinity
+                              : (maxWidth * 0.22).clamp(165.0, 210.0);
+
                           return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildStatSmallCard(
                                 'Awards Won',
@@ -216,7 +227,7 @@ class _DashboardHomeView extends StatelessWidget {
                                 Icons.emoji_events_outlined,
                                 const Color(0xFFFFF7ED),
                                 const Color(0xFFEA580C),
-                                width: 140,
+                                width: cardWidth,
                               ),
                               const SizedBox(width: 16),
                               _buildStatSmallCard(
@@ -225,7 +236,7 @@ class _DashboardHomeView extends StatelessWidget {
                                 Icons.favorite_outline_rounded,
                                 const Color(0xFFFFF1F2),
                                 const Color(0xFFE11D48),
-                                width: 140,
+                                width: cardWidth,
                               ),
                               const SizedBox(width: 24),
                               Expanded(
@@ -260,7 +271,7 @@ class _DashboardHomeView extends StatelessWidget {
     return Container(
       width: width,
       clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -268,11 +279,11 @@ class _DashboardHomeView extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            right: -20,
-            bottom: -20,
+            right: -15,
+            bottom: -15,
             child: Icon(
               icon,
-              size: 100,
+              size: 80,
               color: iconColor.withValues(alpha: 0.05),
             ),
           ),
@@ -280,21 +291,29 @@ class _DashboardHomeView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: bgColor,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: iconColor, size: 20),
+                child: Icon(icon, color: iconColor, size: 18),
               ),
-              const SizedBox(height: 16),
-              Text(value,
-                  style: AppTextStyles.displayMedium(color: Colors.black87),
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              Text(label,
-                  style: AppTextStyles.caption(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 12),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value,
+                    style: AppTextStyles.displayMedium(color: Colors.black87),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(label,
+                    style: AppTextStyles.caption(color: Colors.grey[600]),
+                    overflow: TextOverflow.ellipsis),
+              ),
             ],
           ),
         ],

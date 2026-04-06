@@ -604,7 +604,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                 child: const Text('Cancel'),
               ),
             ]
-          : const [], // actions live inside the form for step 2
+          : const [], // actions live inside the form child for step 2
     );
   }
 
@@ -639,12 +639,10 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
     final badge = _selected!;
     final info = BadgeUtils.getDisplayInfo(badge.name);
 
-    return StatefulBuilder(
-      builder: (ctx, setLocal) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
             // ── Badge Banner ────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(12),
@@ -766,8 +764,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                               );
                             }).toList(),
                             onChanged: (val) {
-                              if (val != null) {
-                                setLocal(() => _selectedPersona = val);
+                              if (val != null && mounted) {
+                                setState(() => _selectedPersona = val);
                               }
                             },
                           ),
@@ -852,10 +850,13 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                     personaLabel:
                                         _selectedPersona['persona_label'],
                                   ));
-                              Navigator.pop(ctx);
+                              if (mounted) Navigator.pop(ctx);
                             },
                             icon: const Icon(Icons.send_rounded, size: 16),
-                            label: const Text('Send Recognition'),
+                            label: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Send Recognition'),
+                            ),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
@@ -916,7 +917,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
                             ),
-                            onChanged: (v) => setLocal(() {
+                            onChanged: (v) => setState(() {
+                              if (!mounted) return;
                               _recipientSearchQuery = v;
                               if (_selectedUser != null) {
                                 _selectedUser = null;
@@ -953,7 +955,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                       .toLowerCase();
                                   final filtered = recState.users.where((u) {
                                     final name = u.name.toLowerCase();
-                                    final email = (u.email ?? '').toLowerCase();
+                                    final email = u.email.toLowerCase();
                                     return name.contains(q) ||
                                         email.contains(q);
                                   }).toList();
@@ -977,7 +979,8 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                     itemBuilder: (ctx, i) {
                                       final user = filtered[i];
                                       return InkWell(
-                                        onTap: () => setLocal(() {
+                                        onTap: () => setState(() {
+                                          if (!mounted) return;
                                           _selectedUser = user;
                                           _recipientSearchController.text =
                                               user.name;
@@ -1032,8 +1035,6 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
             ),
           ],
         );
-      },
-    );
   }
 }
 
@@ -1055,8 +1056,12 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
   Widget build(BuildContext context) {
     final info = BadgeUtils.getDisplayInfo(widget.badge.name);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) {
+        if (mounted) setState(() => _hovered = true);
+      },
+      onExit: (_) {
+        if (mounted) setState(() => _hovered = false);
+      },
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
