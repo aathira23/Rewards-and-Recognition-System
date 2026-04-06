@@ -1,5 +1,6 @@
 """
-EmailService – renders Jinja2 templates from files and sends emails via SMTP.
+EmailService – renders Jinja2 templates from files and sends emails via the
+Styria notification service.
 
 Templates live in  app/templates/email/<name>.html  (and optional .txt).
 Subject lines are defined in  TEMPLATE_SUBJECTS  below – edit freely.
@@ -19,10 +20,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-import smtplib
 from datetime import datetime, timezone
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import Any, Dict, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -151,7 +149,7 @@ EVENT_TEMPLATE_MAP: Dict[str, str] = {
 
 
 class EmailService:
-    """Render file-based Jinja2 templates and dispatch via SMTP."""
+    """Render file-based Jinja2 templates and dispatch via the notification service."""
 
     def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
@@ -175,42 +173,14 @@ class EmailService:
             logger.debug("Email notifications globally disabled – skipping.")
             return None
 
-        user = self.repository.get_user_by_id(recipient_user_id)
-        if not user:
-            # Fallback: resolve via User Service when token is available
-            if self._token:
-                from app.services.user_profiles_client import get_user_profile
-                profile = get_user_profile(recipient_user_id, self._token)
-                if profile and profile.email:
-                    # User not stored locally — treat notifications as enabled
-                    ctx = {
-                        "user_name": profile.name,
-                        "org_name": settings.APP_NAME,
-                        "frontend_url": settings.FRONTEND_URL,
-                        "manage_prefs_url": f"{settings.FRONTEND_URL}/settings/notifications",
-                        "support_email": settings.SMTP_FROM_EMAIL,
-                        **context,
-                    }
-                    template_name = EVENT_TEMPLATE_MAP.get(event_type)
-                    if not template_name:
-                        logger.error("No template mapping for event_type=%s", event_type)
-                        return None
-                    subject, body_html, body_text = self._render_template(template_name, ctx)
-                    return self._dispatch(
-                        to_email=profile.email,
-                        user_id=recipient_user_id,
-                        template_name=template_name,
-                        subject=subject,
-                        body_html=body_html,
-                        body_text=body_text,
-                        ctx=ctx,
-                        token=self._token,
-                    )
-            logger.warning("EmailService.send: user %s not found", recipient_user_id)
-            return None
+        # Resolve recipient via User Service
+        profile = None
+        if self._token:
+            from app.services.user_profiles_client import get_user_profile
+            profile = get_user_profile(recipient_user_id, self._token)
 
-        if not force and not user.email_notifications_enabled:
-            logger.debug("User %s opted out of email notifications", user.id)
+        if not profile or not profile.email:
+            logger.warning("EmailService.send: user %s not found or no email", recipient_user_id)
             return None
 
         template_name = EVENT_TEMPLATE_MAP.get(event_type)
@@ -219,22 +189,21 @@ class EmailService:
             return None
 
         ctx = {
-            "user_name": user.name,
+            "user_name": profile.name,
             "org_name": settings.APP_NAME,
             "frontend_url": settings.FRONTEND_URL,
             "manage_prefs_url": f"{settings.FRONTEND_URL}/settings/notifications",
-            "support_email": settings.SMTP_FROM_EMAIL,
+            "support_email": settings.SUPPORT_EMAIL,
             **context,
         }
 
-        subject, body_html, body_text = self._render_template(template_name, ctx)
+        subject, body_html, _body_text = self._render_template(template_name, ctx)
         return self._dispatch(
-            to_email=user.email,
-            user_id=user.id,
+            to_email=profile.email,
+            user_id=recipient_user_id,
             template_name=template_name,
             subject=subject,
             body_html=body_html,
-            body_text=body_text,
             ctx=ctx,
             token=self._token,
         )
@@ -249,17 +218,16 @@ class EmailService:
         ctx = {
             "org_name": settings.APP_NAME,
             "frontend_url": settings.FRONTEND_URL,
-            "support_email": settings.SMTP_FROM_EMAIL,
+            "support_email": settings.SUPPORT_EMAIL,
             **context,
         }
-        subject, body_html, body_text = self._render_template(template_name, ctx)
+        subject, body_html, _body_text = self._render_template(template_name, ctx)
         return self._dispatch(
             to_email=to_email,
             user_id=None,
             template_name=template_name,
             subject=subject,
             body_html=body_html,
-            body_text=body_text,
             ctx=ctx,
         )
 
@@ -301,7 +269,6 @@ class EmailService:
         template_name: str,
         subject: str,
         body_html: str,
-        body_text: Optional[str],
         ctx: Optional[Dict[str, Any]] = None,
         token: Optional[str] = None,
     ) -> EmailLog:
@@ -315,88 +282,59 @@ class EmailService:
         )
 
         try:
-            # ── Route through Styria notification service ──────────────────
-            if settings.USE_NOTIFICATION_SERVICE:
-                from app.utils.notification_client import send_notification as ns_send
+            from app.utils.notification_client import send_notification as ns_send
 
-                # Build a clean short title for the NS branded template.
-                ns_title = subject  # safe fallback
-                ns_title_tpl = _NS_TITLES.get(template_name)
-                if ns_title_tpl and ctx:
-                    try:
-                        ns_title = _jinja_env.from_string(ns_title_tpl).render(**ctx)
-                    except Exception:
-                        pass
+            # Build a clean short title for the NS branded template.
+            ns_title = subject  # safe fallback
+            ns_title_tpl = _NS_TITLES.get(template_name)
+            if ns_title_tpl and ctx:
+                try:
+                    ns_title = _jinja_env.from_string(ns_title_tpl).render(**ctx)
+                except Exception:
+                    pass
 
-                # Build a clean plain-text body for the NS branded template.
-                # Prefer per-template body string; fall back to stripping our HTML.
-                ns_body_tpl = _NS_BODIES.get(template_name)
-                if ns_body_tpl and ctx:
-                    try:
-                        ns_body = _jinja_env.from_string(ns_body_tpl).render(**ctx)
-                    except Exception:
-                        ns_body = None
-                else:
+            # Build a clean plain-text body for the NS branded template.
+            # Prefer per-template body string; fall back to stripping our HTML.
+            ns_body_tpl = _NS_BODIES.get(template_name)
+            if ns_body_tpl and ctx:
+                try:
+                    ns_body = _jinja_env.from_string(ns_body_tpl).render(**ctx)
+                except Exception:
                     ns_body = None
-                if not ns_body:
-                    import html as _html
-                    # Strip <head> section first so title/meta don't pollute the body
-                    stripped = re.sub(r"(?is)<head[^>]*>.*?</head>", "", body_html)
-                    stripped = re.sub(r"<[^>]+>", " ", stripped)
-                    ns_body = " ".join(_html.unescape(stripped).split())[:500]
-
-                action_url = ctx.get("frontend_url", settings.FRONTEND_URL) if ctx else settings.FRONTEND_URL
-                ok = ns_send(
-                    to_emails=[to_email],
-                    teams_recipients=[to_email] if settings.TEAMS_NOTIFICATIONS_ENABLED else None,
-                    subject=subject,
-                    title=ns_title,
-                    body=ns_body,
-                    action_url=action_url,
-                    action_label="Open Dashboard",
-                    sender_name=settings.SMTP_FROM_NAME,
-                    token=token or self._token,
-                )
-                if ok:
-                    log.status = "SENT"
-                    log.sent_at = datetime.now(timezone.utc)
-                    logger.info(
-                        "Email sent via notification service to %s [%s]",
-                        to_email, template_name,
-                    )
-                else:
-                    log.status = "FAILED"
-                    log.error_message = "Notification service returned a failure response"
-                    logger.warning(
-                        "Notification service failed for %s [%s]", to_email, template_name
-                    )
-
-            # ── Direct SMTP (dev / fallback) ───────────────────────────────
             else:
-                msg = MIMEMultipart("alternative")
-                msg["Subject"] = subject
-                msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-                msg["To"] = to_email
+                ns_body = None
+            if not ns_body:
+                import html as _html
+                # Strip <head> section first so title/meta don't pollute the body
+                stripped = re.sub(r"(?is)<head[^>]*>.*?</head>", "", body_html)
+                stripped = re.sub(r"<[^>]+>", " ", stripped)
+                ns_body = " ".join(_html.unescape(stripped).split())[:500]
 
-                if body_text:
-                    msg.attach(MIMEText(body_text, "plain"))
-                msg.attach(MIMEText(body_html, "html"))
-
-                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-                server.ehlo()
-                if settings.SMTP_USE_TLS:
-                    server.starttls()
-                    server.ehlo()  # re-identify after STARTTLS
-
-                if settings.SMTP_USERNAME:
-                    server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-
-                server.sendmail(settings.SMTP_FROM_EMAIL, [to_email], msg.as_string())
-                server.quit()
-
+            action_url = ctx.get("frontend_url", settings.FRONTEND_URL) if ctx else settings.FRONTEND_URL
+            ok = ns_send(
+                to_emails=[to_email],
+                teams_recipients=[to_email] if settings.TEAMS_NOTIFICATIONS_ENABLED else None,
+                subject=subject,
+                title=ns_title,
+                body=ns_body,
+                action_url=action_url,
+                action_label="Open Dashboard",
+                sender_name=settings.SENDER_NAME,
+                token=token or self._token,
+            )
+            if ok:
                 log.status = "SENT"
                 log.sent_at = datetime.now(timezone.utc)
-                logger.info("Email sent to %s [%s]", to_email, template_name)
+                logger.info(
+                    "Email sent via notification service to %s [%s]",
+                    to_email, template_name,
+                )
+            else:
+                log.status = "FAILED"
+                log.error_message = "Notification service returned a failure response"
+                logger.warning(
+                    "Notification service failed for %s [%s]", to_email, template_name
+                )
 
         except Exception as exc:
             log.status = "FAILED"

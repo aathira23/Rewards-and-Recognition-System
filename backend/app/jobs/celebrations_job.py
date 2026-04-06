@@ -23,7 +23,7 @@ def process_celebrations():
         print("🎉 Starting celebration processing...")
 
         # Use SYSTEM_TOKEN so email service can look up users via User Service
-        token = settings.SYSTEM_TOKEN if settings.AUTH_MODE == "user_service" else None
+        token = settings.SYSTEM_TOKEN
         service = CelebrationService(db, token=token)
         result = service.process_today_celebrations()
 

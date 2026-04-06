@@ -15,16 +15,12 @@ class AnalyticsService:
         self.repository = AnalyticsRepository(db)
 
     def _get_user_names_batch(self, user_ids: set) -> dict:
-        """Batch-resolve user names via User Service, fallback to local DB."""
-        if not user_ids:
+        """Batch-resolve user names via User Service."""
+        if not user_ids or not self._token:
             return {}
-        if self._token:
-            from app.services.user_profiles_client import get_users_batch
-            profiles = get_users_batch(list(user_ids), self._token)
-            return {uid: p.name for uid, p in profiles.items()}
-        from app.models.users import User as UserModel
-        rows = self.db.query(UserModel).filter(UserModel.id.in_(user_ids)).all()
-        return {u.id: u.name for u in rows}
+        from app.services.user_profiles_client import get_users_batch
+        profiles = get_users_batch(list(user_ids), self._token)
+        return {uid: p.name for uid, p in profiles.items()}
 
     def get_recognition_report(
         self,
@@ -33,7 +29,17 @@ class AnalyticsService:
         department_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """Get detailed recognition report."""
-        results = self.repository.get_recognitions(from_date, to_date, department_id)
+        # If department filter is requested, resolve member IDs via User Service
+        receiver_ids = None
+        if department_id and self._token:
+            from app.services.user_profiles_client import get_users_list
+            all_data = get_users_list(self._token, skip=0, limit=10_000)
+            receiver_ids = [
+                p.id for p in all_data.get("items", [])
+                if p.department_id == department_id
+            ]
+
+        results = self.repository.get_recognitions(from_date, to_date, receiver_ids)
 
         # Batch-load user names from User Service
         uid_set = {r.actor_id for r in results} | {r.receiver_id for r in results if r.receiver_id}
@@ -81,11 +87,11 @@ class AnalyticsService:
 
     def get_wallet_utilization_report(self) -> List[Dict[str, Any]]:
         """Get manager wallet utilization report."""
-        managers = self.repository.get_managers()
-
-        # Batch-resolve manager names from User Service
-        manager_ids = {m.id for m in managers}
-        names_map = self._get_user_names_batch(manager_ids)
+        # Resolve managers via User Service
+        managers = []
+        if self._token:
+            from app.services.user_profiles_client import get_users_by_role
+            managers = get_users_by_role(self._token, ["MANAGER", "DEPT_HEAD"])
 
         report_data = []
         for m in managers:
@@ -97,7 +103,7 @@ class AnalyticsService:
 
             report_data.append({
                 "manager_id": m.id,
-                "manager_name": names_map.get(m.id) or m.name,
+                "manager_name": m.name,
                 "total_allocated": total_allocated,
                 "total_spent": total_allocated - wallet.balance,
                 "remaining_balance": wallet.balance
@@ -168,26 +174,42 @@ class AnalyticsService:
             "top_recognized": top_recognized,
             "scope": scope,
             "scope_name": scope_name,
-            "user_count": len(user_ids) if user_ids else self.repository.get_total_user_count(),
+            "user_count": len(user_ids) if user_ids else self._get_total_user_count(),
             "breakdown": breakdown,
         }
+
+    def _get_total_user_count(self) -> int:
+        """Get total user count from User Service."""
+        if self._token:
+            from app.services.user_profiles_client import get_users_list
+            data = get_users_list(self._token, skip=0, limit=10_000)
+            return data.get("total", 0)
+        return 0
 
     def _get_scope_user_ids(self, user: Any, scope: Scope) -> Optional[List[int]]:
         """Identify which users belong to the requested scope."""
         if scope == Scope.TEAM:
-            return self.repository.get_subordinate_ids(user.id)
+            # Get direct reports via User Service cache
+            if self._token:
+                from app.services.user_profiles_client import get_all_cached_profiles, get_users_list
+                # Ensure cache is warm
+                get_users_list(self._token, skip=0, limit=10_000)
+                profiles = get_all_cached_profiles()
+                return [uid for uid, p in profiles.items() if p.manager_id == user.id]
+            return []
         elif scope == Scope.DEPARTMENT:
             dept_id = user.department_id
-            if not dept_id:
+            if not dept_id or not self._token:
                 return []
-            return self.repository.get_department_member_ids(dept_id)
+            from app.services.user_profiles_client import get_users_list
+            all_data = get_users_list(self._token, skip=0, limit=10_000)
+            return [p.id for p in all_data.get("items", []) if p.department_id == dept_id]
         return None
 
     def _get_scope_name(self, user: Any, scope: Scope) -> str:
         """Return a human-readable label for the current scope."""
         if scope == Scope.DEPARTMENT:
-            dept = self.repository.get_department(user.department_id)
-            return dept.name if dept else "Department"
+            return user.department_name or "Department"
         if scope == Scope.TEAM:
             return f"{user.name}'s Team"
         return "Organization"
@@ -204,10 +226,22 @@ class AnalyticsService:
         (manager) breakdown for DEPARTMENT scope. Returns [] for TEAM scope.
         """
         if scope == Scope.ORG:
-            departments = self.repository.get_all_departments()
+            # Fetch all users from User Service once
+            all_users: List = []
+            if self._token:
+                from app.services.user_profiles_client import get_users_list
+                all_data = get_users_list(self._token, skip=0, limit=10_000)
+                all_users = all_data.get("items", [])
+
+            # Derive unique departments directly from user profiles
+            dept_map: Dict[int, str] = {}
+            for p in all_users:
+                if p.department_id and p.department_name and p.department_id not in dept_map:
+                    dept_map[p.department_id] = p.department_name
+
             result = []
-            for dept in departments:
-                member_ids = self.repository.get_department_member_ids(dept.id)
+            for dept_id, dept_name in dept_map.items():
+                member_ids = [p.id for p in all_users if p.department_id == dept_id]
                 if not member_ids:
                     continue
                 rec_count = self.repository.count_recognitions_for_users(
@@ -218,7 +252,7 @@ class AnalyticsService:
                 )
                 engagement = self.get_engagement_rate(member_ids)
                 result.append({
-                    "name": dept.name,
+                    "name": dept_name,
                     "recognition_count": rec_count,
                     "points": int(pts),
                     "user_count": len(member_ids),
@@ -229,25 +263,26 @@ class AnalyticsService:
 
         if scope == Scope.DEPARTMENT:
             dept_id = user.department_id
-            if not dept_id:
+            if not dept_id or not self._token:
                 return []
-            managers = self.repository.get_department_managers(dept_id)
+            from app.services.user_profiles_client import get_users_list, get_all_cached_profiles
+            # Warm cache and get all users
+            get_users_list(self._token, skip=0, limit=10_000)
+            all_profiles = get_all_cached_profiles()
+            # Find all users in this department
+            dept_users = [p for p in all_profiles.values() if p.department_id == dept_id]
+            # Group by manager_id
             manager_ids = list({
-                u.manager_id for u in managers
-                if u.manager_id and u.manager_id != user.id
+                p.manager_id for p in dept_users
+                if p.manager_id and p.manager_id != user.id
             })
-            # Batch-resolve manager names from User Service
             names_map = self._get_user_names_batch(set(manager_ids))
             result = []
             for mgr_id in manager_ids:
-                team_ids = self.repository.get_subordinate_ids(mgr_id)
+                team_ids = [p.id for p in all_profiles.values() if p.manager_id == mgr_id]
                 if not team_ids:
                     continue
-                mgr_name = names_map.get(mgr_id)
-                if not mgr_name:
-                    # final fallback to local DB
-                    mgr = self.repository.get_user_by_id(mgr_id)
-                    mgr_name = mgr.name if mgr else f"User {mgr_id}"
+                mgr_name = names_map.get(mgr_id) or f"User {mgr_id}"
                 rec_count = self.repository.count_recognitions_for_users(team_ids)
                 pts = self.repository.sum_points_for_users(team_ids)
                 engagement = self.get_engagement_rate(team_ids)
@@ -284,7 +319,7 @@ class AnalyticsService:
 
     def get_engagement_rate(self, user_ids: Optional[List[int]]) -> float:
         """Percentage of users that have participated in recognition."""
-        total_users = len(user_ids) if user_ids is not None else self.repository.get_total_user_count()
+        total_users = len(user_ids) if user_ids is not None else self._get_total_user_count()
         if total_users == 0:
             return 0.0
         active_users_count = self.repository.get_active_user_count(user_ids)

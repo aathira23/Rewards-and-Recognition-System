@@ -32,53 +32,18 @@ _oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/logi
 def _enrich_user(profiles: dict, user_id: int) -> UserShortResponse:
     """Build a UserShortResponse from a profiles dict, or a stub if not found.
 
-    The dict values can be either UserProfile (user_service mode) or
-    UserShortResponse (local mode) — both expose .id, .name, .department_name.
+    The dict values are UserProfile objects from the User Service (Cache 2).
     """
     p = profiles.get(user_id)
     if p is None:
         return UserShortResponse(id=user_id, name=f"User {user_id}", department_name=None)
-    if isinstance(p, UserShortResponse):
-        return p
     return UserShortResponse(id=p.id, name=p.name, department_name=p.department_name)
 
 
-def _get_local_user_profiles(db: Session, user_ids: list) -> dict:
-    """Local-mode alternative to get_users_batch.
-
-    Queries the local users table so that local DB primary-key IDs are
-    resolved to correct names — not mis-mapped via the external User Service.
-    Returns Dict[int, UserShortResponse].
-    """
-    from app.models.users import User as UserModel
-    from sqlalchemy.orm import joinedload as _joinedload
-    users = (
-        db.query(UserModel)
-        .options(_joinedload(UserModel.department))
-        .filter(UserModel.id.in_(user_ids))
-        .all()
-    )
-    return {
-        u.id: UserShortResponse(
-            id=u.id,
-            name=u.name,
-            department_name=u.department.name if u.department else None,
-        )
-        for u in users
-    }
-
-
-def _resolve_profiles(db: Session, user_ids: list, token: str) -> dict:
-    """Return a {user_id: UserShortResponse-or-UserProfile} dict.
-
-    Uses the local DB in 'local' AUTH_MODE so that local auto-increment IDs
-    are not incorrectly forwarded to the external User Service (which may
-    have completely different users under the same integer IDs).
-    """
+def _resolve_profiles(user_ids: list[int], token: str) -> dict:
+    """Return a {user_id: UserProfile} dict via the centralized User Service."""
     if not user_ids:
         return {}
-    if settings.AUTH_MODE == "local":
-        return _get_local_user_profiles(db, user_ids)
     return get_users_batch(user_ids, token)
 
 
@@ -102,8 +67,8 @@ def send_recognition(
             persona_label=ecard_in.persona_label,
         )
         data = ECardResponse.model_validate(ecard)
-        # Enrich sender/receiver: use local DB in local mode, User Service otherwise
-        profiles = _resolve_profiles(db, [ecard.sender_id, ecard.receiver_id], token)
+        # Enrich sender/receiver from User Service
+        profiles = _resolve_profiles([ecard.sender_id, ecard.receiver_id], token)
         # When persona is DEPARTMENT the sender identity should stay anonymous
         if ecard.persona_type == "PERSONAL":
             data.sender = _enrich_user(profiles, ecard.sender_id)
@@ -135,7 +100,7 @@ def get_recognition_feed(
 
     # Batch-fetch all user profiles needed for the feed in one call
     user_ids = list({uid for item in items for uid in [item.actor_id, item.receiver_id] if uid})
-    profiles = _resolve_profiles(db, user_ids, token)
+    profiles = _resolve_profiles(user_ids, token)
 
     data = []
     for item in items:
@@ -178,7 +143,7 @@ def get_my_appreciation_overview(
         | {ec.get("receiver_id") for ec in all_ecards if ec.get("receiver_id")}
     )
     if user_ids:
-        profiles = _resolve_profiles(db, list(user_ids), token)
+        profiles = _resolve_profiles(list(user_ids), token)
         for ec in all_ecards:
             # Respect persona anonymity: if DEPARTMENT persona, hide real sender
             if ec.get("persona_type") == "DEPARTMENT" and ec.get("persona_label"):
@@ -208,10 +173,10 @@ def get_leaderboard(
     service = RecognitionService(db)
     data = service.get_leaderboard(period=period, metric=metric, limit=limit)
     
-    # Fetch latest profiles from User Service (if not local mode) to match Feed
+    # Fetch latest profiles from User Service to match Feed
     user_ids = [item.get("user_id") for item in data if item.get("user_id")]
     if user_ids:
-        profiles = _resolve_profiles(db, user_ids, token)
+        profiles = _resolve_profiles(user_ids, token)
         for item in data:
             uid = item.get("user_id")
             if uid in profiles:
@@ -301,7 +266,7 @@ def get_recognition(
     if not ecard:
         return client_error(message=ERROR_ECARD_NOT_FOUND, status_code=status.HTTP_404_NOT_FOUND)
     data = ECardResponse.model_validate(ecard)
-    profiles = _resolve_profiles(db, [ecard.sender_id, ecard.receiver_id], token)
+    profiles = _resolve_profiles([ecard.sender_id, ecard.receiver_id], token)
     data.sender = _enrich_user(profiles, ecard.sender_id)
     data.receiver = _enrich_user(profiles, ecard.receiver_id)
     return success(data=data.model_dump(), message=SUCCESS_RECOGNITION_FOUND)

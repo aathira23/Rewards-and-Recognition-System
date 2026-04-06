@@ -6,7 +6,6 @@ from sqlalchemy import func
 from app.models.wallets import Wallet
 from app.models.wallet_funding import WalletFunding
 from app.models.points_ledger import PointsLedger
-from app.models.users import User
 from app.utils.enums import WalletType, TransactionType
 
 
@@ -58,27 +57,6 @@ class WalletsRepository:
         )
         self.db.add(ledger)
         return ledger
-
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
-        return self.db.query(User).filter(User.id == user_id).first()
-
-    def get_users_by_role_and_department(
-        self,
-        department_id: Optional[int] = None,
-        user_ids: Optional[List[int]] = None,
-        role_filter: Optional[str] = None,
-        default_roles: Optional[List[str]] = None,
-    ) -> List[User]:
-        query = self.db.query(User)
-        if user_ids:
-            query = query.filter(User.id.in_(user_ids))
-        elif department_id:
-            query = query.filter(User.department_id == department_id)
-            if not role_filter and default_roles:
-                query = query.filter(User.role.in_(default_roles))
-        if role_filter:
-            query = query.filter(User.role == role_filter)
-        return query.all()
 
     def commit(self) -> None:
         self.db.commit()

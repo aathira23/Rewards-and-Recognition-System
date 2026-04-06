@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, get_current_user, oauth2_scheme
 from app.services.user_profiles_client import get_users_batch
@@ -100,12 +101,7 @@ def trigger_life_event(
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
         return client_error(message=ERROR_ONLY_HR_ADMIN_TRIGGER_LIFE_EVENT, status_code=403)
 
-    token = None
-    try:
-        from app.core.config import settings
-        token = settings.SYSTEM_TOKEN if settings.AUTH_MODE == "user_service" else None
-    except Exception:
-        pass
+    token = settings.SYSTEM_TOKEN
 
     service = CelebrationService(db, token=token)
     try:

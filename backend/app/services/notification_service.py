@@ -68,7 +68,7 @@ class NotificationService:
 
         # --- Auto-dispatch Teams (best-effort, non-blocking) ---
         # Teams is sent as part of the unified email+teams call in EmailService._dispatch()
-        # when USE_NOTIFICATION_SERVICE + TEAMS_NOTIFICATIONS_ENABLED are both True.
+        # when TEAMS_NOTIFICATIONS_ENABLED is True.
         # This separate path only fires when email is NOT being dispatched for this event
         # (i.e. no email_event_type mapped) to avoid duplicating Teams messages.
         if source_type in _TEAMS_SOURCE_TYPES and evt is None:
@@ -163,11 +163,7 @@ class NotificationService:
         t.start()
 
     def _resolve_user_email(self, user_id: int, *, token: Optional[str] = None) -> Optional[str]:
-        """Return the user's email from local DB, falling back to User Service."""
-        from app.models.users import User
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if user and user.email:
-            return user.email
+        """Return the user's email via User Service."""
         _token = token or self._token
         if _token:
             from app.services.user_profiles_client import get_user_profile

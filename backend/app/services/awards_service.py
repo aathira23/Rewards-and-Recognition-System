@@ -26,26 +26,21 @@ class AwardsService:
         self.recognition_service = RecognitionService(db)
 
     def _get_user_name(self, user_id: int) -> str:
-        """Resolve user name via User Service (with cache), fallback to local DB."""
+        """Resolve user name via User Service (with cache)."""
         if self._token:
             from app.services.user_profiles_client import get_user_profile
             profile = get_user_profile(user_id, self._token)
             if profile:
                 return profile.name
-        local = self.repository.get_user_by_id(user_id)
-        return local.name if local else f"User #{user_id}"
+        return f"User #{user_id}"
 
     def _get_user_names_batch(self, user_ids: set) -> Dict[int, str]:
-        """Batch-resolve user names via User Service, fallback to local DB."""
-        if not user_ids:
+        """Batch-resolve user names via User Service."""
+        if not user_ids or not self._token:
             return {}
-        if self._token:
-            from app.services.user_profiles_client import get_users_batch
-            profiles = get_users_batch(list(user_ids), self._token)
-            return {uid: p.name for uid, p in profiles.items()}
-        from app.models.users import User
-        rows = self.db.query(User).filter(User.id.in_(user_ids)).all()
-        return {u.id: u.name for u in rows}
+        from app.services.user_profiles_client import get_users_batch
+        profiles = get_users_batch(list(user_ids), self._token)
+        return {uid: p.name for uid, p in profiles.items()}
 
     def nominate_for_award(
         self,
@@ -62,10 +57,13 @@ class AwardsService:
         - Managers and Dept Heads' own level is marked as approved automatically.
         - Employees can nominate; their nominations follow the full workflow.
         """
-        nominator = self.repository.get_user_by_id(nominator_id)
+        nominator = None
+        if self._token:
+            from app.services.user_profiles_client import get_user_profile
+            nominator = get_user_profile(nominator_id, self._token)
         if not nominator:
             raise HTTPException(status_code=404, detail="Nominator not found.")
-        nominator_name = self._get_user_name(nominator_id)
+        nominator_name = nominator.name
         display_nominator_name = persona_label if persona_label else nominator_name
 
         # 1. Verify eligibility rules
@@ -82,7 +80,7 @@ class AwardsService:
             raise HTTPException(status_code=400, detail="A pending nomination for this nominee and award type already exists.")
 
         # --- Eligibility checks based on nominator role ---
-        # Validate nominee exists via User Service first, then local DB
+        # Validate nominee exists via User Service
         nominee_name = None
         nominee_dept_id = None
         nominee_manager_id = None
@@ -92,13 +90,9 @@ class AwardsService:
             if nominee_profile:
                 nominee_name = nominee_profile.name
                 nominee_dept_id = nominee_profile.department_id
+                nominee_manager_id = nominee_profile.manager_id
         if not nominee_name:
-            nominee_local = self.repository.get_user_by_id(nominee_id)
-            if not nominee_local:
-                raise HTTPException(status_code=404, detail="Nominee not found.")
-            nominee_name = nominee_local.name
-            nominee_dept_id = nominee_local.department_id
-            nominee_manager_id = getattr(nominee_local, 'manager_id', None)
+            raise HTTPException(status_code=404, detail="Nominee not found.")
 
         # Managers may only nominate their direct reports (skip if manager_id unavailable)
         if nominator.role == UserRole.MANAGER.value and nominee_manager_id is not None:
@@ -340,9 +334,12 @@ class AwardsService:
         # 3b. For MANAGER-level approval, enforce that only the nominee's direct manager
         #     may approve — prevents any random manager from acting on the nomination.
         if approval_level == 'MANAGER':
-            nominee_local = self.repository.get_user_by_id(award.nominee_id)
-            if nominee_local and getattr(nominee_local, 'manager_id', None) is not None:
-                if nominee_local.manager_id != approver_id:
+            nominee_profile = None
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                nominee_profile = get_user_profile(award.nominee_id, self._token)
+            if nominee_profile and nominee_profile.manager_id is not None:
+                if nominee_profile.manager_id != approver_id:
                     raise HTTPException(
                         status_code=403,
                         detail="Only the nominee's direct manager can approve at the MANAGER level."
@@ -358,12 +355,9 @@ class AwardsService:
                 np = get_user_profile(award.nominee_id, self._token)
                 if np:
                     nominee_dept_id = np.department_id
-            if nominee_dept_id is None:
-                nominee_local = self.repository.get_user_by_id(award.nominee_id)
-                if nominee_local:
-                    nominee_dept_id = nominee_local.department_id
             if nominee_dept_id:
-                nominee_dept_head = self.repository.get_dept_head(nominee_dept_id)
+                from app.services.user_profiles_client import get_dept_head
+                nominee_dept_head = get_dept_head(self._token, nominee_dept_id) if self._token else None
                 if nominee_dept_head and nominee_dept_head.id != approver_id:
                     raise HTTPException(
                         status_code=403,
@@ -466,9 +460,12 @@ class AwardsService:
 
         # For MANAGER-level rejection, enforce that only the nominee's direct manager may reject.
         if approval_level.upper() == 'MANAGER':
-            nominee_local = self.repository.get_user_by_id(award.nominee_id)
-            if nominee_local and getattr(nominee_local, 'manager_id', None) is not None:
-                if nominee_local.manager_id != approver_id:
+            nominee_profile = None
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                nominee_profile = get_user_profile(award.nominee_id, self._token)
+            if nominee_profile and nominee_profile.manager_id is not None:
+                if nominee_profile.manager_id != approver_id:
                     raise HTTPException(
                         status_code=403,
                         detail="Only the nominee's direct manager can reject at the MANAGER level."
@@ -559,7 +556,7 @@ class AwardsService:
             next_lvl = self._get_next_required_level(req_levels, comp_levels)
             
             if next_lvl and next_lvl.upper() == role.upper():
-                # Resolve nominee info: prefer User Service, fallback to local
+                # Resolve nominee info via User Service
                 nominee_dept_id = None
                 nominee_manager_id = None
                 if self._token:
@@ -567,11 +564,7 @@ class AwardsService:
                     np = get_user_profile(award.nominee_id, self._token)
                     if np:
                         nominee_dept_id = np.department_id
-                nominee_local = self.repository.get_user_by_id(award.nominee_id)
-                if nominee_local:
-                    if nominee_dept_id is None:
-                        nominee_dept_id = nominee_local.department_id
-                    nominee_manager_id = getattr(nominee_local, 'manager_id', None)
+                        nominee_manager_id = np.manager_id
 
                 # For MANAGER role, only the nominee's direct manager may see it
                 if next_lvl.upper() == 'MANAGER':
@@ -582,10 +575,10 @@ class AwardsService:
                         visible_ids.add(award.id)
                 elif next_lvl.upper() == 'DEPT_HEAD':
                     # Only the nominee's own dept head may see it
-                    nominee_dept_head = (
-                        self.repository.get_dept_head(nominee_dept_id)
-                        if nominee_dept_id else None
-                    )
+                    nominee_dept_head = None
+                    if nominee_dept_id and self._token:
+                        from app.services.user_profiles_client import get_dept_head as _get_dh
+                        nominee_dept_head = _get_dh(self._token, nominee_dept_id)
                     if nominee_dept_head and nominee_dept_head.id == user_id:
                         visible_ids.add(award.id)
                 else:
@@ -842,7 +835,7 @@ class AwardsService:
         """
         nominee_name = self._get_user_name(award.nominee_id)
 
-        # Resolve nominee's department_id and manager_id
+        # Resolve nominee's department_id and manager_id via User Service
         nominee_dept_id = None
         nominee_manager_id = None
         if self._token:
@@ -850,11 +843,7 @@ class AwardsService:
             np = get_user_profile(award.nominee_id, self._token)
             if np:
                 nominee_dept_id = np.department_id
-        nominee_local = self.repository.get_user_by_id(award.nominee_id)
-        if nominee_local:
-            if nominee_dept_id is None:
-                nominee_dept_id = nominee_local.department_id
-            nominee_manager_id = getattr(nominee_local, 'manager_id', None)
+                nominee_manager_id = np.manager_id
 
         msg = (
             f"New Award Nomination: {nominee_name} has been nominated for "
@@ -870,7 +859,10 @@ class AwardsService:
                     source_id=award.id,
                 )
         elif next_level == 'DEPT_HEAD':
-            dept_head = self.repository.get_dept_head(nominee_dept_id) if nominee_dept_id else None
+            dept_head = None
+            if nominee_dept_id and self._token:
+                from app.services.user_profiles_client import get_dept_head as _get_dh
+                dept_head = _get_dh(self._token, nominee_dept_id)
             if dept_head:
                 self.notification_service.create_notification(
                     user_id=dept_head.id,
@@ -879,14 +871,16 @@ class AwardsService:
                     source_id=award.id,
                 )
         elif next_level in ('HR', 'ADMIN'):
-            hr_users = self.repository.get_hr_users()
-            for hr_user in hr_users:
-                self.notification_service.create_notification(
-                    user_id=hr_user.id,
-                    message=msg,
-                    source_type=ReferenceType.AWARD.value,
-                    source_id=award.id,
-                )
+            if self._token:
+                from app.services.user_profiles_client import get_users_by_role
+                hr_users = get_users_by_role(self._token, [UserRole.HR.value])
+                for hr_user in hr_users:
+                    self.notification_service.create_notification(
+                        user_id=hr_user.id,
+                        message=msg,
+                        source_type=ReferenceType.AWARD.value,
+                        source_id=award.id,
+                    )
 
     def _get_required_approval_levels(self, award_type: AwardType) -> List[str]:
         """

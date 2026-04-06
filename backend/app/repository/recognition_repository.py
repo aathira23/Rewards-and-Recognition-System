@@ -8,7 +8,6 @@ from app.models.badges import Badge
 from app.models.ecards import ECard
 from app.models.recognition_feed import RecognitionFeed
 from app.models.points_policy import PointsPolicy
-from app.models.users import User
 
 
 class RecognitionRepository:
@@ -135,13 +134,6 @@ class RecognitionRepository:
     def get_badge_for_ecard(self, ecard_source_id: int) -> Optional[Badge]:
         return self.db.query(Badge).join(ECard).filter(ECard.id == ecard_source_id).first()
 
-    # --- User lookup ---
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
-        return self.db.query(User).filter(User.id == user_id).first()
-
-    def get_admin_user(self) -> Optional[User]:
-        return self.db.query(User).filter(User.role == "ADMIN").first()
-
     # --- Leaderboard ---
     def get_points_leaderboard(
         self, start_date: Optional[datetime], limit: int
@@ -150,11 +142,9 @@ class RecognitionRepository:
         from app.models.wallets import Wallet
 
         query = self.db.query(
-            User,
+            Wallet.user_id,
             func.sum(PointsLedger.points).label("total_score"),
             func.count(PointsLedger.id).label("count"),
-        ).join(
-            Wallet, User.id == Wallet.user_id
         ).join(
             PointsLedger, Wallet.id == PointsLedger.target_wallet_id
         ).filter(
@@ -163,16 +153,16 @@ class RecognitionRepository:
         )
         if start_date is not None:
             query = query.filter(PointsLedger.created_at >= start_date)
-        return query.group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+        return query.group_by(Wallet.user_id).order_by(desc("total_score")).limit(limit).all()
 
     def get_recognition_leaderboard(
         self, start_date: Optional[datetime], limit: int
     ) -> List[Tuple]:
         query = self.db.query(
-            User,
+            ECard.receiver_id,
             func.count(ECard.id).label("total_score"),
             func.sum(ECard.points_awarded).label("points"),
-        ).join(ECard, User.id == ECard.receiver_id)
+        )
         if start_date is not None:
             query = query.filter(ECard.created_at >= start_date)
-        return query.group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+        return query.group_by(ECard.receiver_id).order_by(desc("total_score")).limit(limit).all()

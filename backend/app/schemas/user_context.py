@@ -26,6 +26,7 @@ class UserContext(BaseModel):
     img_path: Optional[str] = None
     dob: Optional[str] = None
     date_of_joining: Optional[str] = None
+    manager_id: Optional[int] = None
 
     @property
     def name(self) -> str:
@@ -55,6 +56,7 @@ class UserProfile(BaseModel):
     dob: Optional[str] = None
     date_of_joining: Optional[str] = None
     is_active: Optional[bool] = None
+    manager_id: Optional[int] = None
 
     @property
     def name(self) -> str:

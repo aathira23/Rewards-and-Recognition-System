@@ -1,6 +1,6 @@
 """
 Background email dispatcher – fires email sends in a separate thread so
-the main request is not blocked by SMTP I/O.
+the main request is not blocked by network I/O.
 
 Usage (from any service / API handler):
 

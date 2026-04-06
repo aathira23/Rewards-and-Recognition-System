@@ -24,8 +24,9 @@ _aggregates_cache: TTLCache = TTLCache(maxsize=5_000, ttl=5 * 60)
 class PointsService:
     """Service for managing points, FIFO deductions, and ledger tracking."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
         self.repository = PointsRepository(db)
 
     def get_employee_wallet(self, user_id: int):
@@ -354,6 +355,15 @@ class PointsService:
 
     def _enrich_description(self, row: PointsLedger, is_credit: bool = True) -> Tuple[str, str]:
         """Logic to match the precise UI descriptions from the reference image."""
+
+        def _resolve_name(user_id: int, fallback: str = "a Peer") -> str:
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                profile = get_user_profile(user_id, self._token)
+                if profile:
+                    return profile.name
+            return fallback
+
         ref_type = row.reference_type
         ref_id = row.reference_id
         if not ref_type: return "General Transaction", "Other"
@@ -367,10 +377,9 @@ class PointsService:
         if ref_upper == ReferenceType.ECARD.value:
             ecard = self.repository.get_ecard(ref_id)
             if ecard:
-                sender = self.repository.get_user(ecard.sender_id)
                 badge = self.repository.get_badge(ecard.badge_id)
                 badge_title = f"'{badge.name}'" if badge else "Recognition"
-                sender_name = sender.name if sender else "a Peer"
+                sender_name = _resolve_name(ecard.sender_id, "a Peer")
                 return f"{badge_title} Appreciation\nFrom: {sender_name}", "Earned"
             return "Recognition Reward", "Earned"
 
@@ -404,12 +413,10 @@ class PointsService:
 
         if ref_upper == ReferenceType.MANAGER_REWARD.value:
             if is_credit:
-                manager = self.repository.get_user(ref_id)
-                manager_name = manager.name if manager else "Manager"
+                manager_name = _resolve_name(ref_id, "Manager")
                 return f"Direct Recognition Reward\nFrom: {manager_name}", "Earned"
             else:
-                employee = self.repository.get_user(ref_id)
-                employee_name = employee.name if employee else "Employee"
+                employee_name = _resolve_name(ref_id, "Employee")
                 return f"Budget Reward Sent\nTo: {employee_name}", "Spent"
 
         if ref_upper == ReferenceType.EXPIRY.value:

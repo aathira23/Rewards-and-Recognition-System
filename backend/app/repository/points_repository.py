@@ -14,7 +14,6 @@ from app.models.awards import Award
 from app.models.award_types import AwardType
 from app.models.badges import Badge
 from app.models.rewards import Reward
-from app.models.users import User
 from app.models.notifications import Notification
 from app.utils.enums import TransactionType, WalletType
 
@@ -215,9 +214,6 @@ class PointsRepository:
     # --- Enrichment lookups ---
     def get_ecard(self, ecard_id: int) -> Optional[ECard]:
         return self.db.query(ECard).filter(ECard.id == ecard_id).first()
-
-    def get_user(self, user_id: int) -> Optional[User]:
-        return self.db.query(User).filter(User.id == user_id).first()
 
     def get_badge(self, badge_id: int) -> Optional[Badge]:
         return self.db.query(Badge).filter(Badge.id == badge_id).first()

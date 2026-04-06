@@ -23,18 +23,53 @@ class CelebrationService:
         self.recognition_service = RecognitionService(db, token=token)
         self.notification_service = NotificationService(db, token=token)
 
+    def _get_all_users(self) -> list:
+        """Fetch all users from User Service for celebration scanning."""
+        if not self._token:
+            return []
+        from app.services.user_profiles_client import get_users_list
+        data = get_users_list(self._token, skip=0, limit=10_000)
+        return data.get("items", [])
+
+    def _users_matching_date(self, all_users: list, field: str, month: int, day: int) -> list:
+        """Filter users whose dob or date_of_joining matches the given month/day."""
+        from datetime import datetime as dt
+        matches = []
+        for u in all_users:
+            raw = getattr(u, field, None)
+            if not raw:
+                continue
+            try:
+                if isinstance(raw, str):
+                    # Try common formats
+                    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y-%m-%dT%H:%M:%S"):
+                        try:
+                            d = dt.strptime(raw[:10], fmt[:len(raw[:10])])
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        continue
+                else:
+                    d = raw
+                if d.month == month and d.day == day:
+                    matches.append(u)
+            except Exception:
+                continue
+        return matches
+
     def get_upcoming_celebrations(self, days: int = 7) -> List[Dict[str, Any]]:
         """Get users with birthdays or anniversaries in the next N days."""
         today = date.today()
         upcoming = []
+        all_users = self._get_all_users()
 
-        # Check for next N days
         for i in range(days + 1):
             target_date = today + timedelta(days=i)
 
             # Birthdays
-            birthday_users = self.repository.get_users_by_date_field(
-                "birth_date", target_date.month, target_date.day
+            birthday_users = self._users_matching_date(
+                all_users, "dob", target_date.month, target_date.day
             )
 
             for user in birthday_users:
@@ -44,16 +79,25 @@ class CelebrationService:
                     "celebration_type": "BIRTHDAY",
                     "date": target_date.strftime("%Y-%m-%d"),
                     "year": target_date.year,
-                    "points_awarded": 0  # Placeholder as it hasn't happened yet
+                    "points_awarded": 0
                 })
 
             # Anniversaries
-            anniversary_users = self.repository.get_users_by_date_field(
-                "date_of_joining", target_date.month, target_date.day
+            anniversary_users = self._users_matching_date(
+                all_users, "date_of_joining", target_date.month, target_date.day
             )
 
             for user in anniversary_users:
-                years = target_date.year - user.date_of_joining.year
+                from datetime import datetime as dt
+                raw = user.date_of_joining
+                if isinstance(raw, str):
+                    try:
+                        join_year = dt.strptime(raw[:10], "%Y-%m-%d").year
+                    except ValueError:
+                        continue
+                else:
+                    join_year = raw.year
+                years = target_date.year - join_year
                 if years > 0:
                     upcoming.append({
                         "user_id": user.id,
@@ -113,26 +157,20 @@ class CelebrationService:
     def _process_birthdays(self, today: date, points: int) -> int:
         """Process birthday celebrations for a specific date."""
         count = 0
-
-        users = self.repository.get_users_by_date_field(
-            "birth_date", today.month, today.day
-        )
+        all_users = self._get_all_users()
+        users = self._users_matching_date(all_users, "dob", today.month, today.day)
 
         for user in users:
-            # Check if already processed this year
             existing = self.repository.get_celebration(
                 user.id, "BIRTHDAY", today.year
             )
-
             if existing:
                 continue
 
-            # Create celebration record
             celebration = self.repository.create_celebration(
                 user.id, "BIRTHDAY", today.year, points
             )
 
-            # Award points
             self.points_service.award_points(
                 user_id=user.id,
                 points=points,
@@ -140,16 +178,14 @@ class CelebrationService:
                 source_id=celebration.id
             )
 
-            # Create recognition feed entry
             self.recognition_service.create_feed_entry(
-                actor_id=1,  # System actor
+                actor_id=1,
                 receiver_id=user.id,
                 source_type="CELEBRATION",
                 source_id=celebration.id,
                 message=f"Happy Birthday, {user.name}! Enjoy your birthday reward points! 🎂"
             )
 
-            # Send notification
             self.notification_service.create_notification(
                 user_id=user.id,
                 message=f"🎉 Happy Birthday! You've been awarded {points} reward points. Have a great day!",
@@ -169,35 +205,37 @@ class CelebrationService:
 
     def _process_anniversaries(self, today: date, base_points: int) -> int:
         """Process work anniversary celebrations for a specific date."""
+        from datetime import datetime as dt
         count = 0
-
-        users = self.repository.get_users_by_date_field(
-            "date_of_joining", today.month, today.day
-        )
+        all_users = self._get_all_users()
+        users = self._users_matching_date(all_users, "date_of_joining", today.month, today.day)
 
         for user in users:
             # Calculate years of service
-            years = today.year - user.date_of_joining.year
-            if years <= 0:  # Joined this year, no anniversary yet
+            raw = user.date_of_joining
+            if isinstance(raw, str):
+                try:
+                    join_year = dt.strptime(raw[:10], "%Y-%m-%d").year
+                except ValueError:
+                    continue
+            else:
+                join_year = raw.year
+            years = today.year - join_year
+            if years <= 0:
                 continue
 
-            # Check if already processed this year
             existing = self.repository.get_celebration(
                 user.id, "ANNIVERSARY", today.year
             )
-
             if existing:
                 continue
 
-            # Calculate points (use base_points or multiply by years as per policy)
-            points = base_points  # Can be changed to base_points * years if needed
+            points = base_points
 
-            # Create celebration record
             celebration = self.repository.create_celebration(
                 user.id, "ANNIVERSARY", today.year, points
             )
 
-            # Award points
             self.points_service.award_points(
                 user_id=user.id,
                 points=points,
@@ -205,16 +243,14 @@ class CelebrationService:
                 source_id=celebration.id
             )
 
-            # Create recognition feed entry
             self.recognition_service.create_feed_entry(
-                actor_id=1,  # System actor
+                actor_id=1,
                 receiver_id=user.id,
                 source_type="CELEBRATION",
                 source_id=celebration.id,
                 message=f"Congratulations to {user.name} on their {years}-year work anniversary! 🎉 Thank you for your dedication."
             )
 
-            # Send notification
             self.notification_service.create_notification(
                 user_id=user.id,
                 message=f"🎊 Happy Work Anniversary! Celebrating {years} year{'s' if years > 1 else ''} with us. You've earned {points} reward points!",
@@ -261,7 +297,6 @@ class CelebrationService:
 
         Returns a dict describing what was done.
         """
-        from app.models.users import User
         from app.utils.enums import CelebrationType
 
         if celebration_type not in (CelebrationType.BIRTH.value, CelebrationType.MARRIAGE.value):
@@ -278,10 +313,14 @@ class CelebrationService:
                 f"A {label} celebration was already awarded to user {user_id} in {year}"
             )
 
-        # Resolve employee
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if not user:
+        # Resolve employee via User Service
+        user_profile = None
+        if self._token:
+            from app.services.user_profiles_client import get_user_profile
+            user_profile = get_user_profile(user_id, self._token)
+        if not user_profile:
             raise ValueError(f"User {user_id} not found")
+        user_name = user_profile.name
 
         points = self._get_points_from_policy(
             celebration_type,
@@ -303,12 +342,12 @@ class CelebrationService:
         # Recognition feed entry
         if celebration_type == CelebrationType.BIRTH.value:
             feed_message = (
-                f"Congratulations to {user.name} on the arrival of their new baby! "
+                f"Congratulations to {user_name} on the arrival of their new baby! "
                 f"Wishing your family joy and happiness! {emoji}"
             )
         else:  # MARRIAGE
             feed_message = (
-                f"Congratulations to {user.name} on their marriage! "
+                f"Congratulations to {user_name} on their marriage! "
                 f"Wishing you a lifetime of happiness together! {emoji}"
             )
 
@@ -338,7 +377,7 @@ class CelebrationService:
             source_type=ReferenceType.CELEBRATION.value,
             source_id=celebration.id,
             email_context={
-                "colleague_name": user.name,
+                "colleague_name": user_name,
                 "event_type": label,
                 "event_date": str(today),
                 "recognize_url": "",
@@ -348,7 +387,7 @@ class CelebrationService:
         self.db.commit()
         return {
             "user_id": user_id,
-            "user_name": user.name,
+            "user_name": user_name,
             "celebration_type": celebration_type,
             "points_awarded": points,
             "year": year,

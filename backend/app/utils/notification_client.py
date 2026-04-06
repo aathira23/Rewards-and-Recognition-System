@@ -2,7 +2,6 @@
 Notification Service client — thin HTTP wrapper around the Styria notification
 microservice (Java/Spring Boot, port 9030).
 
-Enabled when settings.USE_NOTIFICATION_SERVICE = True.
 Teams channel is separately gated by settings.TEAMS_NOTIFICATIONS_ENABLED.
 
 Usage::
@@ -102,10 +101,6 @@ def send_email(
         token:           Bearer token forwarded to the notification service
                          (required in Styria staging/production environments).
     """
-    if not settings.USE_NOTIFICATION_SERVICE:
-        logger.debug("send_email: USE_NOTIFICATION_SERVICE is False, skipping.")
-        return False
-
     content: dict = {
         "title": title,
         "body": body,
@@ -142,9 +137,9 @@ def send_teams(
     `recipients` should be corporate email addresses (e.g. alice@company.com).
     The notification service resolves these to Teams 1:1 chats via Graph API.
     """
-    if not settings.USE_NOTIFICATION_SERVICE or not settings.TEAMS_NOTIFICATIONS_ENABLED:
-        logger.debug("send_teams: skipping (USE_NOTIFICATION_SERVICE=%s, TEAMS_NOTIFICATIONS_ENABLED=%s)",
-                      settings.USE_NOTIFICATION_SERVICE, settings.TEAMS_NOTIFICATIONS_ENABLED)
+    if not settings.TEAMS_NOTIFICATIONS_ENABLED:
+        logger.debug("send_teams: skipping (TEAMS_NOTIFICATIONS_ENABLED=%s)",
+                      settings.TEAMS_NOTIFICATIONS_ENABLED)
         return False
 
     content: dict = {"title": title, "body": body}
@@ -177,9 +172,6 @@ def send_notification(
     additional_data: Optional[dict] = None,
     token: Optional[str] = None,
 ) -> bool:
-
-    if not settings.USE_NOTIFICATION_SERVICE:
-        return False
 
     channels = ["EMAIL"]
     if settings.TEAMS_NOTIFICATIONS_ENABLED and teams_recipients:

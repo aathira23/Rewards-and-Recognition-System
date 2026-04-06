@@ -7,8 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.awards import Award
 from app.models.award_types import AwardType
 from app.models.award_approvals import AwardApproval
-from app.models.users import User
-from app.utils.enums import AwardStatus, ApprovalStatus, UserRole
+from app.utils.enums import AwardStatus, ApprovalStatus
 
 
 class AwardsRepository:
@@ -177,19 +176,6 @@ class AwardsRepository:
         total = query.count()
         awards = query.order_by(Award.created_at.desc()).offset(skip).limit(limit).all()
         return total, awards
-
-    # --- User lookups (used within award operations) ---
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
-        return self.db.query(User).filter(User.id == user_id).first()
-
-    def get_dept_head(self, department_id: int) -> Optional[User]:
-        return self.db.query(User).filter(
-            User.department_id == department_id,
-            User.role == UserRole.DEPT_HEAD.value,
-        ).first()
-
-    def get_hr_users(self) -> List[User]:
-        return self.db.query(User).filter(User.role == UserRole.HR.value).all()
 
     # --- Transaction helpers ---
     def commit(self) -> None:

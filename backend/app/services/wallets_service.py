@@ -23,22 +23,12 @@ class WalletsService:
         self.points_service = PointsService(db)
         self.recognition_service = RecognitionService(db)
 
-    def _get_user_with_sync(self, user_id: int):
-        """Look up user locally; if missing and token available, sync from User Service first."""
-        user = self.repository.get_user_by_id(user_id)
-        if user or not self._token:
-            return user
-        try:
-            from app.services.user_profiles_client import get_user_profile
-            from app.services.user_sync_service import sync_user_data
-            profile = get_user_profile(user_id, self._token)
-            if profile:
-                sync_user_data(self.db, profile)
-                self.db.commit()
-                return self.repository.get_user_by_id(user_id)
-        except Exception:
-            logger.warning("Failed to sync user %s from User Service", user_id, exc_info=True)
-        return None
+    def _get_user_profile(self, user_id: int):
+        """Look up user via User Service cache."""
+        if not self._token:
+            return None
+        from app.services.user_profiles_client import get_user_profile
+        return get_user_profile(user_id, self._token)
 
     def get_or_create_wallet(self, user_id: int, wallet_type: WalletType) -> Wallet:
         """Get or create a wallet for a user."""
@@ -51,7 +41,7 @@ class WalletsService:
     def allocate_budget(self, manager_id: int, points: int, allocated_by: int) -> WalletFunding:
         """Allocate budget to manager wallet (HR only)."""
         # 1. Verify the target user is actually a manager or dept head
-        target_user = self._get_user_with_sync(manager_id)
+        target_user = self._get_user_profile(manager_id)
         if not target_user:
             raise ValueError(f"User with ID {manager_id} not found")
 
@@ -98,8 +88,8 @@ class WalletsService:
     def manager_reward_employee(self, manager_id: int, employee_id: int, points: int, reason: str):
         """Manager rewards employee from their wallet."""
         # 0. Validate permission/hierarchy
-        manager = self.repository.get_user_by_id(manager_id)
-        employee = self._get_user_with_sync(employee_id)
+        manager = self._get_user_profile(manager_id)
+        employee = self._get_user_profile(employee_id)
 
         if not manager or not employee:
             raise ValueError("Manager or Employee not found.")
@@ -159,17 +149,32 @@ class WalletsService:
         role_filter: Optional[str] = None
     ) -> int:
         """Bulk allocate budget to multiple managers."""
-        managers = self.repository.get_users_by_role_and_department(
-            department_id=department_id,
-            user_ids=user_ids,
-            role_filter=role_filter,
-            default_roles=[UserRole.MANAGER.value, UserRole.DEPT_HEAD.value],
-        )
+        # Resolve matching managers via User Service
+        if not self._token:
+            return 0
+
+        from app.services.user_profiles_client import get_users_list
+        all_data = get_users_list(self._token, skip=0, limit=10_000)
+        all_users = all_data.get("items", [])
+
+        default_roles = [UserRole.MANAGER.value, UserRole.DEPT_HEAD.value]
+
+        managers = []
+        for p in all_users:
+            if user_ids:
+                if p.id not in user_ids:
+                    continue
+            elif department_id:
+                if p.department_id != department_id:
+                    continue
+                if not role_filter and p.role not in default_roles:
+                    continue
+            if role_filter and p.role != role_filter:
+                continue
+            managers.append(p)
+
         count = 0
         for manager in managers:
-            # We reuse the existing single allocation logic
-            # Note: This will do a commit per manager, which is safer for partial failures
-            # but slower. For bulk of ~100s it's fine.
             self.allocate_budget(manager.id, points, allocated_by)
             count += 1
 

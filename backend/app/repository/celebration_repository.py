@@ -1,25 +1,16 @@
 from typing import Optional, List, Tuple
 from datetime import date
 
-from sqlalchemy import func, extract
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.celebrations import Celebration
 from app.models.points_policy import PointsPolicy
-from app.models.users import User
 
 
 class CelebrationRepository:
     def __init__(self, db: Session):
         self.db = db
-
-    def get_users_by_date_field(self, field: str, month: int, day: int) -> List[User]:
-        """Get users whose birth_date or date_of_joining matches the given month/day."""
-        col = getattr(User, field)
-        return self.db.query(User).filter(
-            extract("month", col) == month,
-            extract("day", col) == day,
-        ).all()
 
     def get_celebration(
         self, user_id: int, celebration_type: str, year: int

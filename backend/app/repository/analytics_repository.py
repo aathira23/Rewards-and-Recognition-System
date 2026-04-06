@@ -4,8 +4,6 @@ from datetime import date
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
-from app.models.users import User
-from app.models.departments import Department
 from app.models.recognition_feed import RecognitionFeed
 from app.models.redemptions import Redemption
 from app.models.rewards import Reward
@@ -26,17 +24,15 @@ class AnalyticsRepository:
         self,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
-        department_id: Optional[int] = None,
+        receiver_ids: Optional[List[int]] = None,
     ) -> List[RecognitionFeed]:
-        query = self.db.query(RecognitionFeed).join(
-            User, RecognitionFeed.receiver_id == User.id, isouter=True
-        )
+        query = self.db.query(RecognitionFeed)
         if from_date:
             query = query.filter(RecognitionFeed.created_at >= from_date)
         if to_date:
             query = query.filter(RecognitionFeed.created_at <= to_date)
-        if department_id:
-            query = query.filter(User.department_id == department_id)
+        if receiver_ids is not None:
+            query = query.filter(RecognitionFeed.receiver_id.in_(receiver_ids))
         return query.order_by(RecognitionFeed.created_at.desc()).all()
 
     def get_points_for_recognition(
@@ -64,9 +60,6 @@ class AnalyticsRepository:
         return query.order_by(Redemption.created_at.desc()).all()
 
     # --- Wallet utilization ---
-    def get_managers(self) -> List[User]:
-        return self.db.query(User).filter(User.role.in_(["MANAGER", "DEPT_HEAD"])).all()
-
     def get_manager_wallet(self, user_id: int) -> Optional[Wallet]:
         return self.db.query(Wallet).filter(
             Wallet.user_id == user_id,
@@ -114,33 +107,6 @@ class AnalyticsRepository:
             PointsLedger.created_at >= from_date if from_date else True,
             PointsLedger.created_at <= to_date if to_date else True,
         ).scalar() or 0
-
-    # --- Scope helpers ---
-    def get_subordinate_ids(self, manager_id: int) -> List[int]:
-        rows = self.db.query(User.id).filter(User.manager_id == manager_id).all()
-        return [r.id for r in rows]
-
-    def get_department_member_ids(self, department_id: int) -> List[int]:
-        rows = self.db.query(User.id).filter(User.department_id == department_id).all()
-        return [r.id for r in rows]
-
-    def get_department(self, department_id: int) -> Optional[Department]:
-        return self.db.query(Department).filter(Department.id == department_id).first()
-
-    def get_all_departments(self) -> List[Department]:
-        return self.db.query(Department).all()
-
-    def get_total_user_count(self) -> int:
-        return self.db.query(User).count()
-
-    def get_department_managers(self, department_id: int) -> List[User]:
-        return self.db.query(User).filter(
-            User.department_id == department_id,
-            User.manager_id != None,
-        ).all()
-
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
-        return self.db.query(User).filter(User.id == user_id).first()
 
     # --- Trends and rankings ---
     def get_recognition_trends(

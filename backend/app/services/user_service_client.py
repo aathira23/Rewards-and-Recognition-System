@@ -95,6 +95,7 @@ async def get_user_context(token: str) -> UserContext:
         img_path=details.get("img_path"),
         dob=details.get("dob"),
         date_of_joining=details.get("date_of_joining"),
+        manager_id=_safe_int(details.get("manager_id") or details.get("reporting_to_id")),
     )
 
     # Cache it

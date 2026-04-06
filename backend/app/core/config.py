@@ -22,25 +22,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
-    # Security
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
-
     # CORS Configuration
     ALLOWED_ORIGINS: str = "*"  # Use comma-separated URLs in production: "http://localhost:3000,https://yourdomain.com"
 
     # Points expiry reminder window (days before expiry to notify users)
     POINTS_EXPIRY_REMINDER_DAYS: int = 7
 
-    # SMTP / Email Configuration
-    SMTP_HOST: str = "localhost"
-    SMTP_PORT: int = 587
-    SMTP_USERNAME: str = ""
-    SMTP_PASSWORD: str = ""
-    SMTP_USE_TLS: bool = True
-    SMTP_FROM_EMAIL: str = "noreply@example.com"
-    SMTP_FROM_NAME: str = "Rewards & Recognition"
+    # Email sender configuration (used by the notification service)
+    SUPPORT_EMAIL: str = "noreply@example.com"
+    SENDER_NAME: str = "Rewards & Recognition"
 
     # Front-end base URL (used for links in emails)
     FRONTEND_URL: str = "http://localhost:8080"
@@ -60,9 +50,6 @@ class Settings(BaseSettings):
     # Set False in production only if User Service uses a self-signed cert
     USER_SERVICE_VERIFY_SSL: bool = True
 
-    # Auth mode: "user_service" (production) or "local" (dev/testing with local JWT)
-    AUTH_MODE: str = "local"
-
     # Optional service/system token used by background jobs (celebrations, pending-approvals)
     # to call the User Service without a per-request Bearer token.
     # Set this to a long-lived service account token in production.
@@ -73,9 +60,6 @@ class Settings(BaseSettings):
     # Staging: https://api-styria-staging.tarento.dev  (same gateway as User Service)
     # Local dev: http://localhost:9030
     NOTIFICATION_SERVICE_BASE_URL: str = "http://localhost:9030"
-    # Set True to route outbound emails through the notification service instead
-    # of the local SMTP path. Keep False in dev (no notification service running).
-    USE_NOTIFICATION_SERVICE: bool = True
     # Set True to also send Microsoft Teams messages for key R&R events
     # (award approvals, recognitions, celebrations). Requires the notification
     # service to be configured with valid MS Graph API credentials.

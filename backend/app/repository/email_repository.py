@@ -3,16 +3,12 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 from app.models.email_logs import EmailLog
-from app.models.users import User
 from app.models.system_config import SystemConfig
 
 
 class EmailRepository:
     def __init__(self, db: Session):
         self.db = db
-
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
-        return self.db.query(User).filter(User.id == user_id).first()
 
     def is_email_enabled(self) -> bool:
         row = self.db.query(SystemConfig).filter(

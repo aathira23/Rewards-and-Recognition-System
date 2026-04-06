@@ -154,15 +154,12 @@ class RecognitionService:
         if persona_type == "DEPARTMENT":
             if persona_label:
                 return persona_label
-            # Derive from the sender's department
-            user = self.repository.get_user_by_id(sender_id)
-            if user and user.department_id:
-                from app.models.departments import Department
-                dept = self.db.query(Department).filter(
-                    Department.id == user.department_id
-                ).first()
-                if dept:
-                    return dept.name
+            # Derive from the sender's profile via User Service
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                profile = get_user_profile(sender_id, self._token)
+                if profile and profile.department_name:
+                    return profile.department_name
             return "Your Department"
 
         return None
@@ -185,11 +182,6 @@ class RecognitionService:
         """
         if sender_id == receiver_id:
             raise ValueError("You cannot send a recognition to yourself.")
-
-        # 0. Lazy sync recipient if missing (for User Service mode)
-        from app.core.config import settings
-        if settings.AUTH_MODE == "user_service" and token:
-            self._sync_recipient(receiver_id, token)
 
         # 1. Validate badge
         badge = self.get_badge_by_id(badge_id)
@@ -256,10 +248,6 @@ class RecognitionService:
                 sender_profile = get_user_profile(sender_id, self._token)
                 if sender_profile:
                     display_name = sender_profile.name
-            if display_name == "A colleague":
-                sender = self.repository.get_user_by_id(sender_id)
-                if sender:
-                    display_name = sender.name
 
         self.notification_service.create_notification(
             user_id=receiver_id,
@@ -276,24 +264,6 @@ class RecognitionService:
         )
 
         return ecard
-
-    def _sync_recipient(self, user_id: int, token: str) -> None:
-        """Fetch user from User Service and upsert locally if missing."""
-        from app.models.users import User
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if user:
-            return
-
-        from app.services import user_profiles_client
-        from app.services.user_sync_service import sync_user_data
-        try:
-            profile = user_profiles_client.get_user_profile(user_id, token)
-            if profile:
-                sync_user_data(self.db, profile)
-        except Exception:
-            self.db.rollback()
-            import logging
-            logging.getLogger(__name__).warning("Failed to sync recipient %s", user_id, exc_info=True)
 
     def get_recognition_feed(self, page: int = 1, per_page: int = 20):
         """Get company-wide recognition feed. Returns (total, items)."""
@@ -397,8 +367,12 @@ class RecognitionService:
 
         # 2. Award points
         # Find an admin user to act as the "system" sender
-        admin = self.repository.get_admin_user()
-        system_actor_id = admin.id if admin else 1
+        system_actor_id = 1
+        if self._token:
+            from app.services.user_profiles_client import get_users_by_role
+            admins = get_users_by_role(self._token, ["ADMIN"])
+            if admins:
+                system_actor_id = admins[0].id
 
         entry = self.create_feed_entry(
             actor_id=system_actor_id,
@@ -439,12 +413,20 @@ class RecognitionService:
         else:
             results = self.repository.get_recognition_leaderboard(start_date, limit)
 
+        # Batch-resolve user names/departments via User Service
+        user_ids = [r[0] for r in results]
+        profiles_map = {}
+        if self._token and user_ids:
+            from app.services.user_profiles_client import get_users_batch
+            profiles_map = get_users_batch(user_ids, self._token)
+
         leaderboard = []
-        for rank, (user, score, secondary) in enumerate(results, start=1):
+        for rank, (user_id, score, secondary) in enumerate(results, start=1):
+            profile = profiles_map.get(user_id)
             leaderboard.append({
-                "user_id": user.id,
-                "name": user.name,
-                "department_name": user.department.name if user.department else None,
+                "user_id": user_id,
+                "name": profile.name if profile else f"User {user_id}",
+                "department_name": profile.department_name if profile else None,
                 "rank": rank,
                 "score": int(score or 0),
                 "recognitions_received": int(secondary or 0) if metric == "POINTS" else int(score or 0)

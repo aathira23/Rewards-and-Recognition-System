@@ -66,6 +66,7 @@ def _parse_profile(raw: dict) -> Optional[UserProfile]:
         dob=raw.get("dob"),
         date_of_joining=raw.get("date_of_joining"),
         is_active=raw.get("is_active"),
+        manager_id=_safe_int(raw.get("manager_id") or raw.get("reporting_to_id")),
     )
 
 
@@ -235,3 +236,36 @@ def invalidate_all_profiles() -> None:
     _profile_cache.clear()
     _picker_cache.clear()
     logger.info("Cache 2 cleared (profiles and pickers)")
+
+
+# ── Convenience helpers (used by services that no longer query the Users table) ──
+
+def get_all_cached_profiles() -> Dict[int, UserProfile]:
+    """Return a snapshot of all currently cached user profiles.
+
+    Used by the celebrations job and analytics — avoids a DB table scan.
+    Callers should first warm the cache via ``get_users_list(token, 0, 10000)``
+    to ensure completeness.
+    """
+    return dict(_profile_cache)
+
+
+def get_users_by_role(token: str, roles: List[str]) -> List[UserProfile]:
+    """Return profiles matching one of *roles* (case-insensitive).
+
+    Fetches all users (up to 10 000) and filters in memory.
+    """
+    all_data = get_users_list(token, skip=0, limit=10_000)
+    return [
+        p for p in all_data.get("items", [])
+        if p.role and p.role.upper() in {r.upper() for r in roles}
+    ]
+
+
+def get_dept_head(token: str, department_id: int) -> Optional[UserProfile]:
+    """Return the DEPT_HEAD profile for *department_id*, or None."""
+    matches = get_users_by_role(token, ["DEPT_HEAD"])
+    for p in matches:
+        if p.department_id == department_id:
+            return p
+    return None
