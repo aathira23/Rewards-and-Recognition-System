@@ -34,12 +34,12 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       textTheme: GoogleFonts.interTextTheme(),
-      cardTheme: CardThemeData(
+      cardTheme: const CardTheme(
         color: surfaceWhite,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: Color(0xFFE0E0E0)),
         ),
       ),
       inputDecorationTheme:
@@ -55,7 +55,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: brandBlue,
         primary: brandBlue,
-        secondary: brandBlue.withValues(alpha: 0.8),
+        secondary: brandBlue.withOpacity(0.8),
         surface: darkSurface,
         surfaceContainer: darkBackground,
         brightness: Brightness.dark,
@@ -64,12 +64,12 @@ class AppTheme {
         onSurface: Colors.white,
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: darkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: Colors.white.withOpacity(0.1)),
         ),
       ),
       inputDecorationTheme: _inputDecoration(brandBlue, Colors.white24),
@@ -132,7 +132,7 @@ class AppTheme {
         foregroundColor: color,
         minimumSize: const Size(88, 46),
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        side: BorderSide(color: color.withValues(alpha: 0.2)),
+        side: BorderSide(color: color.withOpacity(0.2)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

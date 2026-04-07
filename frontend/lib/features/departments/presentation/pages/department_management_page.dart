@@ -102,7 +102,7 @@ class _DepartmentManagementView extends StatelessWidget {
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.1),
+                                    .withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(Icons.business_rounded,

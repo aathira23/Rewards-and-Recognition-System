@@ -347,7 +347,7 @@ class _AwardsViewState extends State<_AwardsView>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppTheme.brandBlue.withValues(alpha: 0.1),
+                              color: AppTheme.brandBlue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -385,7 +385,7 @@ class _AwardsViewState extends State<_AwardsView>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
+                    color: Colors.black.withOpacity(0.03),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -587,7 +587,7 @@ class _AwardsViewState extends State<_AwardsView>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -633,7 +633,7 @@ class _AwardsViewState extends State<_AwardsView>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -940,7 +940,7 @@ class _AwardsViewState extends State<_AwardsView>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: cardColor.withValues(alpha: 0.06),
+            color: cardColor.withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1034,7 +1034,7 @@ class _AwardsViewState extends State<_AwardsView>
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: const Color(0xFF16A34A)
-                                  .withValues(alpha: 0.08),
+                                  .withOpacity(0.08),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -1058,10 +1058,10 @@ class _AwardsViewState extends State<_AwardsView>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: cardColor.withValues(alpha: 0.05),
+                          color: cardColor.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: cardColor.withValues(alpha: 0.18)),
+                              color: cardColor.withOpacity(0.18)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1112,7 +1112,7 @@ class _AwardsViewState extends State<_AwardsView>
                                 children: [
                                   Icon(Icons.chat_bubble_outline_rounded,
                                       size: 12,
-                                      color: cardColor.withValues(alpha: 0.7)),
+                                      color: cardColor.withOpacity(0.7)),
                                   const SizedBox(width: 5),
                                   Expanded(
                                     child: Text(
@@ -1246,7 +1246,7 @@ class _AwardsViewState extends State<_AwardsView>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: statusColor.withValues(alpha: 0.06),
+            color: statusColor.withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1335,7 +1335,7 @@ class _AwardsViewState extends State<_AwardsView>
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: const Color(0xFF16A34A)
-                                  .withValues(alpha: 0.08),
+                                  .withOpacity(0.08),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text('+$pts pts',

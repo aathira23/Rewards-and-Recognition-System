@@ -258,7 +258,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.05)
+              ? theme.colorScheme.primary.withOpacity(0.05)
               : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
@@ -268,7 +268,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
+              color: Colors.black.withOpacity(0.02),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -283,7 +283,7 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(AwardUtils.getIcon(type.awardKey),
@@ -492,14 +492,14 @@ class _NominateEmployeeDialogState extends State<NominateEmployeeDialog> {
                                 horizontal: 14, vertical: 10),
                             color: isSel
                                 ? theme.colorScheme.primary
-                                    .withValues(alpha: 0.06)
+                                    .withOpacity(0.06)
                                 : Colors.transparent,
                             child: Row(
                               children: [
                                 CircleAvatar(
                                   radius: 15,
                                   backgroundColor: theme.colorScheme.primary
-                                      .withValues(alpha: 0.12),
+                                      .withOpacity(0.12),
                                   child: Text(
                                     user.name.isNotEmpty
                                         ? user.name[0].toUpperCase()

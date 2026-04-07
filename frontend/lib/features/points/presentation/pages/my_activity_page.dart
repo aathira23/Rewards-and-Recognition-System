@@ -255,7 +255,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 1),
                   )
@@ -306,7 +306,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.brandBlue.withValues(alpha: 0.3),
+                color: AppTheme.brandBlue.withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -324,7 +324,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                       child: _buildBalancePart(isBudget, balance, totalPoints),
                     ),
                     Divider(
-                        color: Colors.white.withValues(alpha: 0.15), height: 1),
+                        color: Colors.white.withOpacity(0.15), height: 1),
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: isBudget
@@ -332,7 +332,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                           : _buildStatsRow(summary, recognitionsState),
                     ),
                     Divider(
-                        color: Colors.white.withValues(alpha: 0.15), height: 1),
+                        color: Colors.white.withOpacity(0.15), height: 1),
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: _buildProgressPart(
@@ -367,7 +367,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 28),
                             child: Divider(
-                                color: Colors.white.withValues(alpha: 0.15),
+                                color: Colors.white.withOpacity(0.15),
                                 height: 1),
                           ),
                           Padding(
@@ -383,7 +383,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
 
                     // ── VERTICAL DIVIDER ──────────────────────────────────────
                     VerticalDivider(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: Colors.white.withOpacity(0.15),
                       width: 1,
                       indent: 20,
                       endIndent: 20,
@@ -421,7 +421,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
       children: [
         Text(isBudget ? 'Manager Balance' : 'Current Balance',
             style:
-                AppTextStyles.body(color: Colors.white.withValues(alpha: 0.7))),
+                AppTextStyles.body(color: Colors.white.withOpacity(0.7))),
         const SizedBox(height: 6),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -441,7 +441,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
               padding: const EdgeInsets.only(top: 12.0),
               child: Text('pts',
                   style: AppTextStyles.headline1(
-                          color: Colors.white.withValues(alpha: 0.6))
+                          color: Colors.white.withOpacity(0.6))
                       .copyWith(fontSize: 18)),
             ),
           ],
@@ -498,7 +498,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                         .copyWith(fontSize: 20)),
                 Text(isBudget ? 'Activity tracking' : 'Keep going!',
                     style: AppTextStyles.small(
-                        color: Colors.white.withValues(alpha: 0.6))),
+                        color: Colors.white.withOpacity(0.6))),
               ],
             ),
           ],
@@ -514,7 +514,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                     ? '$rewarded / $allocated pts'
                     : '$totalPoints / $nextThreshold pts',
                 style: AppTextStyles.small(
-                    color: Colors.white.withValues(alpha: 0.7))),
+                    color: Colors.white.withOpacity(0.7))),
           ],
         ),
         const SizedBox(height: 12),
@@ -525,7 +525,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                 ? usageProgress
                 : LevelingUtils.getProgress(totalPoints),
             minHeight: 10,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            backgroundColor: Colors.white.withOpacity(0.2),
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFACC15)),
           ),
         ),
@@ -655,11 +655,11 @@ class _MyActivityPageState extends State<MyActivityPage> {
         }
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withValues(alpha: 0.15),
+        backgroundColor: Colors.white.withOpacity(0.15),
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+        side: BorderSide(color: Colors.white.withOpacity(0.2)),
         elevation: 0,
       ),
       child: const Row(
@@ -698,11 +698,11 @@ class _MyActivityPageState extends State<MyActivityPage> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: Colors.white.withValues(alpha: 0.7)),
+            Icon(icon, size: 14, color: Colors.white.withOpacity(0.7)),
             const SizedBox(width: 6),
             Text(label,
                 style: AppTextStyles.captionStrong(
-                        color: Colors.white.withValues(alpha: 0.7))
+                        color: Colors.white.withOpacity(0.7))
                     .copyWith(fontSize: 11)),
           ],
         ),
@@ -726,7 +726,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -973,9 +973,9 @@ class _MyActivityPageState extends State<MyActivityPage> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
-                color: ptColor.withValues(alpha: 0.05),
+                color: ptColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: ptColor.withValues(alpha: 0.1)),
+                border: Border.all(color: ptColor.withOpacity(0.1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -992,7 +992,7 @@ class _MyActivityPageState extends State<MyActivityPage> {
                   Text(
                     'Points',
                     style: AppTextStyles.bodyBold(
-                        color: ptColor.withValues(alpha: 0.7)),
+                        color: ptColor.withOpacity(0.7)),
                   ),
                 ],
               ),

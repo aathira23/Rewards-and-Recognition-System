@@ -24,7 +24,7 @@ class AppreciationComposer extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -32,7 +32,7 @@ class AppreciationComposer extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -165,7 +165,7 @@ class _BadgeCardState extends State<_BadgeCard> {
             decoration: BoxDecoration(
               border: Border.all(
                 color: _isHovered
-                    ? badgeInfo.color.withValues(alpha: 0.5)
+                    ? badgeInfo.color.withOpacity(0.5)
                     : Colors.grey[200]!,
                 width: _isHovered ? 1.5 : 1,
               ),
@@ -174,7 +174,7 @@ class _BadgeCardState extends State<_BadgeCard> {
               boxShadow: [
                 if (_isHovered)
                   BoxShadow(
-                    color: badgeInfo.color.withValues(alpha: 0.1),
+                    color: badgeInfo.color.withOpacity(0.1),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -190,7 +190,7 @@ class _BadgeCardState extends State<_BadgeCard> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: badgeInfo.color.withValues(alpha: 0.15),
+                        color: badgeInfo.color.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Center(

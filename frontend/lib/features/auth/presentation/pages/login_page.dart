@@ -482,7 +482,7 @@ class _LoginCarouselState extends State<_LoginCarousel> {
                       slide['subtitle'],
                       textAlign: TextAlign.center,
                       style: AppTextStyles.loginSubtitle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withOpacity(0.8),
                       ),
                     ),
                   ),
@@ -518,7 +518,7 @@ class _LoginCarouselState extends State<_LoginCarousel> {
                     decoration: BoxDecoration(
                       color: index == _currentPage
                           ? Colors.white
-                          : Colors.white.withValues(alpha: 0.4),
+                          : Colors.white.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

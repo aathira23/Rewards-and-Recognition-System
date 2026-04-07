@@ -120,12 +120,12 @@ class _NotificationsView extends StatelessWidget {
       decoration: BoxDecoration(
         color: notification.isRead
             ? Colors.white
-            : theme.colorScheme.primary.withValues(alpha: 0.03),
+            : theme.colorScheme.primary.withOpacity(0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: notification.isRead
               ? Colors.grey.shade200
-              : theme.colorScheme.primary.withValues(alpha: 0.15),
+              : theme.colorScheme.primary.withOpacity(0.15),
         ),
       ),
       child: Row(
@@ -134,7 +134,7 @@ class _NotificationsView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),

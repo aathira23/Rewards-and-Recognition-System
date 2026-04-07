@@ -141,7 +141,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
             ),
             padding: const EdgeInsets.all(4),
             child: Row(
@@ -194,7 +194,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -315,7 +315,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
       child: Column(
@@ -335,7 +335,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: entries.length,
             separatorBuilder: (context, index) =>
-                Divider(color: Colors.grey.withValues(alpha: 0.1), height: 32),
+                Divider(color: Colors.grey.withOpacity(0.1), height: 32),
             itemBuilder: (context, index) {
               final entry = entries[index];
               return _buildListRow(entry);

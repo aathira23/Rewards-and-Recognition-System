@@ -83,7 +83,7 @@ class BadgesEarnedSummary extends StatelessWidget {
                             Border.all(color: Colors.grey.shade200, width: 1),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
+                            color: Colors.black.withOpacity(0.03),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -95,7 +95,7 @@ class BadgesEarnedSummary extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: info.color.withValues(alpha: 0.08),
+                              color: info.color.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
@@ -276,7 +276,7 @@ class _EcardPreviewCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.25)),
+        border: Border.all(color: badgeColor.withOpacity(0.25)),
       ),
       child: Column(
         children: [
@@ -284,14 +284,14 @@ class _EcardPreviewCard extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 20),
-            color: badgeColor.withValues(alpha: 0.08),
+            color: badgeColor.withOpacity(0.08),
             child: Column(
               children: [
                 Container(
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.15),
+                    color: badgeColor.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -441,7 +441,7 @@ class _FeedItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -456,7 +456,7 @@ class _FeedItem extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: info.color.withValues(alpha: 0.12),
+                backgroundColor: info.color.withOpacity(0.12),
                 child: Text(senderName.substring(0, 1).toUpperCase(),
                     style: TextStyle(
                         color: info.color,
@@ -662,11 +662,11 @@ class _SendBadgeCardState extends State<_SendBadgeCard> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
           decoration: BoxDecoration(
-            color: _hovered ? info.color.withValues(alpha: 0.05) : Colors.white,
+            color: _hovered ? info.color.withOpacity(0.05) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: _hovered
-                  ? info.color.withValues(alpha: 0.4)
+                  ? info.color.withOpacity(0.4)
                   : Colors.grey.shade200,
             ),
           ),
@@ -677,7 +677,7 @@ class _SendBadgeCardState extends State<_SendBadgeCard> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: info.color.withValues(alpha: 0.1),
+                  color: info.color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -938,7 +938,7 @@ class _EcardHistoryTableState extends State<EcardHistoryTable> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: info.color.withValues(alpha: 0.15),
+                        color: info.color.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -1038,10 +1038,10 @@ class _HistoryEntry {
 BoxDecoration _cardDecoration(BuildContext context) => BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+      border: Border.all(color: Colors.grey.withOpacity(0.1)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.03),
+          color: Colors.black.withOpacity(0.03),
           blurRadius: 15,
           offset: const Offset(0, 5),
         ),

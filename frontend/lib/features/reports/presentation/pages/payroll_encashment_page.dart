@@ -257,7 +257,7 @@ class _PayrollViewState extends State<_PayrollView> {
                 CircleAvatar(
                   radius: 14,
                   backgroundColor:
-                      theme.colorScheme.primary.withValues(alpha: 0.1),
+                      theme.colorScheme.primary.withOpacity(0.1),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: TextStyle(

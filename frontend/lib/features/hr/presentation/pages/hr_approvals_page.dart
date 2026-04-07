@@ -468,7 +468,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
             child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
                 style: TextStyle(
                     color: theme.colorScheme.primary,
@@ -489,7 +489,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+              color: theme.colorScheme.primary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text('$walletBal pts',
@@ -576,10 +576,10 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+              color: theme.colorScheme.primaryContainer.withOpacity(0.4),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                  color: theme.colorScheme.primary.withOpacity(0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

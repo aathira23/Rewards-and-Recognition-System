@@ -1218,8 +1218,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.08),
+                            color: theme.colorScheme.primary.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -1257,7 +1256,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                                     ),
                                   );
                             },
-                            activeThumbColor: theme.colorScheme.primary,
+                            activeColor: theme.colorScheme.primary,
                           ),
                         ] else ...[
                           Container(

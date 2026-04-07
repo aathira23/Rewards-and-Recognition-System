@@ -206,7 +206,7 @@ class EmployeeRecognitionsPage extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: const SizedBox(
         height: 200,

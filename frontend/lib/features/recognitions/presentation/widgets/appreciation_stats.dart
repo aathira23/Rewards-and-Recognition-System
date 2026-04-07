@@ -55,7 +55,7 @@ class _AppreciationStatsState extends State<AppreciationStats> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -63,7 +63,7 @@ class _AppreciationStatsState extends State<AppreciationStats> {
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -95,7 +95,7 @@ class _AppreciationStatsState extends State<AppreciationStats> {
                           color: Theme.of(context)
                               .colorScheme
                               .primary
-                              .withValues(alpha: 0.1),
+                              .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -118,7 +118,7 @@ class _AppreciationStatsState extends State<AppreciationStats> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.amber.withValues(alpha: 0.12),
+                                color: Colors.amber.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -155,10 +155,10 @@ class _AppreciationStatsState extends State<AppreciationStats> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(48),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.03),
+                  color: Colors.grey.withOpacity(0.03),
                   borderRadius: BorderRadius.circular(16),
                   border:
-                      Border.all(color: Colors.grey.withValues(alpha: 0.08)),
+                      Border.all(color: Colors.grey.withOpacity(0.08)),
                 ),
                 child: Column(
                   children: [
@@ -220,7 +220,7 @@ class _AppreciationStatsState extends State<AppreciationStats> {
                                 Theme.of(context)
                                     .colorScheme
                                     .surface
-                                    .withValues(alpha: 0.0),
+                                    .withOpacity(0.0),
                                 Theme.of(context).colorScheme.surface,
                               ],
                             ),
@@ -258,7 +258,7 @@ class _AppreciationStatsState extends State<AppreciationStats> {
                                 Theme.of(context)
                                     .colorScheme
                                     .surface
-                                    .withValues(alpha: 0.0),
+                                    .withOpacity(0.0),
                                 Theme.of(context).colorScheme.surface,
                               ],
                               stops: const [0.0, 1.0],
@@ -335,11 +335,11 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
           padding: _isHovered ? EdgeInsets.zero : const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _isHovered
-                ? badgeInfo.color.withValues(alpha: 0.06)
+                ? badgeInfo.color.withOpacity(0.06)
                 : Theme.of(context).colorScheme.surface,
             border: Border.all(
               color: _isHovered
-                  ? badgeInfo.color.withValues(alpha: 0.4)
+                  ? badgeInfo.color.withOpacity(0.4)
                   : Colors.grey[200]!,
               width: _isHovered ? 1.5 : 1,
             ),
@@ -347,13 +347,13 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
             boxShadow: [
               if (_isHovered)
                 BoxShadow(
-                  color: badgeInfo.color.withValues(alpha: 0.15),
+                  color: badgeInfo.color.withOpacity(0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 )
               else
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -396,7 +396,7 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: badgeInfo.color.withValues(alpha: 0.15),
+            color: badgeInfo.color.withOpacity(0.15),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -428,7 +428,7 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: badgeInfo.color.withValues(alpha: 0.15),
+              color: badgeInfo.color.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -493,7 +493,7 @@ class _ReceivedHoverCardState extends State<_ReceivedHoverCard>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: badgeInfo.color.withValues(alpha: 0.12),
+                          color: badgeInfo.color.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(

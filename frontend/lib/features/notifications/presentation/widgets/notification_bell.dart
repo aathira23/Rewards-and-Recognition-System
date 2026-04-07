@@ -117,7 +117,7 @@ class _NotificationBellState extends State<NotificationBell> {
                   size: 24,
                   color: isOpen
                       ? Colors.white
-                      : Colors.white.withValues(alpha: 0.85),
+                      : Colors.white.withOpacity(0.85),
                 ),
                 onPressed: _togglePanel,
                 tooltip: 'Notifications',
@@ -171,7 +171,7 @@ class _NotificationsPanel extends StatelessWidget {
     return Material(
       elevation: 16,
       borderRadius: BorderRadius.circular(16),
-      shadowColor: Colors.black.withValues(alpha: 0.12),
+      shadowColor: Colors.black.withOpacity(0.12),
       clipBehavior: Clip.antiAlias,
       child: Container(
         width: 380,
@@ -378,7 +378,7 @@ class _NotificationItem extends StatelessWidget {
       child: Container(
         color: notification.isRead
             ? Colors.transparent
-            : theme.colorScheme.primary.withValues(alpha: 0.03),
+            : theme.colorScheme.primary.withOpacity(0.03),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,7 +389,7 @@ class _NotificationItem extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(icon, size: 18, color: color),
@@ -446,7 +446,7 @@ class _NotificationItem extends StatelessWidget {
       BuildContext context, IconData icon, Color color, ThemeData theme) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.4),
+      barrierColor: Colors.black.withOpacity(0.4),
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -459,7 +459,7 @@ class _NotificationItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
+                  color: Colors.black.withOpacity(0.12),
                   blurRadius: 28,
                   offset: const Offset(0, 10),
                 ),
@@ -476,7 +476,7 @@ class _NotificationItem extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(icon, color: color, size: 20),
@@ -740,15 +740,15 @@ class _NotificationItem extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
+          color: color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
+          border: Border.all(color: color.withOpacity(0.15)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.info_outline_rounded,
-                size: 15, color: color.withValues(alpha: 0.7)),
+                size: 15, color: color.withOpacity(0.7)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
