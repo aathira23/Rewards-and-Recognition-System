@@ -252,7 +252,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: Colors.orange.withValues(alpha: 0.12),
+              backgroundColor: Colors.orange.withOpacity(0.12),
               child: const Icon(
                 Icons.account_balance_wallet_outlined,
                 color: Colors.orange,
@@ -331,7 +331,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                   border: Border.all(color: const Color(0xFFE8EAF6)),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.brandBlue.withValues(alpha: 0.06),
+                      color: AppTheme.brandBlue.withOpacity(0.06),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -355,7 +355,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.18),
+                              color: Colors.white.withOpacity(0.18),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.swap_horiz_rounded,
@@ -376,7 +376,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               Text(
                                 '1 pt = ₹${currentRate.toStringAsFixed(3)}',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.72),
+                                  color: Colors.white.withOpacity(0.72),
                                   fontSize: 12,
                                 ),
                               ),
@@ -677,7 +677,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color:
-                                AppTheme.brandBlue.withValues(alpha: 0.08),
+                                AppTheme.brandBlue.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -699,7 +699,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color:
-                                const Color(0xFF059669).withValues(alpha: 0.08),
+                                const Color(0xFF059669).withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -811,7 +811,7 @@ class _EmployeeRewardsPageState extends State<EmployeeRewardsPage> {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3B31A5).withValues(alpha: 0.1),
+                    color: const Color(0xFF3B31A5).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.sync_alt_rounded,
@@ -1436,7 +1436,7 @@ class _ConversionStep extends StatelessWidget {
           width: 26,
           height: 26,
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
+            color: color.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
           child: Center(

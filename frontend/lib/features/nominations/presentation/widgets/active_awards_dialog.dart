@@ -95,7 +95,7 @@ class _AwardListTile extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -109,7 +109,7 @@ class _AwardListTile extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(AwardUtils.getIcon(type.awardKey),

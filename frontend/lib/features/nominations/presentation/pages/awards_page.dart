@@ -129,8 +129,6 @@ class _AwardsViewState extends State<_AwardsView>
   // ── build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final isMobile = Responsive.isMobile(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: BlocListener<NominationsBloc, NominationsState>(
@@ -165,7 +163,9 @@ class _AwardsViewState extends State<_AwardsView>
                   // Right Sidebar: Company Feed (Awards Only)
                   if (MediaQuery.of(context).size.width > 950)
                     SizedBox(
-                      width: (MediaQuery.of(context).size.width * 0.3).clamp(320.0, 450.0).toDouble(),
+                      width: (MediaQuery.of(context).size.width * 0.3)
+                          .clamp(320.0, 450.0)
+                          .toDouble(),
                       child: _buildCompanyFeed(context),
                     ),
                 ],
@@ -195,7 +195,8 @@ class _AwardsViewState extends State<_AwardsView>
             }
 
             return GestureDetector(
-              onTap: () => MainLayout.of(context)?.selectTabByTitle(destination),
+              onTap: () =>
+                  MainLayout.of(context)?.selectTabByTitle(destination),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: Row(
@@ -225,41 +226,41 @@ class _AwardsViewState extends State<_AwardsView>
     );
 
     final rightButton = BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, authState) {
-              UserEntity? currentUser;
-              if (authState is AuthAuthenticated) {
-                currentUser = authState.auth.user;
-              }
-              return BlocBuilder<NominationsBloc, NominationsState>(
-                builder: (context, state) {
-                  return ElevatedButton.icon(
-                    onPressed: (state.awardTypes.isEmpty || currentUser == null)
-                        ? null
-                        : () => showDialog(
-                              context: context,
-                              builder: (_) => ActiveAwardsDialog(
-                                awardTypes: state.awardTypes,
-                                users: state.users,
-                                bloc: context.read<NominationsBloc>(),
-                                currentUser: currentUser!,
-                              ),
-                            ),
-                    icon: const Icon(Icons.emoji_events_rounded, size: 18),
-                    label: const Text('View & Nominate'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.brandBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  );
-                },
-              );
-            },
-          );
+      builder: (context, authState) {
+        UserEntity? currentUser;
+        if (authState is AuthAuthenticated) {
+          currentUser = authState.auth.user;
+        }
+        return BlocBuilder<NominationsBloc, NominationsState>(
+          builder: (context, state) {
+            return ElevatedButton.icon(
+              onPressed: (state.awardTypes.isEmpty || currentUser == null)
+                  ? null
+                  : () => showDialog(
+                        context: context,
+                        builder: (_) => ActiveAwardsDialog(
+                          awardTypes: state.awardTypes,
+                          users: state.users,
+                          bloc: context.read<NominationsBloc>(),
+                          currentUser: currentUser!,
+                        ),
+                      ),
+              icon: const Icon(Icons.emoji_events_rounded, size: 18),
+              label: const Text('View & Nominate'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.brandBlue,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+            );
+          },
+        );
+      },
+    );
 
     if (isMobile) {
       return Container(
@@ -366,7 +367,7 @@ class _AwardsViewState extends State<_AwardsView>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppTheme.brandBlue.withValues(alpha: 0.1),
+                              color: AppTheme.brandBlue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -388,14 +389,15 @@ class _AwardsViewState extends State<_AwardsView>
   }
 
   // ── Company Feed Sidebar ──────────────────────────────────────────
-  Widget _buildCompanyFeed(BuildContext context, {bool useExpanded = true, EdgeInsetsGeometry? customMargin}) {
+  Widget _buildCompanyFeed(BuildContext context,
+      {bool useExpanded = true, EdgeInsetsGeometry? customMargin}) {
     final feedContent = Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -407,7 +409,8 @@ class _AwardsViewState extends State<_AwardsView>
               .where((r) => (r.sourceType ?? '').toUpperCase() == 'AWARD')
               .toList();
           if (state.status == RecognitionStatus.loading && state.feed.isEmpty) {
-            return const Center(child: Padding(
+            return const Center(
+                child: Padding(
               padding: EdgeInsets.all(32.0),
               child: CircularProgressIndicator(),
             ));
@@ -415,26 +418,30 @@ class _AwardsViewState extends State<_AwardsView>
           if (awardsFeed.isEmpty) {
             return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Text('No recent awards',
-                      style: AppTextStyles.body(color: Colors.grey[500])),
-                ));
+              padding: const EdgeInsets.all(32.0),
+              child: Text('No recent awards',
+                  style: AppTextStyles.body(color: Colors.grey[500])),
+            ));
           }
           return RecognitionFeedList(
             feed: awardsFeed,
             shrinkWrap: true,
-            physics: useExpanded ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
+            physics: useExpanded
+                ? const AlwaysScrollableScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
           );
         },
       ),
     );
 
     return Container(
-      margin: customMargin ?? const EdgeInsets.only(left: 24, right: 32, top: 32, bottom: 24),
+      margin: customMargin ??
+          const EdgeInsets.only(left: 24, right: 32, top: 32, bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Company Feed', style: AppTextStyles.headline1(color: Colors.black87)),
+          Text('Company Feed',
+              style: AppTextStyles.headline1(color: Colors.black87)),
           const SizedBox(height: 24),
           useExpanded ? Expanded(child: feedContent) : feedContent,
         ],
@@ -506,9 +513,8 @@ class _AwardsViewState extends State<_AwardsView>
                 const SizedBox(height: 48),
                 const Divider(),
                 const SizedBox(height: 16),
-                _buildCompanyFeed(context, 
-                    useExpanded: false, 
-                    customMargin: EdgeInsets.zero),
+                _buildCompanyFeed(context,
+                    useExpanded: false, customMargin: EdgeInsets.zero),
               ]
             ],
           ),
@@ -570,9 +576,8 @@ class _AwardsViewState extends State<_AwardsView>
                 const SizedBox(height: 48),
                 const Divider(),
                 const SizedBox(height: 16),
-                _buildCompanyFeed(context, 
-                    useExpanded: false, 
-                    customMargin: EdgeInsets.zero),
+                _buildCompanyFeed(context,
+                    useExpanded: false, customMargin: EdgeInsets.zero),
               ]
             ],
           ),
@@ -635,7 +640,7 @@ class _AwardsViewState extends State<_AwardsView>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -681,7 +686,7 @@ class _AwardsViewState extends State<_AwardsView>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -708,7 +713,8 @@ class _AwardsViewState extends State<_AwardsView>
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(nom.awardTypeName,
-                          style: AppTextStyles.sectionTitle(color: Colors.black87),
+                          style:
+                              AppTextStyles.sectionTitle(color: Colors.black87),
                           overflow: TextOverflow.ellipsis),
                     ),
                   ],
@@ -818,7 +824,8 @@ class _AwardsViewState extends State<_AwardsView>
                                           : nom.reviewerLevel!.toUpperCase() ==
                                                   'MANAGER'
                                               ? 'Manager'
-                                              : nom.reviewerLevel!.toUpperCase() ==
+                                              : nom.reviewerLevel!
+                                                          .toUpperCase() ==
                                                       'HR'
                                                   ? 'HR'
                                                   : nom.reviewerLevel!
@@ -828,7 +835,8 @@ class _AwardsViewState extends State<_AwardsView>
                                           nom.reviewerName!.isNotEmpty
                                       ? ' (${nom.reviewerName})'
                                       : ''),
-                              style: AppTextStyles.smallBold(color: Colors.black87),
+                              style: AppTextStyles.smallBold(
+                                  color: Colors.black87),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -979,9 +987,8 @@ class _AwardsViewState extends State<_AwardsView>
             const SizedBox(height: 32),
             const Divider(),
             const SizedBox(height: 16),
-            _buildCompanyFeed(context, 
-                useExpanded: false, 
-                customMargin: EdgeInsets.zero),
+            _buildCompanyFeed(context,
+                useExpanded: false, customMargin: EdgeInsets.zero),
           ]
         ],
       ),
@@ -1021,7 +1028,7 @@ class _AwardsViewState extends State<_AwardsView>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: cardColor.withValues(alpha: 0.06),
+            color: cardColor.withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1114,8 +1121,7 @@ class _AwardsViewState extends State<_AwardsView>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16A34A)
-                                  .withValues(alpha: 0.08),
+                              color: const Color(0xFF16A34A).withOpacity(0.08),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -1139,10 +1145,10 @@ class _AwardsViewState extends State<_AwardsView>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: cardColor.withValues(alpha: 0.05),
+                          color: cardColor.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: cardColor.withValues(alpha: 0.18)),
+                          border:
+                              Border.all(color: cardColor.withOpacity(0.18)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1193,7 +1199,7 @@ class _AwardsViewState extends State<_AwardsView>
                                 children: [
                                   Icon(Icons.chat_bubble_outline_rounded,
                                       size: 12,
-                                      color: cardColor.withValues(alpha: 0.7)),
+                                      color: cardColor.withOpacity(0.7)),
                                   const SizedBox(width: 5),
                                   Expanded(
                                     child: Text(
@@ -1300,9 +1306,8 @@ class _AwardsViewState extends State<_AwardsView>
                 const SizedBox(height: 32),
                 const Divider(),
                 const SizedBox(height: 16),
-                _buildCompanyFeed(context, 
-                    useExpanded: false, 
-                    customMargin: EdgeInsets.zero),
+                _buildCompanyFeed(context,
+                    useExpanded: false, customMargin: EdgeInsets.zero),
               ]
             ],
           ),
@@ -1348,7 +1353,7 @@ class _AwardsViewState extends State<_AwardsView>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: statusColor.withValues(alpha: 0.06),
+            color: statusColor.withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1436,8 +1441,7 @@ class _AwardsViewState extends State<_AwardsView>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16A34A)
-                                  .withValues(alpha: 0.08),
+                              color: const Color(0xFF16A34A).withOpacity(0.08),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text('+$pts pts',

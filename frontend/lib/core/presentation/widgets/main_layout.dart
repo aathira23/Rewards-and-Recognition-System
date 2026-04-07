@@ -201,8 +201,8 @@ class MainLayoutState extends State<MainLayout> {
             _hoveredNavIndex = hovering ? index : null;
           });
         },
-        splashColor: _sidebarActiveColor.withValues(alpha: 0.12),
-        highlightColor: _sidebarActiveColor.withValues(alpha: 0.06),
+        splashColor: _sidebarActiveColor.withOpacity(0.12),
+        highlightColor: _sidebarActiveColor.withOpacity(0.06),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
           child: Row(
@@ -228,7 +228,7 @@ class MainLayoutState extends State<MainLayout> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: isActive
-                            ? _sidebarActiveColor.withValues(alpha: 0.10)
+                            ? _sidebarActiveColor.withOpacity(0.10)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -237,7 +237,7 @@ class MainLayoutState extends State<MainLayout> {
                         size: 22,
                         color: isActive
                             ? _sidebarActiveColor
-                            : _sidebarTextColor.withValues(alpha: 0.75),
+                            : _sidebarTextColor.withOpacity(0.75),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -249,7 +249,7 @@ class MainLayoutState extends State<MainLayout> {
                             isActive ? FontWeight.w700 : FontWeight.w500,
                         color: isActive
                             ? _sidebarActiveColor
-                            : _sidebarTextColor.withValues(alpha: 0.75),
+                            : _sidebarTextColor.withOpacity(0.75),
                         letterSpacing: 0.1,
                       ),
                       maxLines: 1,
@@ -294,12 +294,12 @@ class MainLayoutState extends State<MainLayout> {
               });
             },
             borderRadius: BorderRadius.circular(8),
-            splashColor: _sidebarActiveColor.withValues(alpha: 0.10),
+            splashColor: _sidebarActiveColor.withOpacity(0.10),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: isActive
-                    ? _sidebarActiveColor.withValues(alpha: 0.08)
+                    ? _sidebarActiveColor.withOpacity(0.08)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -319,7 +319,7 @@ class MainLayoutState extends State<MainLayout> {
                       size: 20,
                       color: isActive
                           ? _sidebarActiveColor
-                          : _sidebarTextColor.withValues(alpha: 0.75)),
+                          : _sidebarTextColor.withOpacity(0.75)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
@@ -328,7 +328,7 @@ class MainLayoutState extends State<MainLayout> {
                         isSelected: isActive,
                         color: isActive
                             ? _sidebarActiveColor
-                            : _sidebarTextColor.withValues(alpha: 0.75),
+                            : _sidebarTextColor.withOpacity(0.75),
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -372,7 +372,7 @@ class MainLayoutState extends State<MainLayout> {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: isPopupOpen
-                    ? _sidebarActiveColor.withValues(alpha: 0.10)
+                    ? _sidebarActiveColor.withOpacity(0.10)
                     : Colors.grey.shade100,
                 child: Text(
                   widget.userName.isNotEmpty
@@ -414,7 +414,7 @@ class MainLayoutState extends State<MainLayout> {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: _sidebarActiveColor.withValues(alpha: 0.10),
+            backgroundColor: _sidebarActiveColor.withOpacity(0.10),
             child: Text(
               widget.userName.isNotEmpty
                   ? widget.userName[0].toUpperCase()
@@ -491,7 +491,7 @@ class MainLayoutState extends State<MainLayout> {
               color: _topBarColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: Colors.black.withOpacity(0.18),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -513,7 +513,7 @@ class MainLayoutState extends State<MainLayout> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
+                          color: Colors.white.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -597,7 +597,7 @@ class _ProfilePopupCard extends StatelessWidget {
     return Material(
       elevation: 16,
       borderRadius: BorderRadius.circular(14),
-      shadowColor: Colors.black.withValues(alpha: 0.18),
+      shadowColor: Colors.black.withOpacity(0.18),
       clipBehavior: Clip.antiAlias,
       child: Container(
         width: 230,
@@ -613,7 +613,7 @@ class _ProfilePopupCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
               decoration: BoxDecoration(
-                color: AppTheme.brandSecondary.withValues(alpha: 0.06),
+                color: AppTheme.brandSecondary.withOpacity(0.06),
                 border: Border(
                   bottom: BorderSide(color: Colors.grey.shade200),
                 ),
@@ -623,7 +623,7 @@ class _ProfilePopupCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor:
-                        AppTheme.brandSecondary.withValues(alpha: 0.15),
+                        AppTheme.brandSecondary.withOpacity(0.15),
                     child: Text(
                       userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                       style: AppTextStyles.sectionTitle(

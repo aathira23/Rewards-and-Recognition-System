@@ -468,7 +468,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
             child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
                 style: TextStyle(
                     color: theme.colorScheme.primary,
@@ -489,7 +489,7 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+              color: theme.colorScheme.primary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text('$walletBal pts',
@@ -576,10 +576,10 @@ class _HrApprovalsViewState extends State<_HrApprovalsView>
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+              color: theme.colorScheme.primaryContainer.withOpacity(0.4),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+              border:
+                  Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -803,39 +803,6 @@ class _RefreshBtn extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-  const _FilterChip(
-      {required this.label, required this.isActive, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color:
-              isActive ? theme.colorScheme.primary : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color:
-                  isActive ? theme.colorScheme.primary : Colors.grey.shade300),
-        ),
-        child: Text(label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : Colors.grey.shade600,
-            )),
-      ),
-    );
-  }
-}
-
 class _TabWithBadge extends StatelessWidget {
   final String label;
   final int count;
@@ -865,27 +832,6 @@ class _TabWithBadge extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _NomStatusBadge extends StatelessWidget {
-  final Map<String, dynamic> nom;
-  const _NomStatusBadge({required this.nom});
-
-  @override
-  Widget build(BuildContext context) {
-    final status = nom['status']?.toString() ?? 'PENDING';
-    final isPending = status == 'PENDING';
-    final nextLevel =
-        nom['next_required_level']?.toString().toUpperCase() ?? '';
-
-    final level = nextLevel.isEmpty ? 'Action' : nextLevel;
-    final label = isPending ? 'Pending $level' : null;
-
-    return StatusBadge(
-      status: status,
-      label: label,
     );
   }
 }

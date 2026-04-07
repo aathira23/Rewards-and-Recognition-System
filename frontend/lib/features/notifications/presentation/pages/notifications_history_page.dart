@@ -113,11 +113,11 @@ class _NotificationHistoryItem extends StatelessWidget {
         side: BorderSide(
           color: notification.isRead
               ? Colors.grey.shade200
-              : color.withValues(alpha: 0.3),
+              : color.withOpacity(0.3),
           width: notification.isRead ? 1 : 1.5,
         ),
       ),
-      color: notification.isRead ? Colors.white : color.withValues(alpha: 0.02),
+      color: notification.isRead ? Colors.white : color.withOpacity(0.02),
       child: InkWell(
         onTap: () {
           if (!notification.isRead) {
@@ -136,7 +136,7 @@ class _NotificationHistoryItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -180,7 +180,7 @@ class _NotificationHistoryItem extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

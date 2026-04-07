@@ -69,7 +69,7 @@ class CompactSendPanel extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -77,7 +77,7 @@ class CompactSendPanel extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -133,9 +133,9 @@ class CompactSendPanel extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: brandColor.withValues(alpha: 0.04),
+                color: brandColor.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: brandColor.withValues(alpha: 0.1)),
+                border: Border.all(color: brandColor.withOpacity(0.1)),
               ),
               child: Row(
                 children: [
@@ -147,7 +147,7 @@ class CompactSendPanel extends StatelessWidget {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: brandColor.withValues(alpha: 0.12),
+                            color: brandColor.withOpacity(0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.send_rounded,
@@ -179,7 +179,7 @@ class CompactSendPanel extends StatelessWidget {
                     Container(
                         width: 1,
                         height: 44,
-                        color: brandColor.withValues(alpha: 0.12)),
+                        color: brandColor.withOpacity(0.12)),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -201,10 +201,10 @@ class CompactSendPanel extends StatelessWidget {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: info.color.withValues(alpha: 0.15),
+                                  color: info.color.withOpacity(0.15),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                      color: info.color.withValues(alpha: 0.3)),
+                                      color: info.color.withOpacity(0.3)),
                                 ),
                                 child: Center(
                                   child: rb.iconUrl != null
@@ -386,9 +386,9 @@ class _StatusPills extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: bg.withValues(alpha: 0.1),
+            color: bg.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: fg.withValues(alpha: 0.3)),
+            border: Border.all(color: fg.withOpacity(0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -428,7 +428,7 @@ class _StatusPills extends StatelessWidget {
             color: const Color(0xFFD1FAE5),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: const Color(0xFF34D399).withValues(alpha: 0.5)),
+                color: const Color(0xFF34D399).withOpacity(0.5)),
           ),
           child: const Row(
             mainAxisSize: MainAxisSize.min,
@@ -471,7 +471,7 @@ class _StatusPills extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFFEF3C7),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: fg.withValues(alpha: 0.35)),
+          border: Border.all(color: fg.withOpacity(0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -647,9 +647,9 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: info.color.withValues(alpha: 0.08),
+                color: info.color.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: info.color.withValues(alpha: 0.2)),
+                border: Border.all(color: info.color.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
@@ -657,7 +657,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: info.color.withValues(alpha: 0.15),
+                      color: info.color.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -692,7 +692,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                   IconButton(
                     tooltip: 'Change badge',
                     icon: Icon(Icons.swap_horiz_rounded,
-                        color: info.color.withValues(alpha: 0.7)),
+                        color: info.color.withOpacity(0.7)),
                     onPressed: () => setState(() => _selected = null),
                   ),
                 ],
@@ -997,7 +997,7 @@ class _BadgePickerDialogState extends State<BadgePickerDialog> {
                                                 backgroundColor:
                                                     Theme.of(context)
                                                         .primaryColor
-                                                        .withValues(alpha: 0.1),
+                                                        .withOpacity(0.1),
                                                 child: Text(
                                                     user.name.isNotEmpty
                                                         ? user.name[0]
@@ -1070,11 +1070,11 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _hovered
-                ? info.color.withValues(alpha: 0.07)
+                ? info.color.withOpacity(0.07)
                 : Theme.of(context).colorScheme.surface,
             border: Border.all(
               color: _hovered
-                  ? info.color.withValues(alpha: 0.5)
+                  ? info.color.withOpacity(0.5)
                   : Colors.grey.shade200,
               width: _hovered ? 1.5 : 1,
             ),
@@ -1082,7 +1082,7 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
             boxShadow: [
               if (_hovered)
                 BoxShadow(
-                  color: info.color.withValues(alpha: 0.15),
+                  color: info.color.withOpacity(0.15),
                   blurRadius: 14,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
@@ -1098,7 +1098,7 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: info.color.withValues(alpha: 0.15),
+                    color: info.color.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Center(

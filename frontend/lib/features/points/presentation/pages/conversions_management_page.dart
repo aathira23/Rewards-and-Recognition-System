@@ -110,8 +110,8 @@ class _ConversionsManagementView extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: type == 'PAYROLL'
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.blue.withValues(alpha: 0.1),
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(

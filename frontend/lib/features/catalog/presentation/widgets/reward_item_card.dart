@@ -27,7 +27,7 @@ class RewardItemCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFEEEEEE)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -77,7 +77,7 @@ class RewardItemCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
+                          color: Colors.black.withOpacity(0.12),
                           blurRadius: 4,
                           offset: const Offset(0, 1),
                         ),
@@ -170,7 +170,7 @@ class RewardItemCard extends StatelessWidget {
         child: Icon(
           _iconForCategory(reward.category),
           size: 52,
-          color: _primary.withValues(alpha: 0.25),
+          color: _primary.withOpacity(0.25),
         ),
       ),
     );

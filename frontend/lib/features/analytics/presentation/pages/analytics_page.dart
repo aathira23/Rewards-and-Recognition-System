@@ -118,8 +118,8 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                           const SizedBox(height: 4),
                           Text(
                             'Key insights into team performance',
-                            style: AppTextStyles.body(
-                                color: Colors.grey.shade600),
+                            style:
+                                AppTextStyles.body(color: Colors.grey.shade600),
                           ),
                         ],
                       ),
@@ -307,7 +307,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                  color: theme.colorScheme.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -463,7 +463,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(emptyIcon, size: 17, color: color),
@@ -512,7 +512,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                       height: 22,
                       decoration: BoxDecoration(
                         color: rank <= 3
-                            ? rankColor.withValues(alpha: 0.12)
+                            ? rankColor.withOpacity(0.12)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
                       ),
@@ -531,7 +531,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.08),
+                        color: color.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
@@ -560,9 +560,8 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                               minHeight: 4,
                               backgroundColor: Colors.grey.shade100,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                color.withValues(
-                                    alpha: 0.3 +
-                                        (count / math.max(maxCount, 1)) * 0.6),
+                                color.withOpacity(0.3 +
+                                    (count / math.max(maxCount, 1)) * 0.6),
                               ),
                             ),
                           ),
@@ -574,7 +573,7 @@ class _AnalyticsViewState extends State<_AnalyticsView> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.08),
+                        color: color.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -635,7 +634,7 @@ class _KpiCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFEEEEEE)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
@@ -649,7 +648,7 @@ class _KpiCard extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 17, color: color),
@@ -715,7 +714,7 @@ class _BreakdownRow extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.1),
+                  color: primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(7),
                 ),
                 alignment: Alignment.center,
@@ -841,7 +840,7 @@ class _WhiteCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFEEEEEE)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
+              color: Colors.black.withOpacity(0.02),
               blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
@@ -1010,8 +1009,8 @@ class _TrendPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          color.withValues(alpha: 0.22),
-          color.withValues(alpha: 0.04),
+          color.withOpacity(0.22),
+          color.withOpacity(0.04),
         ],
       ).createShader(Rect.fromLTWH(leftPad, topPad, cw, ch));
     canvas.drawPath(areaPath, gradientPaint);
@@ -1028,7 +1027,7 @@ class _TrendPainter extends CustomPainter {
     canvas.drawPath(
         linePath,
         Paint()
-          ..color = color.withValues(alpha: 0.85)
+          ..color = color.withOpacity(0.85)
           ..strokeWidth = 2.5
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
@@ -1053,11 +1052,11 @@ class _TrendPainter extends CustomPainter {
           pts[i],
           isMax ? 7.0 : 5.0,
           Paint()
-            ..color = isMax ? color : color.withValues(alpha: 0.6)
+            ..color = isMax ? color : color.withOpacity(0.6)
             ..style = PaintingStyle.stroke
             ..strokeWidth = isMax ? 2.5 : 1.8);
       canvas.drawCircle(pts[i], isMax ? 3.5 : 2.5,
-          Paint()..color = isMax ? color : color.withValues(alpha: 0.5));
+          Paint()..color = isMax ? color : color.withOpacity(0.5));
 
       // value pill above peak
       if (isMax && counts[i] > 0) {
@@ -1131,14 +1130,13 @@ class _TrendPainter extends CustomPainter {
           Offset(target.dx, topPad),
           Offset(target.dx, topPad + ch),
           Paint()
-            ..color = color.withValues(alpha: 0.3)
+            ..color = color.withOpacity(0.3)
             ..strokeWidth = 1,
         );
 
         // Highlight point
         canvas.drawCircle(target, 5, Paint()..color = color);
-        canvas.drawCircle(
-            target, 8, Paint()..color = color.withValues(alpha: 0.2));
+        canvas.drawCircle(target, 8, Paint()..color = color.withOpacity(0.2));
 
         // Tooltip content
         final dateText = _dateLabel(dateStr, 0); // show full day/month
@@ -1186,7 +1184,7 @@ class _TrendPainter extends CustomPainter {
         canvas.drawRRect(
           tooltipRect,
           Paint()
-            ..color = Colors.black.withValues(alpha: 0.2)
+            ..color = Colors.black.withOpacity(0.2)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
         );
 

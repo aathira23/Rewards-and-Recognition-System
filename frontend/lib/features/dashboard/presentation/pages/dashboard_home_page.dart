@@ -284,7 +284,7 @@ class _DashboardHomeView extends StatelessWidget {
             child: Icon(
               icon,
               size: 80,
-              color: iconColor.withValues(alpha: 0.05),
+              color: iconColor.withOpacity(0.05),
             ),
           ),
           Column(
@@ -335,7 +335,7 @@ class _DashboardHomeView extends StatelessWidget {
               child: Text(
                 'CURRENT STANDING',
                 style: AppTextStyles.captionStrong(
-                    color: Colors.white.withValues(alpha: 0.7)),
+                    color: Colors.white.withOpacity(0.7)),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -357,12 +357,12 @@ class _DashboardHomeView extends StatelessWidget {
                   Icon(
                     Icons.shield_rounded,
                     size: 52,
-                    color: Colors.black.withValues(alpha: 0.12),
+                    color: Colors.black.withOpacity(0.12),
                   ),
                   Text(
                     level.toString(),
                     style: AppTextStyles.headline1(
-                        color: Colors.black.withValues(alpha: 0.55)),
+                        color: Colors.black.withOpacity(0.55)),
                   ),
                 ],
               ),
@@ -387,14 +387,14 @@ class _DashboardHomeView extends StatelessWidget {
                       Text(
                         'pts',
                         style: AppTextStyles.sectionTitle(
-                            color: Colors.white.withValues(alpha: 0.85)),
+                            color: Colors.white.withOpacity(0.85)),
                       ),
                     ],
                   ),
                   Text(
                     'Available Balance',
                     style: AppTextStyles.bodyLarge(
-                        color: Colors.white.withValues(alpha: 0.7)),
+                        color: Colors.white.withOpacity(0.7)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -412,7 +412,7 @@ class _DashboardHomeView extends StatelessWidget {
               Flexible(
                 child: Text('$pointsToNext pts to Level ${level + 1}',
                     style: AppTextStyles.smallMedium(
-                        color: Colors.white.withValues(alpha: 0.9)),
+                        color: Colors.white.withOpacity(0.9)),
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end),
               ),
@@ -423,7 +423,7 @@ class _DashboardHomeView extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: Colors.white.withValues(alpha: 0.12),
+            backgroundColor: Colors.white.withOpacity(0.12),
             valueColor:
                 const AlwaysStoppedAnimation<Color>(AppTheme.accentYellow),
             minHeight: 12,
@@ -439,7 +439,7 @@ class _DashboardHomeView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,7 +512,7 @@ class _DashboardHomeView extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black87,
                         side: BorderSide(
-                            color: Colors.grey.withValues(alpha: 0.3)),
+                            color: Colors.grey.withOpacity(0.3)),
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -798,7 +798,7 @@ class _DashboardHomeView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
                 ),
                 child: Center(
                     child: Text('No recent activity',
@@ -811,7 +811,7 @@ class _DashboardHomeView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                border: Border.all(color: Colors.grey.withOpacity(0.1)),
               ),
               child: RecognitionFeedList(
                 feed: state.feed,
@@ -864,10 +864,10 @@ class _HoverableModuleCardState extends State<_HoverableModuleCard> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.08)),
+            border: Border.all(color: Colors.grey.withOpacity(0.08)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.02),
+                color: Colors.black.withOpacity(_isHovered ? 0.08 : 0.02),
                 blurRadius: _isHovered ? 20 : 10,
                 offset: Offset(0, _isHovered ? 8 : 4),
               ),

@@ -24,7 +24,7 @@ class RewardsBalanceCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE8EAF6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -86,9 +86,9 @@ class RewardsBalanceCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: isDark
               ? [
-                  theme.colorScheme.primary.withValues(alpha: 0.9),
+                  theme.colorScheme.primary.withOpacity(0.9),
                   theme.colorScheme.primaryContainer,
-                  theme.colorScheme.secondary.withValues(alpha: 0.7),
+                  theme.colorScheme.secondary.withOpacity(0.7),
                 ]
               : [
                   AppTheme.brandBlue,
@@ -99,7 +99,7 @@ class RewardsBalanceCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: (isDark ? Colors.black : AppTheme.brandBlue)
-                .withValues(alpha: 0.25),
+                .withOpacity(0.25),
             blurRadius: 25,
             offset: const Offset(0, 12),
           ),
@@ -118,7 +118,7 @@ class RewardsBalanceCard extends StatelessWidget {
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withOpacity(0.1),
                 ),
               ),
             ),
@@ -136,7 +136,7 @@ class RewardsBalanceCard extends StatelessWidget {
                           Text(
                             'Your Points Balance',
                             style: AppTextStyles.cardTitle(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withOpacity(0.8),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -154,7 +154,7 @@ class RewardsBalanceCard extends StatelessWidget {
                               Text(
                                 'pts',
                                 style: AppTextStyles.pageTitle(
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: Colors.white.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -164,7 +164,7 @@ class RewardsBalanceCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -180,10 +180,10 @@ class RewardsBalanceCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withOpacity(0.1),
                       ),
                     ),
                     child: Row(

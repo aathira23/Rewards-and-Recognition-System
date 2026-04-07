@@ -379,7 +379,7 @@ class _ReportsViewState extends State<_ReportsView> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: type.color.withValues(alpha: 0.1),
+                          color: type.color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(type.icon, color: type.color, size: 22),
@@ -727,7 +727,7 @@ class _ReportsViewState extends State<_ReportsView> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: s.color.withValues(alpha: 0.1),
+              color: s.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(s.icon, size: 16, color: s.color),
@@ -1084,7 +1084,7 @@ class _ReportsViewState extends State<_ReportsView> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text('$d days',
@@ -1167,7 +1167,7 @@ class _ReportCardState extends State<_ReportCard> {
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           elevation: _hovered ? 4 : 0,
-          shadowColor: widget.type.color.withValues(alpha: 0.2),
+          shadowColor: widget.type.color.withOpacity(0.2),
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(12),
@@ -1177,7 +1177,7 @@ class _ReportCardState extends State<_ReportCard> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                     color: _hovered
-                        ? widget.type.color.withValues(alpha: 0.3)
+                        ? widget.type.color.withOpacity(0.3)
                         : Colors.grey.shade200),
               ),
               child: Column(
@@ -1188,7 +1188,7 @@ class _ReportCardState extends State<_ReportCard> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: widget.type.color.withValues(alpha: 0.1),
+                          color: widget.type.color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(widget.type.icon,

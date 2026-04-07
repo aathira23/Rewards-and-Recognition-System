@@ -88,7 +88,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: grad.first.withValues(alpha: 0.3),
+              color: grad.first.withOpacity(0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -157,7 +157,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
     return Container(
       height: 34,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(17),
       ),
       child: Row(
@@ -392,9 +392,9 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
