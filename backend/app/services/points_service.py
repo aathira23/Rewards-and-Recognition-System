@@ -178,6 +178,30 @@ class PointsService:
         end_of_month = date(today.year, today.month, last_day)
         expiring_this_month = self.repository.get_expiring_points_range(user_id, today, end_of_month)
 
+        # ── Monthly level calculation ─────────────────────────
+        first_of_month = date(today.year, today.month, 1)
+        monthly_pts = int(self.repository.get_monthly_earned_for_user(wallet.id, first_of_month))
+
+        _LEVEL_THRESHOLDS = [
+            (0,    1, 100),   # level, pts needed for next level
+            (100,  2, 250),
+            (250,  3, 500),
+            (500,  4, 1000),
+            (1000, 5, 1000),  # max level — progress fills to 1000
+        ]
+        level_num = 1
+        level_min = 0
+        level_max_pts = 100
+        for threshold, lvl, next_pts in _LEVEL_THRESHOLDS:
+            if monthly_pts >= threshold:
+                level_num = lvl
+                level_min = threshold
+                level_max_pts = next_pts
+
+        level_progress = monthly_pts - level_min
+        # For max level, cap progress at level_max_pts
+        level_progress = min(level_progress, level_max_pts)
+
         result = {
             "balance": balance,
             "total_earned": int(earned),
@@ -187,6 +211,11 @@ class PointsService:
             "expiring_soon": int(expiring_today + expiring_this_month),
             "expiring_today": int(expiring_today),
             "expiring_this_month": int(expiring_this_month),
+            "level": level_num,
+            "level_name": f"Level {level_num}",
+            "level_progress": level_progress,
+            "level_max": level_max_pts,
+            "monthly_earned": monthly_pts,
         }
         _aggregates_cache[user_id] = result
         logger.debug("Aggregates cache STORE — user_id=%s", user_id)

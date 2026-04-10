@@ -145,6 +145,14 @@ class PointsRepository:
             PointsLedger.created_at >= first_day,
         ).scalar() or 0
 
+    def get_monthly_earned_for_user(self, wallet_id: int, first_day: date) -> int:
+        """Total CREDIT points earned by a specific wallet in the current calendar month."""
+        return self.db.query(func.sum(PointsLedger.points)).filter(
+            PointsLedger.transaction_type == TransactionType.CREDIT.value,
+            PointsLedger.target_wallet_id == wallet_id,
+            PointsLedger.created_at >= first_day,
+        ).scalar() or 0
+
     def get_ledger_query(self, wallet_id: int):
         return self.db.query(PointsLedger).filter(
             or_(
