@@ -8,3 +8,9 @@
 build/
 sonar-project.properties
 award-service-dev/
+/notification-service-develop/
+/training-service-dev/
+styria-flutter-web/
+entity-service-entity-styria-dev/
+form-service-dev/
+user-service-dev/
