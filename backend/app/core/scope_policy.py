@@ -45,7 +45,7 @@ def resolve_effective_scope(requested_scope: Optional[Scope | str], user_role: s
     Raises:
         HTTPException: If the requested scope is not permitted for the user's role.
     """
-    policy = ROLE_SCOPE_POLICY.get(user_role)
+    policy = ROLE_SCOPE_POLICY.get(user_role.upper() if user_role else user_role)
     
     if not policy:
         raise HTTPException(
