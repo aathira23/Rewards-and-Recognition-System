@@ -19,8 +19,35 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_V1_STR: str = "/api/v1"
 
-    # Database
-    DATABASE_URL: str
+    # ── Database — generic multi-DB config (matches Styria service pattern) ──
+    # Set DB_TYPE to one of: "mysql" | "postgresql" | "mssql"
+    DB_TYPE: str = "postgresql"
+
+    # MySQL / MariaDB
+    MYSQL_DB_SERVER: str = ""
+    MYSQL_DB_PORT: int = 3306
+    MYSQL_DB_USER: str = ""
+    MYSQL_DB_PASSWORD: str = ""
+    MYSQL_DB_NAME: str = ""
+
+    # MSSQL (SQL Server)
+    MSSQL_DB_SERVER: str = ""
+    MSSQL_DB_PORT: int = 1433
+    MSSQL_DB_USER: str = ""
+    MSSQL_DB_PASSWORD: str = ""
+    MSSQL_DB_NAME: str = ""
+
+    # PostgreSQL (legacy / dev)
+    POSTGRES_DB_SERVER: str = ""
+    POSTGRES_DB_PORT: int = 5432
+    POSTGRES_DB_USER: str = ""
+    POSTGRES_DB_PASSWORD: str = ""
+    POSTGRES_DB_NAME: str = ""
+    POSTGRES_DB_SCHEMA: str = ""
+
+    # Direct URL override — used when DB_TYPE="postgresql" and a full URL is provided.
+    # Set this OR the POSTGRES_DB_* fields above, not both.
+    DATABASE_URL: Optional[str] = None
 
     # CORS Configuration
     ALLOWED_ORIGINS: str = "*"  # Use comma-separated URLs in production: "http://localhost:3000,https://yourdomain.com"

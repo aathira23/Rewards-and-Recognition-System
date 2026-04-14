@@ -1,7 +1,6 @@
-from typing import Optional, List, Tuple, Any
-from datetime import date, datetime
+from typing import Optional, List, Tuple
+from datetime import datetime
 
-from sqlalchemy import func, or_, desc
 from sqlalchemy.orm import Session
 
 from app.models.rewards import Reward
@@ -9,65 +8,63 @@ from app.models.redemptions import Redemption
 from app.models.points_conversion import PointsConversion
 from app.models.points_policy import PointsPolicy
 from app.utils.enums import ConversionStatus
+from app.utils.query_loader import QueryLoader
 
 
 class StoreRepository:
     def __init__(self, db: Session):
         self.db = db
+        loader = QueryLoader()
+        self.reward_q = loader.get_queries(Reward)
+        self.redemption_q = loader.get_queries(Redemption)
+        self.conversion_q = loader.get_queries(PointsConversion)
+        self.policy_q = loader.get_queries(PointsPolicy)
 
-    # --- Rewards / Catalog ---
+    # ── Rewards / Catalog ────────────────────────────────────────────────────
+
     def get_catalog_paginated(
         self, skip: int, limit: int, include_inactive: bool = False
-    ) -> Tuple[int, List[Reward]]:
-        query = self.db.query(Reward)
-        if not include_inactive:
-            query = query.filter(
-                Reward.is_active == True,
-                or_(Reward.stock_quantity == None, Reward.stock_quantity > 0),
-            )
-        total = query.count()
-        items = query.offset(skip).limit(limit).all()
-        return total, items
+    ) -> Tuple[int, List]:
+        count_q = self.reward_q.GET_CATALOG_COUNT_ALL if include_inactive else self.reward_q.GET_CATALOG_COUNT
+        data_q = self.reward_q.GET_CATALOG_ALL if include_inactive else self.reward_q.GET_CATALOG
+        total = self.db.execute(count_q).scalar()
+        items = self.db.execute(data_q, {"limit": limit, "skip": skip}).mappings().fetchall()
+        return total, list(items)
 
-    def get_reward_by_id(self, reward_id: int) -> Optional[Reward]:
-        return self.db.query(Reward).filter(Reward.id == reward_id).first()
+    def get_reward_by_id(self, reward_id: int):
+        return self.db.execute(self.reward_q.GET_BY_ID, {"id": reward_id}).mappings().fetchone()
 
-    def create_reward(self, data: dict) -> Reward:
-        reward = Reward(**data)
-        self.db.add(reward)
+    def create_reward(self, data: dict):
+        result = self.db.execute(self.reward_q.CREATE, data)
         self.db.commit()
-        self.db.refresh(reward)
-        return reward
+        return self.db.execute(self.reward_q.GET_BY_ID, {"id": result.lastrowid}).mappings().fetchone()
 
-    def save_reward(self, reward: Reward) -> Reward:
+    def save_reward(self, reward_id: int, **kwargs):
+        self.db.execute(self.reward_q.UPDATE, {"id": reward_id, **kwargs})
         self.db.commit()
-        self.db.refresh(reward)
-        return reward
+        return self.db.execute(self.reward_q.GET_BY_ID, {"id": reward_id}).mappings().fetchone()
 
-    # --- Redemptions ---
+    # ── Redemptions ──────────────────────────────────────────────────────────
+
     def create_redemption(
         self, user_id: int, reward_id: int, points_used: int, status: str
-    ) -> Redemption:
-        redemption = Redemption(
-            user_id=user_id,
-            reward_id=reward_id,
-            points_used=points_used,
-            status=status,
+    ):
+        result = self.db.execute(
+            self.redemption_q.CREATE,
+            {"user_id": user_id, "reward_id": reward_id, "points_used": points_used, "status": status},
         )
-        self.db.add(redemption)
         self.db.commit()
-        self.db.refresh(redemption)
-        return redemption
+        return self.db.execute(self.redemption_q.GET_BY_ID, {"id": result.lastrowid}).mappings().fetchone()
 
-    def get_redemptions_by_user(self, user_id: int) -> List[Redemption]:
+    def get_redemptions_by_user(self, user_id: int) -> List:
         return (
-            self.db.query(Redemption)
-            .filter(Redemption.user_id == user_id)
-            .order_by(Redemption.created_at.desc())
-            .all()
+            self.db.execute(self.redemption_q.GET_BY_USER, {"user_id": user_id})
+            .mappings()
+            .fetchall()
         )
 
-    # --- Conversions ---
+    # ── Conversions ──────────────────────────────────────────────────────────
+
     def create_conversion(
         self,
         user_id: int,
@@ -75,88 +72,113 @@ class StoreRepository:
         cash_amount: float,
         conversion_type: str,
         status: str,
-    ) -> PointsConversion:
-        conversion = PointsConversion(
-            user_id=user_id,
-            points_converted=points,
-            cash_amount=cash_amount,
-            conversion_type=conversion_type,
-            status=status,
+    ):
+        result = self.db.execute(
+            self.conversion_q.CREATE,
+            {
+                "user_id": user_id,
+                "points_converted": points,
+                "cash_amount": cash_amount,
+                "conversion_type": conversion_type,
+                "status": status,
+            },
         )
-        self.db.add(conversion)
         self.db.commit()
-        self.db.refresh(conversion)
-        return conversion
-
-    def get_conversion_by_id(self, conversion_id: int) -> Optional[PointsConversion]:
-        return self.db.query(PointsConversion).filter(PointsConversion.id == conversion_id).first()
-
-    def get_conversions_by_user(self, user_id: int) -> List[PointsConversion]:
         return (
-            self.db.query(PointsConversion)
-            .filter(PointsConversion.user_id == user_id)
-            .order_by(PointsConversion.requested_at.desc())
-            .all()
+            self.db.execute(self.conversion_q.GET_BY_ID, {"id": result.lastrowid})
+            .mappings()
+            .fetchone()
         )
 
-    def get_all_conversions(self) -> List[PointsConversion]:
-        return self.db.query(PointsConversion).order_by(PointsConversion.requested_at.desc()).all()
-
-    def get_pending_conversions(self) -> List[PointsConversion]:
+    def get_conversion_by_id(self, conversion_id: int):
         return (
-            self.db.query(PointsConversion)
-            .filter(PointsConversion.status == ConversionStatus.PENDING.value)
-            .all()
+            self.db.execute(self.conversion_q.GET_BY_ID, {"id": conversion_id})
+            .mappings()
+            .fetchone()
         )
+
+    def get_conversions_by_user(self, user_id: int) -> List:
+        return (
+            self.db.execute(self.conversion_q.GET_BY_USER, {"user_id": user_id})
+            .mappings()
+            .fetchall()
+        )
+
+    def get_all_conversions(self) -> List:
+        return self.db.execute(self.conversion_q.GET_ALL).mappings().fetchall()
+
+    def get_pending_conversions(self) -> List:
+        return self.db.execute(self.conversion_q.GET_PENDING).mappings().fetchall()
 
     def has_pending_conversion(self, user_id: int) -> bool:
-        """Check if user already has a PENDING conversion request."""
-        return self.db.query(PointsConversion).filter(
-            PointsConversion.user_id == user_id,
-            PointsConversion.status == ConversionStatus.PENDING.value,
-        ).first() is not None
+        cnt = self.db.execute(
+            self.conversion_q.HAS_PENDING, {"user_id": user_id}
+        ).scalar()
+        return (cnt or 0) > 0
 
-    def save_conversion(self, conversion: PointsConversion) -> PointsConversion:
+    def save_conversion(self, conversion_id: int, status: str, approved_by: Optional[int] = None, approved_at: Optional[datetime] = None):
+        self.db.execute(
+            self.conversion_q.UPDATE_STATUS,
+            {"id": conversion_id, "status": status, "approved_by": approved_by, "approved_at": approved_at},
+        )
         self.db.commit()
-        self.db.refresh(conversion)
-        return conversion
+        return self.db.execute(self.conversion_q.GET_BY_ID, {"id": conversion_id}).mappings().fetchone()
 
-    # --- Policies ---
-    def get_policies(self, include_inactive: bool = False) -> List[PointsPolicy]:
-        query = self.db.query(PointsPolicy)
-        if not include_inactive:
-            query = query.filter(PointsPolicy.is_active == True)
-        return query.all()
+    # ── Policies ─────────────────────────────────────────────────────────────
 
-    def get_policy_by_id(self, policy_id: int) -> Optional[PointsPolicy]:
-        return self.db.query(PointsPolicy).filter(PointsPolicy.id == policy_id).first()
+    def get_policies(self, include_inactive: bool = False) -> List:
+        q = self.policy_q.GET_ALL if include_inactive else self.policy_q.GET_ACTIVE
+        return self.db.execute(q).mappings().fetchall()
+
+    def get_policy_by_id(self, policy_id: int):
+        return (
+            self.db.execute(self.policy_q.GET_BY_ID, {"id": policy_id})
+            .mappings()
+            .fetchone()
+        )
 
     def find_duplicate_policies(
-        self, recognition_type: str, event_key: Optional[str] = None, conversion_reward_type: Optional[str] = None
-    ) -> List[PointsPolicy]:
+        self,
+        recognition_type: str,
+        event_key: Optional[str] = None,
+        conversion_reward_type: Optional[str] = None,
+    ) -> List:
         if recognition_type == "CONVERSION":
-            return self.db.query(PointsPolicy).filter(
-                PointsPolicy.recognition_type == recognition_type,
-                PointsPolicy.conversion_reward_type == conversion_reward_type,
-            ).all()
-
-        query = self.db.query(PointsPolicy).filter(
-            PointsPolicy.recognition_type == recognition_type,
-        )
+            return (
+                self.db.execute(
+                    self.policy_q.FIND_DUPLICATES_CONVERSION,
+                    {"conversion_reward_type": conversion_reward_type},
+                )
+                .mappings()
+                .fetchall()
+            )
         if event_key:
-            query = query.filter(PointsPolicy.event_key == event_key)
-        else:
-            query = query.filter(PointsPolicy.event_key == None)
-        return query.all()
+            return (
+                self.db.execute(
+                    self.policy_q.FIND_DUPLICATES_WITH_EVENT_KEY,
+                    {"recognition_type": recognition_type, "event_key": event_key},
+                )
+                .mappings()
+                .fetchall()
+            )
+        return (
+            self.db.execute(
+                self.policy_q.FIND_DUPLICATES_NO_EVENT_KEY,
+                {"recognition_type": recognition_type},
+            )
+            .mappings()
+            .fetchall()
+        )
 
-    def create_policy(self, data: dict) -> PointsPolicy:
-        policy = PointsPolicy(**data)
-        self.db.add(policy)
+    def create_policy(self, data: dict):
+        result = self.db.execute(self.policy_q.CREATE, data)
         self.db.commit()
-        self.db.refresh(policy)
-        return policy
+        return self.db.execute(self.policy_q.GET_BY_ID, {"id": result.lastrowid}).mappings().fetchone()
 
-    def save_policy(self, policy: PointsPolicy) -> PointsPolicy:
+    def save_policy(self, policy_id: int, **kwargs):
+        self.db.execute(self.policy_q.UPDATE, {"id": policy_id, **kwargs})
         self.db.commit()
-        self.db.refresh(policy)
-        return policy
+        return self.db.execute(self.policy_q.GET_BY_ID, {"id": policy_id}).mappings().fetchone()
+
+
+

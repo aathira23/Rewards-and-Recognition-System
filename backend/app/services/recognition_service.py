@@ -64,10 +64,7 @@ class RecognitionService:
         badge = self.repository.get_badge_by_id(badge_id)
         if not badge:
             raise ValueError("Badge not found")
-        for key, value in data.items():
-            if value is not None:
-                setattr(badge, key, value)
-        result = self.repository.save_badge(badge)
+        result = self.repository.save_badge(badge_id, **{k: v for k, v in data.items() if v is not None})
         _badge_cache.clear()  # invalidate badge caches on update
         return result
 

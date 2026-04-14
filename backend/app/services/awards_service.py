@@ -820,11 +820,7 @@ class AwardsService:
         if not award_type:
             return None
 
-        for field, value in updates.items():
-            if value is not None:
-                setattr(award_type, field, value)
-
-        return self.repository.save_award_type(award_type)
+        return self.repository.save_award_type(type_id, **{k: v for k, v in updates.items() if v is not None})
 
     # --- Multi-Level Approval Helper Methods ---
 

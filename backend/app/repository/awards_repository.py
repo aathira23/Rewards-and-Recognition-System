@@ -1,22 +1,33 @@
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import date, datetime
+from typing import Optional, List, Tuple
 
-from sqlalchemy import func, or_, and_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.awards import Award
 from app.models.award_types import AwardType
 from app.models.award_approvals import AwardApproval
-from app.utils.enums import AwardStatus, ApprovalStatus
+from app.utils.query_loader import QueryLoader
 
 
 class AwardsRepository:
     def __init__(self, db: Session):
         self.db = db
+        loader = QueryLoader()
+        self.q = loader.get_queries(Award)
+        self.type_q = loader.get_queries(AwardType)
+        self.approval_q = loader.get_queries(AwardApproval)
 
-    # --- Award CRUD ---
-    def get_by_id(self, award_id: int) -> Optional[Award]:
-        return self.db.query(Award).filter(Award.id == award_id).first()
+    # ── helpers ──────────────────────────────────────────────────────────────
+
+    def _award_by_id(self, aid: int):
+        return self.db.execute(self.q.GET_BY_ID, {"id": aid}).mappings().fetchone()
+
+    def _approval_by_id(self, aid: int):
+        return self.db.execute(self.approval_q.GET_BY_ID, {"id": aid}).mappings().fetchone()
+
+    # ── Award CRUD ───────────────────────────────────────────────────────────
+
+    def get_by_id(self, award_id: int):
+        return self._award_by_id(award_id)
 
     def create_award(
         self,
@@ -28,69 +39,88 @@ class AwardsRepository:
         citation: Optional[str] = None,
         persona_type: Optional[str] = None,
         persona_label: Optional[str] = None,
-    ) -> Award:
-        award = Award(
-            nominee_id=nominee_id,
-            nominator_id=nominator_id,
-            award_type_id=award_type_id,
-            status=status,
-            points_awarded=points,
-            citation=citation,
-            persona_type=persona_type,
-            persona_label=persona_label,
+    ):
+        result = self.db.execute(
+            self.q.CREATE,
+            {
+                "nominee_id": nominee_id,
+                "nominator_id": nominator_id,
+                "award_type_id": award_type_id,
+                "status": status,
+                "points_awarded": points,
+                "citation": citation,
+                "persona_type": persona_type,
+                "persona_label": persona_label,
+            },
         )
-        self.db.add(award)
         self.db.flush()
-        self.db.refresh(award)
-        return award
+        return self._award_by_id(result.lastrowid)
 
-    def find_pending_nomination(
-        self, nominee_id: int, award_type_id: int
-    ) -> Optional[Award]:
-        return self.db.query(Award).filter(
-            Award.nominee_id == nominee_id,
-            Award.award_type_id == award_type_id,
-            Award.status == AwardStatus.PENDING.value,
-        ).first()
+    def find_pending_nomination(self, nominee_id: int, award_type_id: int):
+        return (
+            self.db.execute(
+                self.q.FIND_PENDING_NOMINATION,
+                {"nominee_id": nominee_id, "award_type_id": award_type_id},
+            )
+            .mappings()
+            .fetchone()
+        )
 
-    # --- Award Types ---
-    def get_award_type_by_id(self, type_id: int, active_only: bool = False) -> Optional[AwardType]:
-        query = self.db.query(AwardType).filter(AwardType.id == type_id)
-        if active_only:
-            query = query.filter(AwardType.is_active == True)
-        return query.first()
+    # ── Award Types ──────────────────────────────────────────────────────────
+
+    def get_award_type_by_id(self, type_id: int, active_only: bool = False):
+        q = self.type_q.GET_BY_ID_ACTIVE if active_only else self.type_q.GET_BY_ID
+        return self.db.execute(q, {"id": type_id}).mappings().fetchone()
 
     def get_award_types(
         self, active_only: bool = True, eligibility_rules: Optional[List[str]] = None
-    ) -> List[AwardType]:
-        query = self.db.query(AwardType)
-        if active_only:
-            query = query.filter(AwardType.is_active == True)
+    ) -> List:
         if eligibility_rules:
-            query = query.filter(AwardType.eligibility_rule.in_(eligibility_rules))
-        return query.all()
+            return (
+                self.db.execute(
+                    self.type_q.GET_ACTIVE_WITH_ELIGIBILITY,
+                    {"eligibility_rules": tuple(eligibility_rules)},
+                )
+                .mappings()
+                .fetchall()
+            )
+        q = self.type_q.GET_ALL_ACTIVE if active_only else self.type_q.GET_ALL
+        return self.db.execute(q).mappings().fetchall()
 
-    def get_award_type_by_key(self, award_key: str) -> Optional[AwardType]:
-        return self.db.query(AwardType).filter(AwardType.award_key == award_key).first()
+    def get_award_type_by_key(self, award_key: str):
+        return (
+            self.db.execute(self.type_q.GET_BY_KEY, {"award_key": award_key})
+            .mappings()
+            .fetchone()
+        )
 
-    def get_award_type_by_name(self, name: str) -> Optional[AwardType]:
-        return self.db.query(AwardType).filter(
-            func.lower(AwardType.name) == name.lower()
-        ).first()
+    def get_award_type_by_name(self, name: str):
+        return (
+            self.db.execute(self.type_q.GET_BY_NAME, {"name": name})
+            .mappings()
+            .fetchone()
+        )
 
-    def create_award_type(self, **kwargs) -> AwardType:
-        award_type = AwardType(**kwargs)
-        self.db.add(award_type)
+    def create_award_type(self, **kwargs):
+        result = self.db.execute(self.type_q.CREATE, kwargs)
         self.db.commit()
-        self.db.refresh(award_type)
-        return award_type
+        return (
+            self.db.execute(self.type_q.GET_BY_ID, {"id": result.lastrowid})
+            .mappings()
+            .fetchone()
+        )
 
-    def save_award_type(self, award_type: AwardType) -> AwardType:
+    def save_award_type(self, award_type_id: int, **kwargs):
+        self.db.execute(self.type_q.UPDATE, {"id": award_type_id, **kwargs})
         self.db.commit()
-        self.db.refresh(award_type)
-        return award_type
+        return (
+            self.db.execute(self.type_q.GET_BY_ID, {"id": award_type_id})
+            .mappings()
+            .fetchone()
+        )
 
-    # --- Approvals ---
+    # ── Approvals ────────────────────────────────────────────────────────────
+
     def create_approval(
         self,
         award_id: int,
@@ -98,70 +128,80 @@ class AwardsRepository:
         approval_level: str,
         status: str,
         comments: Optional[str] = None,
-    ) -> AwardApproval:
-        approval = AwardApproval(
-            award_id=award_id,
-            approver_id=approver_id,
-            approval_level=approval_level,
-            status=status,
-            comments=comments,
+    ):
+        result = self.db.execute(
+            self.approval_q.CREATE,
+            {
+                "award_id": award_id,
+                "approver_id": approver_id,
+                "approval_level": approval_level,
+                "status": status,
+                "comments": comments,
+            },
         )
-        self.db.add(approval)
         self.db.flush()
-        return approval
+        return self._approval_by_id(result.lastrowid)
 
     def get_approved_levels(self, award_id: int) -> List[str]:
-        approvals = self.db.query(AwardApproval).filter(
-            AwardApproval.award_id == award_id,
-            AwardApproval.status == ApprovalStatus.APPROVED.value,
-        ).all()
-        return [str(a.approval_level).strip().upper() for a in approvals]
+        rows = (
+            self.db.execute(
+                self.approval_q.GET_APPROVED_LEVELS, {"award_id": award_id}
+            )
+            .mappings()
+            .fetchall()
+        )
+        return [str(r["approval_level"]).strip().upper() for r in rows]
 
-    def get_approvals_for_award(self, award_id: int) -> List[AwardApproval]:
-        return self.db.query(AwardApproval).filter(
-            AwardApproval.award_id == award_id,
-        ).all()
-
-    def get_approvals_by_user(self, user_id: int) -> List[AwardApproval]:
+    def get_approvals_for_award(self, award_id: int) -> List:
         return (
-            self.db.query(AwardApproval)
-            .filter(AwardApproval.approver_id == user_id)
-            .order_by(AwardApproval.created_at.desc())
-            .all()
+            self.db.execute(
+                self.approval_q.GET_BY_AWARD_ID, {"award_id": award_id}
+            )
+            .mappings()
+            .fetchall()
         )
 
-    def get_approvals_for_awards(self, award_ids: List[int]) -> List[AwardApproval]:
+    def get_approvals_by_user(self, user_id: int) -> List:
         return (
-            self.db.query(AwardApproval)
-            .filter(AwardApproval.award_id.in_(award_ids))
-            .order_by(AwardApproval.created_at.desc())
-            .all()
+            self.db.execute(
+                self.approval_q.GET_BY_APPROVER, {"approver_id": user_id}
+            )
+            .mappings()
+            .fetchall()
         )
 
-    # --- Nominations visibility ---
+    def get_approvals_for_awards(self, award_ids: List[int]) -> List:
+        if not award_ids:
+            return []
+        return (
+            self.db.execute(
+                self.approval_q.GET_BY_AWARD_IDS, {"award_ids": tuple(award_ids)}
+            )
+            .mappings()
+            .fetchall()
+        )
+
+    # ── Nominations visibility ───────────────────────────────────────────────
+
     def get_involved_award_ids(self, user_id: int) -> set:
-        rows = self.db.query(Award.id).outerjoin(AwardApproval).filter(
-            or_(
-                Award.nominator_id == user_id,
-                Award.nominee_id == user_id,
-                AwardApproval.approver_id == user_id,
-            )
-        ).all()
-        return {r[0] for r in rows}
-
-    def get_pending_awards_not_in(self, exclude_ids: set) -> List[Award]:
-        return (
-            self.db.query(Award)
-            .filter(
-                Award.status == AwardStatus.PENDING.value,
-                ~Award.id.in_(exclude_ids) if exclude_ids else True,
-            )
-            .options(
-                joinedload(Award.award_type),
-                joinedload(Award.approvals),
-            )
-            .all()
+        rows = (
+            self.db.execute(self.q.GET_INVOLVED_IDS, {"user_id": user_id})
+            .mappings()
+            .fetchall()
         )
+        return {r["id"] for r in rows}
+
+    def get_pending_awards_not_in(self, exclude_ids: set) -> List:
+        if exclude_ids:
+            return (
+                self.db.execute(
+                    self.q.GET_PENDING_EXCLUDING,
+                    {"exclude_ids": tuple(exclude_ids)},
+                )
+                .mappings()
+                .fetchall()
+            )
+        return self.db.execute(self.q.GET_PENDING_NO_EXCLUSION).mappings().fetchall()
 
     def get_filtered_awards(
         self,
@@ -169,17 +209,29 @@ class AwardsRepository:
         status_filter: Optional[str],
         skip: int,
         limit: int,
-    ) -> Tuple[int, List[Award]]:
-        query = self.db.query(Award).filter(Award.id.in_(award_ids))
-        if status_filter:
-            query = query.filter(Award.status == status_filter)
-        total = query.count()
-        awards = query.order_by(Award.created_at.desc()).offset(skip).limit(limit).all()
-        return total, awards
+    ) -> Tuple[int, List]:
+        ids = tuple(award_ids) if award_ids else (0,)
+        total = self.db.execute(
+            self.q.GET_FILTERED_COUNT,
+            {"award_ids": ids, "status": status_filter},
+        ).scalar()
+        items = (
+            self.db.execute(
+                self.q.GET_FILTERED,
+                {"award_ids": ids, "status": status_filter, "limit": limit, "skip": skip},
+            )
+            .mappings()
+            .fetchall()
+        )
+        return total, list(items)
 
-    # --- Transaction helpers ---
+    # ── Transaction helpers ──────────────────────────────────────────────────
+
     def commit(self) -> None:
         self.db.commit()
 
     def refresh(self, obj) -> None:
-        self.db.refresh(obj)
+        pass  # not needed with raw SQL
+
+
+

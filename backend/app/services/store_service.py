@@ -59,14 +59,11 @@ class StoreService:
 
         update_data = reward_data.model_dump(exclude_unset=True)
 
-        for key, value in update_data.items():
-            setattr(reward, key, value)
-
         # HR controls is_active manually — stock hitting 0 does NOT auto-deactivate.
         # 0-stock rewards are simply hidden from the employee catalog by the query filter.
 
         _catalog_cache.clear()  # invalidate catalog on update
-        return self.repository.save_reward(reward)
+        return self.repository.save_reward(reward_id, **update_data)
 
     def redeem_reward(self, user_id: int, reward_id: int) -> Redemption:
         """Instant redemption for Merch or Vouchers."""
@@ -81,8 +78,7 @@ class StoreService:
         if reward.stock_quantity is not None:
             if reward.stock_quantity <= 0:
                 # Auto-deactivate if stock is 0
-                reward.is_active = False
-                self.repository.save_reward(reward)
+                self.repository.save_reward(reward_id, is_active=False)
                 raise ValueError("This reward is out of stock.")
 
         # Check balance accounting for points locked in pending conversions
@@ -231,16 +227,20 @@ class StoreService:
         )
 
         # 2. Update Status
-        conversion.status = ConversionStatus.APPROVED.value # Or PAID if immediate
-        conversion.approved_by = approver_id
-        conversion.approved_at = datetime.now()
-
-        self.repository.save_conversion(conversion)
+        _now = datetime.now()
+        self.repository.save_conversion(
+            conversion_id,
+            status=ConversionStatus.APPROVED.value,
+            approved_by=approver_id,
+            approved_at=_now,
+        )
+        # Re-fetch so the rest of the method has current values
+        conversion = self.repository.get_conversion_by_id(conversion_id)
 
         # 3. Notify User
         self.notification_service.create_notification(
-            user_id=conversion.user_id,
-            message=f"Your points conversion request for {conversion.points_converted} points has been approved.",
+            user_id=conversion["user_id"],
+            message=f"Your points conversion request for {conversion['points_converted']} points has been approved.",
             source_type=ReferenceType.CONVERSION.value,
             source_id=conversion.id,
             email_event_type="CONVERSION_APPROVED",
@@ -262,16 +262,19 @@ class StoreService:
         if not conversion:
             raise ValueError("Conversion request not found.")
 
-        conversion.status = ConversionStatus.REJECTED.value
-        conversion.approved_by = approver_id
-        conversion.approved_at = datetime.now()
-
-        self.repository.save_conversion(conversion)
+        _now = datetime.now()
+        self.repository.save_conversion(
+            conversion_id,
+            status=ConversionStatus.REJECTED.value,
+            approved_by=approver_id,
+            approved_at=_now,
+        )
+        conversion = self.repository.get_conversion_by_id(conversion_id)
 
         # Notify User
         self.notification_service.create_notification(
-            user_id=conversion.user_id,
-            message=f"Your points conversion request for {conversion.points_converted} points has been rejected.",
+            user_id=conversion["user_id"],
+            message=f"Your points conversion request for {conversion['points_converted']} points has been rejected.",
             source_type=ReferenceType.CONVERSION.value,
             source_id=conversion.id,
             email_event_type="CONVERSION_REJECTED",
@@ -317,12 +320,10 @@ class StoreService:
         if duplicates:
             # Update the existing record instead of creating a new one
             policy = duplicates[0]
-            for key, value in data.items():
-                if key != "id":
-                    setattr(policy, key, value)
-            policy.is_active = True
+            update_kwargs = {k: v for k, v in data.items() if k != "id"}
+            update_kwargs["is_active"] = True
             _policy_cache.clear()
-            return self.repository.save_policy(policy)
+            return self.repository.save_policy(policy["id"], **update_kwargs)
         else:
             result = self.repository.create_policy(data)
             _policy_cache.clear()
@@ -335,8 +336,6 @@ class StoreService:
             raise ValueError("Policy not found.")
 
         update_data = policy_data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(policy, key, value)
 
         _policy_cache.clear()
-        return self.repository.save_policy(policy)
+        return self.repository.save_policy(policy_id, **update_data)
