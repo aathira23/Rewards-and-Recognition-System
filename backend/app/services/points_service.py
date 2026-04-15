@@ -2,53 +2,47 @@
 Points service - Business logic for points management, FIFO deductions, and ledger tracking.
 Aligned with UI requirements for rich descriptions.
 """
+from __future__ import annotations
+
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import date, datetime, timedelta
-from sqlalchemy import or_, desc, func
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from cachetools import TTLCache
 
-from app.models.wallets import Wallet
 from app.models.points_ledger import PointsLedger
-from app.models.points_conversion import PointsConversion
-from app.models.points_batches import PointsBatch
-from app.models.users import User
-from app.models.ecards import ECard
-from app.models.awards import Award
-from app.models.award_types import AwardType
-from app.models.badges import Badge
-from app.models.rewards import Reward
-from app.models.redemptions import Redemption
 from app.utils.enums import TransactionType, ReferenceType, WalletType
+from app.repository.points_repository import PointsRepository
+
+logger = logging.getLogger(__name__)
+
+# Module-level cache: user_id → aggregates dict.  5 min TTL, up to 5 000 users.
+_aggregates_cache: TTLCache = TTLCache(maxsize=5_000, ttl=5 * 60)
 
 
 class PointsService:
     """Service for managing points, FIFO deductions, and ledger tracking."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
+        self.repository = PointsRepository(db)
 
-    def get_employee_wallet(self, user_id: int) -> Optional[Wallet]:
+    def get_employee_wallet(self, user_id: int):
         """Get or create employee wallet."""
-        wallet = self.db.query(Wallet).filter(
-            Wallet.user_id == user_id,
-            Wallet.wallet_type == WalletType.EMPLOYEE.value
-        ).first()
+        wallet = self.repository.get_employee_wallet(user_id)
         if not wallet:
-            wallet = Wallet(user_id=user_id, wallet_type=WalletType.EMPLOYEE.value, balance=0)
-            self.db.add(wallet)
-            self.db.commit()
-            self.db.refresh(wallet)
+            wallet = self.repository.create_employee_wallet(user_id)
         return wallet
 
     def get_user_balance(self, user_id: int) -> int:
         """Get total available points for a user across all non-expired batches."""
-        today = date.today()
-        total = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
-            PointsBatch.user_id == user_id,
-            PointsBatch.expiry_date >= today,
-            PointsBatch.remaining_points > 0
-        ).scalar() or 0
-        return int(total)
+        return self.repository.get_available_balance(user_id)
+
+    def get_pending_conversion_points(self, user_id: int) -> int:
+        """Get total points locked in pending conversion requests."""
+        return self.repository.get_pending_conversion_points(user_id)
 
     def award_points(
         self,
@@ -67,12 +61,8 @@ class PointsService:
         if cap_val:
             try:
                 cap = int(cap_val)
-                # Calculate total awarded this month
                 first_day = date.today().replace(day=1)
-                month_total = self.db.query(func.sum(PointsLedger.points)).filter(
-                    PointsLedger.transaction_type == TransactionType.CREDIT.value,
-                    PointsLedger.created_at >= first_day
-                ).scalar() or 0
+                month_total = self.repository.get_month_credits(first_day)
 
                 if month_total + points > cap:
                     available = max(0, cap - month_total)
@@ -82,56 +72,47 @@ class PointsService:
                     )
             except ValueError as e:
                 if "System-wide" in str(e): raise e
-                # If int conversion fails, ignore the cap
                 pass
 
         # 2. If this is a manager->employee transfer, deduct manager budget centrally
         if source_type == ReferenceType.MANAGER_REWARD.value:
-            # source_id is expected to be the manager's user_id
-            manager_wallet = self.db.query(Wallet).filter(
-                Wallet.user_id == source_id,
-                Wallet.wallet_type == WalletType.MANAGER.value
-            ).first()
+            manager_wallet = self.repository.get_manager_wallet(source_id)
             if not manager_wallet or manager_wallet.balance < points:
                 raise ValueError(f"Insufficient manager budget. Available: {manager_wallet.balance if manager_wallet else 0}, Requested: {points}")
 
-            # Deduct from manager wallet and create debit ledger entry
             manager_wallet.balance -= points
-            manager_debit = PointsLedger(
-                source_wallet_id=manager_wallet.id,
+            self.repository.add_ledger_entry(
                 points=points,
                 transaction_type=TransactionType.DEBIT.value,
                 reference_type=ReferenceType.MANAGER_REWARD.value,
-                reference_id=user_id
+                reference_id=user_id,
+                source_wallet_id=manager_wallet.id,
             )
-            self.db.add(manager_debit)
 
         # 2. Proceed with awarding (credit to employee)
         expiry_date = date.today() + timedelta(days=expiry_days)
-        batch = PointsBatch(
+        batch = self.repository.create_batch(
             user_id=user_id,
             points=points,
-            remaining_points=points,
             source_type=source_type,
             source_id=source_id,
-            expiry_date=expiry_date
+            expiry_date=expiry_date,
         )
-        self.db.add(batch)
 
         wallet = self.get_employee_wallet(user_id)
         wallet.balance += points
 
-        ledger = PointsLedger(
-            target_wallet_id=wallet.id,
+        self.repository.add_ledger_entry(
             points=points,
             transaction_type=TransactionType.CREDIT.value,
             reference_type=source_type,
-            reference_id=source_id
+            reference_id=source_id,
+            target_wallet_id=wallet.id,
         )
-        self.db.add(ledger)
 
-        self.db.commit()
-        self.db.refresh(batch)
+        self.repository.commit()
+        self.repository.refresh(batch)
+        self.invalidate_aggregates(user_id)
         return batch
 
     def deduct_points(self, user_id: int, points: int, reference_type: str, reference_id: int):
@@ -143,12 +124,7 @@ class PointsService:
         if wallet.balance < points:
             raise ValueError(f"Insufficient points. Available: {wallet.balance}, Requested: {points}")
 
-        today = date.today()
-        batches = self.db.query(PointsBatch).filter(
-            PointsBatch.user_id == user_id,
-            PointsBatch.expiry_date >= today,
-            PointsBatch.remaining_points > 0
-        ).order_by(PointsBatch.expiry_date.asc()).all()
+        batches = self.repository.get_fifo_batches(user_id)
 
         remaining_to_deduct = points
         for batch in batches:
@@ -162,61 +138,71 @@ class PointsService:
             raise ValueError("Insufficient non-expired points to complete deduction.")
 
         wallet.balance -= points
-        ledger = PointsLedger(
-            source_wallet_id=wallet.id,
+        self.repository.add_ledger_entry(
             points=points,
             transaction_type=TransactionType.DEBIT.value,
             reference_type=reference_type,
-            reference_id=reference_id
+            reference_id=reference_id,
+            source_wallet_id=wallet.id,
         )
-        self.db.add(ledger)
-        self.db.commit()
+        self.repository.commit()
+        self.invalidate_aggregates(user_id)
+
+    def invalidate_aggregates(self, user_id: int) -> None:
+        """Remove cached aggregates for a user after a points mutation."""
+        _aggregates_cache.pop(user_id, None)
 
     def get_aggregates(self, user_id: int) -> Dict[str, int]:
-        """Compute dashboard metrics: balance, earned, redeemed, pending."""
+        """Compute dashboard metrics: balance, earned, redeemed, pending.
+
+        Results are served from an in-memory TTL cache (5 min) to avoid
+        8 separate DB round-trips on every dashboard load.
+        """
+        if user_id in _aggregates_cache:
+            logger.debug("Aggregates cache HIT — user_id=%s", user_id)
+            return _aggregates_cache[user_id]
+
         wallet = self.get_employee_wallet(user_id)
         balance = self.get_user_balance(user_id)
 
-        earned = self.db.query(func.sum(PointsLedger.points)).filter(
-            PointsLedger.transaction_type == TransactionType.CREDIT.value,
-            PointsLedger.target_wallet_id == wallet.id
-        ).scalar() or 0
+        earned = self.repository.get_total_credits(wallet.id)
+        redeemed = self.repository.get_total_redeemed(user_id)
+        converted = self.repository.get_total_converted(user_id)
+        pending_count = self.repository.get_pending_conversion_count(user_id)
 
-        redeemed = self.db.query(func.sum(Redemption.points_used)).filter(
-            Redemption.user_id == user_id
-        ).scalar() or 0
-
-        converted = self.db.query(func.sum(PointsConversion.points_converted)).filter(
-            PointsConversion.user_id == user_id,
-            PointsConversion.status.in_(["APPROVED", "PAID"])
-        ).scalar() or 0
-
-        pending_count = self.db.query(func.count(PointsConversion.id)).filter(
-            PointsConversion.user_id == user_id,
-            PointsConversion.status == "PENDING"
-        ).scalar() or 0
-
-        # Calculate points expiring today
         today = date.today()
-        expiring_today = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
-            PointsBatch.user_id == user_id,
-            PointsBatch.remaining_points > 0,
-            PointsBatch.expiry_date == today
-        ).scalar() or 0
+        expiring_today = self.repository.get_expiring_points(user_id, today)
 
-        # Calculate points expiring this month (from tomorrow until end of month)
         import calendar
         _, last_day = calendar.monthrange(today.year, today.month)
         end_of_month = date(today.year, today.month, last_day)
+        expiring_this_month = self.repository.get_expiring_points_range(user_id, today, end_of_month)
 
-        expiring_this_month = self.db.query(func.sum(PointsBatch.remaining_points)).filter(
-            PointsBatch.user_id == user_id,
-            PointsBatch.remaining_points > 0,
-            PointsBatch.expiry_date > today,
-            PointsBatch.expiry_date <= end_of_month
-        ).scalar() or 0
+        # ── Monthly level calculation ─────────────────────────
+        first_of_month = date(today.year, today.month, 1)
+        monthly_pts = int(self.repository.get_monthly_earned_for_user(wallet.id, first_of_month))
 
-        return {
+        _LEVEL_THRESHOLDS = [
+            (0,    1, 100),   # level, pts needed for next level
+            (100,  2, 250),
+            (250,  3, 500),
+            (500,  4, 1000),
+            (1000, 5, 1000),  # max level — progress fills to 1000
+        ]
+        level_num = 1
+        level_min = 0
+        level_max_pts = 100
+        for threshold, lvl, next_pts in _LEVEL_THRESHOLDS:
+            if monthly_pts >= threshold:
+                level_num = lvl
+                level_min = threshold
+                level_max_pts = next_pts
+
+        level_progress = monthly_pts - level_min
+        # For max level, cap progress at level_max_pts
+        level_progress = min(level_progress, level_max_pts)
+
+        result = {
             "balance": balance,
             "total_earned": int(earned),
             "total_redeemed": int(redeemed),
@@ -225,7 +211,15 @@ class PointsService:
             "expiring_soon": int(expiring_today + expiring_this_month),
             "expiring_today": int(expiring_today),
             "expiring_this_month": int(expiring_this_month),
+            "level": level_num,
+            "level_name": f"Level {level_num}",
+            "level_progress": level_progress,
+            "level_max": level_max_pts,
+            "monthly_earned": monthly_pts,
         }
+        _aggregates_cache[user_id] = result
+        logger.debug("Aggregates cache STORE — user_id=%s", user_id)
+        return result
 
     def fetch_ledger_history(
         self,
@@ -242,19 +236,14 @@ class PointsService:
         page, per_page, skip = clamp_pagination(page, per_page)
 
         if wallet_type == "MANAGER":
-             wallet = self.db.query(Wallet).filter(
-                Wallet.user_id == user_id,
-                Wallet.wallet_type == WalletType.MANAGER.value
-            ).first()
+             wallet = self.repository.get_manager_wallet(user_id)
         else:
              wallet = self.get_employee_wallet(user_id)
 
         if not wallet:
             return 0, []
 
-        q = self.db.query(PointsLedger).filter(
-            or_(PointsLedger.source_wallet_id == wallet.id, PointsLedger.target_wallet_id == wallet.id)
-        )
+        q = self.repository.get_ledger_query(wallet.id)
 
         if start_date:
             try:
@@ -269,14 +258,7 @@ class PointsService:
 
         # ── Expired-only view ──────────────────────────────────
         if category and category.lower() == "expired":
-            today = date.today()
-            batch_q = self.db.query(PointsBatch).filter(
-                PointsBatch.user_id == user_id,
-                PointsBatch.expiry_date < today,
-                PointsBatch.remaining_points > 0
-            )
-            total = batch_q.count()
-            rows = batch_q.order_by(desc(PointsBatch.expiry_date)).offset(skip).limit(per_page).all()
+            total, rows = self.repository.get_expired_batches_paginated(user_id, skip, per_page)
             items = [{
                 "id": f"batch-{b.id}",
                 "date": b.expiry_date.strftime("%d/%m/%Y"),
@@ -291,12 +273,7 @@ class PointsService:
 
         # ── Pending-only view ──────────────────────────────────
         if category and category.lower() == "pending":
-            pending_q = self.db.query(PointsConversion).filter(
-                PointsConversion.user_id == user_id,
-                PointsConversion.status == "PENDING"
-            )
-            total = pending_q.count()
-            pending_rows = pending_q.order_by(desc(PointsConversion.requested_at)).offset(skip).limit(per_page).all()
+            total, pending_rows = self.repository.get_pending_conversions_paginated(user_id, skip, per_page)
             items = []
             for p in pending_rows:
                 req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
@@ -328,16 +305,9 @@ class PointsService:
         extra_expired_count = 0
         extra_pending_count = 0
         if not category and wallet_type == "EMPLOYEE":
-            today = date.today()
-            extra_expired_count = self.db.query(PointsBatch).filter(
-                PointsBatch.user_id == user_id,
-                PointsBatch.expiry_date < today,
-                PointsBatch.remaining_points > 0,
-            ).count()
-            extra_pending_count = self.db.query(PointsConversion).filter(
-                PointsConversion.user_id == user_id,
-                PointsConversion.status == "PENDING",
-            ).count()
+            _, expired_all = self.repository.get_expired_batches_paginated(user_id, 0, 999999)
+            extra_expired_count = len(expired_all)
+            extra_pending_count = self.repository.get_pending_conversion_count(user_id)
 
         grand_total = ledger_total + extra_expired_count + extra_pending_count
 
@@ -353,10 +323,7 @@ class PointsService:
                 # Collect pending first, then expired
                 all_extras = []
                 if extra_pending_count > 0:
-                    pending_rows = self.db.query(PointsConversion).filter(
-                        PointsConversion.user_id == user_id,
-                        PointsConversion.status == "PENDING",
-                    ).order_by(desc(PointsConversion.requested_at)).all()
+                    pending_rows = self.repository.get_pending_conversions_all(user_id)
                     for p in pending_rows:
                         req_date = p.requested_at.strftime("%d/%m/%Y") if p.requested_at else "Pending"
                         req_full = p.requested_at.isoformat() if p.requested_at else ""
@@ -371,12 +338,7 @@ class PointsService:
                             "reference_type": "CONVERSION",
                         })
                 if extra_expired_count > 0:
-                    today = date.today()
-                    expired_batches = self.db.query(PointsBatch).filter(
-                        PointsBatch.user_id == user_id,
-                        PointsBatch.expiry_date < today,
-                        PointsBatch.remaining_points > 0,
-                    ).order_by(desc(PointsBatch.expiry_date)).all()
+                    expired_batches = self.repository.get_expired_batches(user_id)
                     for b in expired_batches:
                         all_extras.append({
                             "id": f"batch-{b.id}",
@@ -422,6 +384,15 @@ class PointsService:
 
     def _enrich_description(self, row: PointsLedger, is_credit: bool = True) -> Tuple[str, str]:
         """Logic to match the precise UI descriptions from the reference image."""
+
+        def _resolve_name(user_id: int, fallback: str = "a Peer") -> str:
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                profile = get_user_profile(user_id, self._token)
+                if profile:
+                    return profile.name
+            return fallback
+
         ref_type = row.reference_type
         ref_id = row.reference_id
         if not ref_type: return "General Transaction", "Other"
@@ -433,22 +404,20 @@ class PointsService:
 
         # 1. Peer Appreciations (eCards)
         if ref_upper == ReferenceType.ECARD.value:
-            ecard = self.db.query(ECard).filter(ECard.id == ref_id).first()
+            ecard = self.repository.get_ecard(ref_id)
             if ecard:
-                sender = self.db.query(User).filter(User.id == ecard.sender_id).first()
-                badge = self.db.query(Badge).filter(Badge.id == ecard.badge_id).first()
+                badge = self.repository.get_badge(ecard.badge_id)
                 badge_title = f"'{badge.name}'" if badge else "Recognition"
-                sender_name = sender.name if sender else "a Peer"
+                sender_name = _resolve_name(ecard.sender_id, "a Peer")
                 return f"{badge_title} Appreciation\nFrom: {sender_name}", "Earned"
             return "Recognition Reward", "Earned"
 
         # 2. Store Redemptions
         if ref_upper == ReferenceType.REDEMPTION.value:
-            redemption = self.db.query(Redemption).filter(Redemption.id == ref_id).first()
+            redemption = self.repository.get_redemption(ref_id)
             if redemption:
-                reward = self.db.query(Reward).filter(Reward.id == redemption.reward_id).first()
+                reward = self.repository.get_reward(redemption.reward_id)
                 reward_name = reward.name if reward else "Reward"
-                # Matches format like: Amazon Gift Voucher Redemption\nOrder ID: ALR-984421
                 return f"{reward_name} Redemption\nOrder ID: ALR-{redemption.id}", "Redeemed"
             return "Reward Redemption", "Redeemed"
 
@@ -459,26 +428,24 @@ class PointsService:
 
         # 4. Official Awards
         if ref_upper == ReferenceType.AWARD.value:
-            award = self.db.query(Award).filter(Award.id == ref_id).first()
+            award = self.repository.get_award(ref_id)
             if award:
-                award_type = self.db.query(AwardType).filter(AwardType.id == award.award_type_id).first()
+                award_type = self.repository.get_award_type(award.award_type_id)
                 award_name = award_type.name if award_type else "Official Award"
                 return f"{award_name}\nExcellence Award", "Earned"
             return "Official Award", "Earned"
 
         if ref_upper == ReferenceType.CONVERSION.value:
-            conversion = self.db.query(PointsConversion).filter(PointsConversion.id == ref_id).first()
+            conversion = self.repository.get_conversion(ref_id)
             ctype = conversion.conversion_type if conversion else "Cash"
             return f"Points Conversion - {ctype}\nCompleted Request", "Redeemed"
 
         if ref_upper == ReferenceType.MANAGER_REWARD.value:
             if is_credit:
-                manager = self.db.query(User).filter(User.id == ref_id).first()
-                manager_name = manager.name if manager else "Manager"
+                manager_name = _resolve_name(ref_id, "Manager")
                 return f"Direct Recognition Reward\nFrom: {manager_name}", "Earned"
             else:
-                employee = self.db.query(User).filter(User.id == ref_id).first()
-                employee_name = employee.name if employee else "Employee"
+                employee_name = _resolve_name(ref_id, "Employee")
                 return f"Budget Reward Sent\nTo: {employee_name}", "Spent"
 
         if ref_upper == ReferenceType.EXPIRY.value:
@@ -493,7 +460,6 @@ class PointsService:
         Aggregates expiring batches per user and sends a single notification
         (with email) per user via NotificationService.
         """
-        from app.models.notifications import Notification
         from app.services.notification_service import NotificationService
         from app.core.config import settings
 
@@ -503,11 +469,7 @@ class PointsService:
         today = date.today()
         cutoff = today + timedelta(days=days)
 
-        upcoming_batches = self.db.query(PointsBatch).filter(
-            PointsBatch.expiry_date > today,
-            PointsBatch.expiry_date <= cutoff,
-            PointsBatch.remaining_points > 0
-        ).all()
+        upcoming_batches = self.repository.get_upcoming_expiry_batches(cutoff)
 
         if not upcoming_batches:
             return {
@@ -518,13 +480,12 @@ class PointsService:
             }
 
         # Group batches by user, skipping already-notified ones
+        from app.services.notification_service import NotificationService as NS2
+        notification_repo = NS2(self.db)
         user_batches: Dict[int, list] = {}
         for batch in upcoming_batches:
-            exists = self.db.query(Notification).filter(
-                Notification.source_type == ReferenceType.EXPIRY.value,
-                Notification.source_id == batch.id
-            ).first()
-            if exists:
+            # Check if already notified via the repository lookup
+            if self.repository.notification_exists(ReferenceType.EXPIRY.value, batch.id):
                 continue
             user_batches.setdefault(batch.user_id, []).append(batch)
 
@@ -582,10 +543,7 @@ class PointsService:
         today = date.today()
 
         # Find expired batches with remaining points
-        expired_batches = self.db.query(PointsBatch).filter(
-            PointsBatch.expiry_date < today,
-            PointsBatch.remaining_points > 0
-        ).all()
+        expired_batches = self.repository.get_all_expired_unprocessed()
 
         if not expired_batches:
             return {
@@ -609,14 +567,13 @@ class PointsService:
                 wallet.balance = 0  # Safety net
 
             # 3. Create ledger entry for expiry
-            ledger = PointsLedger(
+            self.repository.add_ledger_entry(
                 source_wallet_id=wallet.id,
                 points=points_to_expire,
                 transaction_type=TransactionType.DEBIT.value,
                 reference_type=ReferenceType.EXPIRY.value,
                 reference_id=batch.id
             )
-            self.db.add(ledger)
 
             # 4. Set batch.remaining_points to 0
             batch.remaining_points = 0
@@ -628,12 +585,12 @@ class PointsService:
                 source_type=ReferenceType.EXPIRY.value,
                 source_id=batch.id
             )
-            self.db.add(notification)
+            self.repository.add(notification)
 
             total_points_expired += points_to_expire
             batches_expired += 1
 
-        self.db.commit()
+        self.repository.commit()
 
         return {
             "date": str(today),

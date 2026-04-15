@@ -1,10 +1,13 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/utils/file_download_helper.dart';
 import '../../../../injection_container.dart';
 import '../bloc/reports_bloc.dart';
@@ -29,7 +32,7 @@ enum _ReportType {
     subtitle:
         'Complete history of peer recognitions, ecards, manager rewards and formal awards with sender/receiver details, points and messages',
     icon: Icons.emoji_events_rounded,
-    color: Color(0xFF3B82F6),
+    color: AppTheme.brandBlue,
     hasDateFilter: true,
     hasDeptFilter: true,
     columns: [
@@ -241,16 +244,48 @@ class _ReportsViewState extends State<_ReportsView> {
 
   void _goBack() => setState(() => _active = null);
 
+  Widget _buildPageHeader(String title, String subtitle, {VoidCallback? onBack}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onBack ??
+              () => MainLayout.of(context)?.selectTabByTitle('Dashboard'),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_back_rounded,
+                    size: 20, color: Colors.black87),
+                const SizedBox(width: 8),
+                Text(
+                    onBack == null ? 'Back to Dashboard' : 'Back to Reports',
+                    style: AppTextStyles.bodyBold(color: Colors.black87)),
+              ],
+            ),
+          ),
+        ),
+        Text(
+          title,
+          style: AppTextStyles.headline1(color: Colors.black87),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: AppTextStyles.body(color: Colors.grey.shade600),
+        ),
+      ],
+    );
+  }
+
   // ── build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ReportsBloc, ReportsState>(
       listener: (context, state) {
         if (state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.successMessage!),
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.success(context, state.successMessage!);
         }
 
         // Trigger CSV download if data available
@@ -264,11 +299,7 @@ class _ReportsViewState extends State<_ReportsView> {
         }
 
         if (state.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: ${state.error}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.error(context, state.error!);
         }
       },
       builder: (context, state) {
@@ -289,6 +320,11 @@ class _ReportsViewState extends State<_ReportsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildPageHeader(
+            'Reports & Insights',
+            'Organization-wide data and trends',
+          ),
+          const SizedBox(height: 32),
           LayoutBuilder(builder: (ctx, constraints) {
             final w = constraints.maxWidth;
             // desktop ≥1100 → 3 cols, tablet ≥600 → 2 cols, mobile → 1 col
@@ -324,35 +360,12 @@ class _ReportsViewState extends State<_ReportsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── breadcrumb ──
-          Row(
-            children: [
-              InkWell(
-                onTap: _goBack,
-                borderRadius: BorderRadius.circular(6),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.arrow_back_rounded,
-                      size: 18, color: Colors.grey.shade600),
-                  const SizedBox(width: 6),
-                  Text('Reports',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500)),
-                ]),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('/',
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-              ),
-              Text(type.title,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
+          _buildPageHeader(
+            type.title,
+            type.subtitle,
+            onBack: _goBack,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
 
           // ── title + actions ──
           LayoutBuilder(
@@ -366,7 +379,7 @@ class _ReportsViewState extends State<_ReportsView> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: type.color.withValues(alpha: 0.1),
+                          color: type.color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(type.icon, color: type.color, size: 22),
@@ -554,7 +567,8 @@ class _ReportsViewState extends State<_ReportsView> {
               width: 180,
               inputDecorationTheme: InputDecorationTheme(
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(
@@ -576,7 +590,8 @@ class _ReportsViewState extends State<_ReportsView> {
                     _deptId != null ? Colors.blue.shade50 : Colors.grey.shade50,
               ),
               textStyle: TextStyle(fontSize: 12, color: Colors.grey.shade800),
-              label: Text('All Departments', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              label: Text('All Departments',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
               dropdownMenuEntries: [
                 const DropdownMenuEntry(value: null, label: 'All Departments'),
                 ...state.departments.map((d) => DropdownMenuEntry(
@@ -613,11 +628,11 @@ class _ReportsViewState extends State<_ReportsView> {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color:
-                          sel ? const Color(0xFF1E56BD) : Colors.grey.shade100,
+                          sel ? AppTheme.brandBlue : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                           color: sel
-                              ? const Color(0xFF1E56BD)
+                              ? AppTheme.brandBlue
                               : Colors.grey.shade300),
                     ),
                     child: Text('${d}d',
@@ -712,7 +727,7 @@ class _ReportsViewState extends State<_ReportsView> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: s.color.withValues(alpha: 0.1),
+              color: s.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(s.icon, size: 16, color: s.color),
@@ -1069,7 +1084,7 @@ class _ReportsViewState extends State<_ReportsView> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text('$d days',
@@ -1152,7 +1167,7 @@ class _ReportCardState extends State<_ReportCard> {
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           elevation: _hovered ? 4 : 0,
-          shadowColor: widget.type.color.withValues(alpha: 0.2),
+          shadowColor: widget.type.color.withOpacity(0.2),
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(12),
@@ -1162,7 +1177,7 @@ class _ReportCardState extends State<_ReportCard> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                     color: _hovered
-                        ? widget.type.color.withValues(alpha: 0.3)
+                        ? widget.type.color.withOpacity(0.3)
                         : Colors.grey.shade200),
               ),
               child: Column(
@@ -1173,7 +1188,7 @@ class _ReportCardState extends State<_ReportCard> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: widget.type.color.withValues(alpha: 0.1),
+                          color: widget.type.color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(widget.type.icon,

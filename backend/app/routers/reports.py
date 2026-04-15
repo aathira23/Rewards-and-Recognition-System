@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from datetime import date, datetime
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id
+from app.core.dependencies import get_current_user_id, oauth2_scheme
 
 from app.services.analytics_service import AnalyticsService
 from app.utils.response import success, client_error
@@ -31,12 +31,13 @@ def get_reports(
     days: int = 30,
     export_format: str = "json", # json, csv
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """
     Generate and export reports.
     """
-    service = AnalyticsService(db)
+    service = AnalyticsService(db, token=token)
 
     if report_type == "AWARDS_GIVEN" or report_type == "RECOGNITIONS":
         data = service.get_recognition_report(from_date, to_date, department_id)
@@ -72,12 +73,13 @@ def get_payroll_report(
     month: str,  # Format: YYYY-MM
     export_format: str = "json", # json, csv
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """
     Generate monthly payroll encashment report.
     """
-    service = AnalyticsService(db)
+    service = AnalyticsService(db, token=token)
     try:
         data = service.get_payroll_report(month)
         if export_format == "csv":

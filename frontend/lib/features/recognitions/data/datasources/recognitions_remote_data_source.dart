@@ -12,6 +12,8 @@ abstract class RecognitionsRemoteDataSource {
     required int receiverId,
     required int badgeId,
     String? message,
+    required String personaType,
+    String? personaLabel,
   });
   Future<AppreciationStatsModel> getAppreciationStats();
 }
@@ -47,6 +49,8 @@ class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
     required int receiverId,
     required int badgeId,
     String? message,
+    required String personaType,
+    String? personaLabel,
   }) async {
     final response = await client.post(
       ApiConstants.sendRecognition,
@@ -54,6 +58,8 @@ class RecognitionsRemoteDataSourceImpl implements RecognitionsRemoteDataSource {
         'receiver_id': receiverId,
         'badge_id': badgeId,
         'message': message,
+        'persona_type': personaType,
+        'persona_label': personaLabel,
       },
     );
     return RecognitionModel.fromJson(response.data['data']);

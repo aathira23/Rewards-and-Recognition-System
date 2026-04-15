@@ -11,6 +11,8 @@ abstract class RecognitionsRepository {
     required int receiverId,
     required int badgeId,
     String? message,
+    required String personaType,
+    String? personaLabel,
   });
   Future<Either<Failure, AppreciationStatsEntity>> getAppreciationStats();
 }

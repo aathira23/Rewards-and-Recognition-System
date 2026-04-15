@@ -55,17 +55,33 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     MarkAllAsReadRequested event,
     Emitter<NotificationsState> emit,
   ) async {
-    await markAsReadUseCase(null);
-    add(GetNotificationsRequested());
-    add(GetUnreadCountRequested());
+    final result = await markAsReadUseCase(null);
+    result.fold(
+      (failure) => emit(state.copyWith(
+        status: NotificationsStatus.failure,
+        errorMessage: failure.message,
+      )),
+      (_) {
+        add(GetNotificationsRequested());
+        add(GetUnreadCountRequested());
+      },
+    );
   }
 
   Future<void> _onMarkOneAsRead(
     MarkOneAsReadRequested event,
     Emitter<NotificationsState> emit,
   ) async {
-    await markAsReadUseCase(event.notificationId);
-    add(GetNotificationsRequested());
-    add(GetUnreadCountRequested());
+    final result = await markAsReadUseCase(event.notificationId);
+    result.fold(
+      (failure) => emit(state.copyWith(
+        status: NotificationsStatus.failure,
+        errorMessage: failure.message,
+      )),
+      (_) {
+        add(GetNotificationsRequested());
+        add(GetUnreadCountRequested());
+      },
+    );
   }
 }

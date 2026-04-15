@@ -4,6 +4,7 @@ import '../../domain/entities/auth_entity.dart';
 import '../../domain/usecases/check_auth_status_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/token_login_usecase.dart';
 import '../../../profile/domain/usecases/get_me_usecase.dart';
 import '../../../../core/usecases/usecase.dart';
 import 'auth_event.dart';
@@ -14,15 +15,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LogoutUseCase logoutUseCase;
   final CheckAuthStatusUseCase checkAuthStatusUseCase;
   final GetMeUseCase getMeUseCase;
+  final TokenLoginUseCase tokenLoginUseCase;
 
   AuthBloc({
     required this.loginUseCase,
     required this.logoutUseCase,
     required this.checkAuthStatusUseCase,
     required this.getMeUseCase,
+    required this.tokenLoginUseCase,
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
+    on<AuthTokenLoginRequested>(_onAuthTokenLoginRequested);
     on<AuthProfileFetchRequested>(_onAuthProfileFetchRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
   }
@@ -62,6 +66,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (auth) {
         emit(AuthAuthenticated(auth: auth));
         // Immediately fetch profile after successful login
+        add(AuthProfileFetchRequested());
+      },
+    );
+  }
+
+  Future<void> _onAuthTokenLoginRequested(
+    AuthTokenLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    final result = await tokenLoginUseCase(
+      TokenLoginParams(token: event.token),
+    );
+    result.fold(
+      (failure) => emit(AuthFailure(message: failure.message)),
+      (auth) {
+        emit(AuthAuthenticated(auth: auth));
         add(AuthProfileFetchRequested());
       },
     );

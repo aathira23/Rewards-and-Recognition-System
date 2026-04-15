@@ -3,9 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 import '../../../../core/utils/badge_utils.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/appreciation_stats_entity.dart';
 import '../../../profile/domain/entities/user_entity.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/recognitions_bloc.dart';
 import '../bloc/recognitions_event.dart';
 import 'sent_recognitions_list.dart';
@@ -29,7 +32,7 @@ class CompactSendPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sentCount = stats?.sentCount ?? 0;
-    const brandBlue = Color(0xFF1A60FF);
+    final brandColor = Theme.of(context).colorScheme.primary;
 
     // ── Limit / cooldown state ──────────────────────────────────
     final int? monthlyLimit = stats?.monthlyLimit;
@@ -66,7 +69,7 @@ class CompactSendPanel extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -74,7 +77,7 @@ class CompactSendPanel extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -100,7 +103,7 @@ class CompactSendPanel extends StatelessWidget {
                   limitReached: limitReached,
                   onCooldown: onCooldown,
                   nextAvailableAt: nextAvailableAt,
-                  brandBlue: brandBlue,
+                  brandColor: brandColor,
                 ),
                 const SizedBox(width: 8),
                 TextButton(
@@ -113,7 +116,7 @@ class CompactSendPanel extends StatelessWidget {
                   ),
                   child: Text(
                     'View all',
-                    style: AppTextStyles.bodyBold(color: brandBlue),
+                    style: AppTextStyles.bodyBold(color: brandColor),
                   ),
                 ),
               ],
@@ -130,9 +133,9 @@ class CompactSendPanel extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: brandBlue.withValues(alpha: 0.04),
+                color: brandColor.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: brandBlue.withValues(alpha: 0.1)),
+                border: Border.all(color: brandColor.withOpacity(0.1)),
               ),
               child: Row(
                 children: [
@@ -144,11 +147,11 @@ class CompactSendPanel extends StatelessWidget {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: brandBlue.withValues(alpha: 0.12),
+                            color: brandColor.withOpacity(0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.send_rounded,
-                              color: brandBlue, size: 22),
+                          child: Icon(Icons.send_rounded,
+                              color: brandColor, size: 22),
                         ),
                         const SizedBox(width: 14),
                         Column(
@@ -157,7 +160,7 @@ class CompactSendPanel extends StatelessWidget {
                             Text(
                               '$sentCount',
                               style:
-                                  AppTextStyles.sectionHeader(color: brandBlue)
+                                  AppTextStyles.sectionHeader(color: brandColor)
                                       .copyWith(fontSize: 26),
                             ),
                             Text(
@@ -176,7 +179,7 @@ class CompactSendPanel extends StatelessWidget {
                     Container(
                         width: 1,
                         height: 44,
-                        color: brandBlue.withValues(alpha: 0.12)),
+                        color: brandColor.withOpacity(0.12)),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -198,10 +201,10 @@ class CompactSendPanel extends StatelessWidget {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: info.color.withValues(alpha: 0.15),
+                                  color: info.color.withOpacity(0.15),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                      color: info.color.withValues(alpha: 0.3)),
+                                      color: info.color.withOpacity(0.3)),
                                 ),
                                 child: Center(
                                   child: rb.iconUrl != null
@@ -280,7 +283,7 @@ class CompactSendPanel extends StatelessWidget {
   void _showBadgePicker(BuildContext outerContext) {
     showDialog(
       context: outerContext,
-      builder: (dialogCtx) => _BadgePickerDialog(
+      builder: (dialogCtx) => BadgePickerDialog(
         badges: badges,
         users: users,
         outerContext: outerContext,
@@ -325,7 +328,7 @@ class _StatusPills extends StatelessWidget {
   final bool limitReached;
   final bool onCooldown;
   final DateTime? nextAvailableAt;
-  final Color brandBlue;
+  final Color brandColor;
 
   const _StatusPills({
     required this.monthlyLimit,
@@ -333,7 +336,7 @@ class _StatusPills extends StatelessWidget {
     required this.limitReached,
     required this.onCooldown,
     required this.nextAvailableAt,
-    required this.brandBlue,
+    required this.brandColor,
   });
 
   @override
@@ -363,8 +366,8 @@ class _StatusPills extends StatelessWidget {
       fg = const Color(0xFFD97706);
       bg = const Color(0xFFD97706);
     } else {
-      fg = brandBlue;
-      bg = brandBlue;
+      fg = brandColor;
+      bg = brandColor;
     }
 
     final label = limitReached
@@ -383,9 +386,9 @@ class _StatusPills extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: bg.withValues(alpha: 0.1),
+            color: bg.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: fg.withValues(alpha: 0.3)),
+            border: Border.all(color: fg.withOpacity(0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -425,7 +428,7 @@ class _StatusPills extends StatelessWidget {
             color: const Color(0xFFD1FAE5),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: const Color(0xFF34D399).withValues(alpha: 0.5)),
+                color: const Color(0xFF34D399).withOpacity(0.5)),
           ),
           child: const Row(
             mainAxisSize: MainAxisSize.min,
@@ -468,7 +471,7 @@ class _StatusPills extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFFEF3C7),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: fg.withValues(alpha: 0.35)),
+          border: Border.all(color: fg.withOpacity(0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -487,23 +490,105 @@ class _StatusPills extends StatelessWidget {
   }
 }
 
-class _BadgePickerDialog extends StatefulWidget {
+// Public wrapper so other widgets can reuse the same pills UI.
+class StatusPills extends StatelessWidget {
+  final int? monthlyLimit;
+  final int monthlySent;
+  final bool limitReached;
+  final bool onCooldown;
+  final DateTime? nextAvailableAt;
+  final Color brandColor;
+
+  const StatusPills({
+    Key? key,
+    required this.monthlyLimit,
+    required this.monthlySent,
+    required this.limitReached,
+    required this.onCooldown,
+    required this.nextAvailableAt,
+    required this.brandColor,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return _StatusPills(
+      monthlyLimit: monthlyLimit,
+      monthlySent: monthlySent,
+      limitReached: limitReached,
+      onCooldown: onCooldown,
+      nextAvailableAt: nextAvailableAt,
+      brandColor: brandColor,
+    );
+  }
+}
+
+class BadgePickerDialog extends StatefulWidget {
   final List<BadgeEntity> badges;
   final List<UserEntity> users;
   final BuildContext outerContext;
+  final BadgeEntity? initialBadge;
 
-  const _BadgePickerDialog({
+  const BadgePickerDialog({
+    super.key,
     required this.badges,
     required this.users,
     required this.outerContext,
+    this.initialBadge,
   });
 
   @override
-  State<_BadgePickerDialog> createState() => _BadgePickerDialogState();
+  State<BadgePickerDialog> createState() => _BadgePickerDialogState();
 }
 
-class _BadgePickerDialogState extends State<_BadgePickerDialog> {
+class _BadgePickerDialogState extends State<BadgePickerDialog> {
   BadgeEntity? _selected;
+  int? _receiverId;
+  UserEntity? _selectedUser;
+  final TextEditingController _recipientSearchController =
+      TextEditingController();
+  String _recipientSearchQuery = '';
+  String? _message;
+
+  List<Map<String, dynamic>> _personas = [];
+  late Map<String, dynamic> _selectedPersona;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialBadge;
+
+    _personas = [
+      {'persona_type': 'PERSONAL', 'persona_label': null}
+    ];
+
+    final authState = widget.outerContext.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      final user = authState.auth.user;
+      final role = user?.role.toUpperCase() ?? '';
+      final defaultDeptLabel = 'Department';
+      final deptName = user?.departmentName ?? defaultDeptLabel;
+
+      if (role == 'MANAGER' || role == 'DEPT_HEAD') {
+        _personas.add({
+          'persona_type': 'DEPARTMENT',
+          'persona_label': '$deptName Team',
+        });
+      } else if (role == 'ADMIN' || role == 'HR') {
+        _personas.add({
+          'persona_type': 'Company',
+          'persona_label': 'Tarento',
+        });
+      }
+    }
+
+    _selectedPersona = _personas.first;
+  }
+
+  @override
+  void dispose() {
+    _recipientSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -524,41 +609,31 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
   }
 
   Widget _buildBadgeGrid() {
-    // 1. Sort by name for stability
     final sortedBadges = List<BadgeEntity>.from(widget.badges)
       ..sort((a, b) => a.name.compareTo(b.name));
 
-    // 2. Interleave for visual diversity
-    final displayBadges = BadgeUtils.interleaveByColor<BadgeEntity>(
-      sortedBadges,
-      (b) => b.name,
-    );
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 140,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 0.75,
+    return SizedBox(
+      height: 400, // Reduced from 480 to be even more compact
+      child: GridView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: sortedBadges.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4, // More columns = smaller badges
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.75, // Adjusted for smaller width
+        ),
+        itemBuilder: (ctx, i) => _PickerBadgeCard(
+          badge: sortedBadges[i],
+          onTap: () => setState(() => _selected = sortedBadges[i]),
+        ),
       ),
-      itemCount: displayBadges.length,
-      itemBuilder: (ctx, i) {
-        final badge = displayBadges[i];
-        return _PickerBadgeCard(
-          badge: badge,
-          onTap: () => setState(() => _selected = badge),
-        );
-      },
     );
   }
 
-  Widget _buildSendForm(BuildContext context) {
+  Widget _buildSendForm(BuildContext ctx) {
     final badge = _selected!;
     final info = BadgeUtils.getDisplayInfo(badge.name);
-    int? receiverId;
-    String? message;
 
     return StatefulBuilder(
       builder: (ctx, setLocal) {
@@ -566,41 +641,37 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Selected badge banner ──────────────────────────────
+            // ── Badge Banner ────────────────────────────────────────
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: info.color.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: info.color.withValues(alpha: 0.25)),
+                color: info.color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: info.color.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: info.color.withValues(alpha: 0.15),
+                      color: info.color.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: badge.iconUrl != null
-                          ? Image.network(
-                              badge.iconUrl!,
-                              width: 34,
-                              height: 34,
+                          ? Image.network(badge.iconUrl!,
+                              width: 28,
+                              height: 28,
                               fit: BoxFit.contain,
                               errorBuilder: (_, __, ___) => info.hasEmoji
                                   ? Text(info.emoji!,
-                                      style: const TextStyle(fontSize: 22))
+                                      style: AppTextStyles.emoji())
                                   : Icon(info.icon,
-                                      color: info.color, size: 28),
-                            )
+                                      color: info.color, size: 24))
                           : (info.hasEmoji
-                              ? Text(info.emoji!,
-                                  style: const TextStyle(fontSize: 22))
-                              : Icon(info.icon, color: info.color, size: 28)),
+                              ? Text(info.emoji!, style: AppTextStyles.emoji())
+                              : Icon(info.icon, color: info.color, size: 24)),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -608,171 +679,347 @@ class _BadgePickerDialogState extends State<_BadgePickerDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          badge.name,
-                          style: AppTextStyles.sectionHeader(color: info.color),
-                        ),
-                        if (badge.description != null &&
-                            badge.description!.isNotEmpty) ...[
-                          const SizedBox(height: 3),
-                          Text(
-                            badge.description!,
-                            style: AppTextStyles.small(color: Colors.grey[600]),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (badge.points != null && badge.points! > 0) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: info.color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '+${badge.points} pts',
+                        Text(badge.name, style: AppTextStyles.sectionHeader()),
+                        if (badge.points != null && badge.points! > 0)
+                          Text('+${badge.points} pts',
                               style:
-                                  AppTextStyles.captionBold(color: info.color),
-                            ),
-                          ),
-                        ],
+                                  AppTextStyles.captionBold(color: info.color)),
                       ],
                     ),
                   ),
-                  // Back / change badge
                   IconButton(
                     tooltip: 'Change badge',
                     icon: Icon(Icons.swap_horiz_rounded,
-                        color: info.color.withValues(alpha: 0.7)),
+                        color: info.color.withOpacity(0.7)),
                     onPressed: () => setState(() => _selected = null),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 22),
-
-            // ── Recipient ──────────────────────────────────────────
-            Row(
-              children: [
-                Icon(Icons.person_outline,
-                    size: 16, color: Colors.grey.shade500),
-                const SizedBox(width: 6),
-                Text('Recipient', style: AppTextStyles.sectionTitle()),
-              ],
-            ),
-            const SizedBox(height: 8),
-            DropdownMenu<int>(
-              expandedInsets: EdgeInsets.zero,
-              menuHeight: 250,
-              inputDecorationTheme: InputDecorationTheme(
-                hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              hintText: 'Search employee name...',
-              dropdownMenuEntries: widget.users.map((u) {
-                return DropdownMenuEntry<int>(value: u.id, label: u.name);
-              }).toList(),
-              onSelected: (v) => receiverId = v,
-              textStyle: AppTextStyles.body(),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── Message ────────────────────────────────────────────
-            Row(
-              children: [
-                Icon(Icons.edit_note_rounded,
-                    size: 16, color: Colors.grey.shade500),
-                const SizedBox(width: 6),
-                Text('Message', style: AppTextStyles.sectionTitle()),
-                const SizedBox(width: 6),
-                Text('(optional)',
-                    style: AppTextStyles.caption(color: Colors.grey.shade400)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              style: AppTextStyles.body(),
-              decoration: InputDecoration(
-                hintText: 'Tell them why they deserve this recognition…',
-                hintStyle: AppTextStyles.body(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                contentPadding: const EdgeInsets.all(16),
-              ),
-              maxLines: 4,
-              onChanged: (v) => message = v,
-            ),
-
             const SizedBox(height: 24),
 
-            // ── Action row ─────────────────────────────────────────
-            Row(
+            // ── Main Form with Floating Overlay ──────────────────────
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => _selected = null),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                    label: const Text('Back'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Recipient Label
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline,
+                            size: 16, color: Colors.grey.shade500),
+                        const SizedBox(width: 6),
+                        Text('Recipient', style: AppTextStyles.sectionTitle()),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (receiverId == null) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a recipient.'),
-                            backgroundColor: Colors.red,
+                    const SizedBox(height: 8),
+
+                    // Placeholder for TextField height to keep layout stable
+                    const SizedBox(height: 52),
+
+                    const SizedBox(height: 24),
+
+                    // Send As Persona Selector
+                    if (_personas.length > 1) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.assignment_ind_outlined,
+                              size: 16, color: Colors.grey.shade500),
+                          const SizedBox(width: 6),
+                          Text('Send as', style: AppTextStyles.sectionTitle()),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<Map<String, dynamic>>(
+                            value: _selectedPersona,
+                            isExpanded: true,
+                            icon: Icon(Icons.arrow_drop_down,
+                                color: Colors.grey.shade600),
+                            items: _personas.map((persona) {
+                              final isPersonal =
+                                  persona['persona_type'] == 'PERSONAL';
+                              final label = isPersonal
+                                  ? 'Send as Myself'
+                                  : persona['persona_label'] ??
+                                      '${persona['persona_type']}';
+                              return DropdownMenuItem(
+                                value: persona,
+                                child: Text(label, style: AppTextStyles.body()),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setLocal(() => _selectedPersona = val);
+                              }
+                            },
                           ),
-                        );
-                        return;
-                      }
-                      widget.outerContext
-                          .read<RecognitionsBloc>()
-                          .add(SendRecognitionRequested(
-                            receiverId: receiverId!,
-                            badgeId: _selected!.id,
-                            message: message,
-                          ));
-                      Navigator.pop(ctx);
-                    },
-                    icon: const Icon(Icons.send_rounded, size: 16),
-                    label: const Text('Send Recognition'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Message Section
+                    Row(
+                      children: [
+                        Icon(Icons.edit_note_rounded,
+                            size: 16, color: Colors.grey.shade500),
+                        const SizedBox(width: 6),
+                        Text('Message', style: AppTextStyles.sectionTitle()),
+                        const SizedBox(width: 6),
+                        Text('(optional)',
+                            style: AppTextStyles.caption(
+                                color: Colors.grey.shade400)),
+                      ],
                     ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: TextEditingController(text: _message),
+                      style: AppTextStyles.body(),
+                      decoration: InputDecoration(
+                        hintText:
+                            'Tell them why they deserve this recognition…',
+                        hintStyle:
+                            AppTextStyles.body(color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      maxLines: 3,
+                      onChanged: (v) => _message = v,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Action Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(() => _selected = null),
+                            icon:
+                                const Icon(Icons.arrow_back_rounded, size: 16),
+                            label: const Text('Back'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              if (_receiverId == null) {
+                                AppSnackbar.warning(
+                                    ctx, 'Please select a recipient.');
+                                return;
+                              }
+                              widget.outerContext
+                                  .read<RecognitionsBloc>()
+                                  .add(SendRecognitionRequested(
+                                    receiverId: _receiverId!,
+                                    badgeId: _selected!.id,
+                                    message: _message ?? '',
+                                    personaType:
+                                        _selectedPersona['persona_type'],
+                                    personaLabel:
+                                        _selectedPersona['persona_label'],
+                                  ));
+                              Navigator.pop(ctx);
+                            },
+                            icon: const Icon(Icons.send_rounded, size: 16),
+                            label: const Text('Send Recognition'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                // Floating Search Results Overlay
+                Positioned(
+                  top:
+                      24, // Positioned exactly where the TextField starts in the overlap
+                  left: 0,
+                  right: 0,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BlocBuilder<RecognitionsBloc, RecognitionsState>(
+                        bloc: widget.outerContext.read<RecognitionsBloc>(),
+                        builder: (ctx, recState) {
+                          if (recState.users.isEmpty) {
+                            return Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: const Center(
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          }
+
+                          return TextField(
+                            controller: _recipientSearchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search employee name...',
+                              hintStyle: AppTextStyles.body(
+                                  color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade200),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade200),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                            ),
+                            onChanged: (v) => setLocal(() {
+                              _recipientSearchQuery = v;
+                              if (_selectedUser != null) {
+                                _selectedUser = null;
+                                _receiverId = null;
+                              }
+                            }),
+                          );
+                        },
+                      ),
+
+                      // The actual floating list
+                      if (_recipientSearchQuery.isNotEmpty &&
+                          _selectedUser == null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Material(
+                            elevation: 8,
+                            borderRadius: BorderRadius.circular(12),
+                            shadowColor: Colors.black45,
+                            child: Container(
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: BlocBuilder<RecognitionsBloc,
+                                  RecognitionsState>(
+                                bloc: widget.outerContext
+                                    .read<RecognitionsBloc>(),
+                                builder: (ctx, recState) {
+                                  final q = _recipientSearchQuery
+                                      .trim()
+                                      .toLowerCase();
+                                  final filtered = recState.users.where((u) {
+                                    final name = u.name.toLowerCase();
+                                    final email = (u.email ?? '').toLowerCase();
+                                    return name.contains(q) ||
+                                        email.contains(q);
+                                  }).toList();
+
+                                  if (filtered.isEmpty) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Text(
+                                          'No results for "$_recipientSearchQuery"',
+                                          style: TextStyle(
+                                              color: Colors.grey.shade400)),
+                                    );
+                                  }
+
+                                  return ListView.separated(
+                                    shrinkWrap: true,
+                                    padding: EdgeInsets.zero,
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, __) => Divider(
+                                        height: 1, color: Colors.grey.shade100),
+                                    itemBuilder: (ctx, i) {
+                                      final user = filtered[i];
+                                      return InkWell(
+                                        onTap: () => setLocal(() {
+                                          _selectedUser = user;
+                                          _recipientSearchController.text =
+                                              user.name;
+                                          _receiverId = user.id;
+                                          _recipientSearchQuery = '';
+                                        }),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 12),
+                                          child: Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 14,
+                                                backgroundColor:
+                                                    Theme.of(context)
+                                                        .primaryColor
+                                                        .withOpacity(0.1),
+                                                child: Text(
+                                                    user.name.isNotEmpty
+                                                        ? user.name[0]
+                                                            .toUpperCase()
+                                                        : '?',
+                                                    style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Theme.of(context)
+                                                            .primaryColor)),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                  child: Text(user.name,
+                                                      style: const TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight: FontWeight
+                                                              .w500))),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -805,79 +1052,76 @@ class _PickerBadgeCardState extends State<_PickerBadgeCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedScale(
-        scale: _hovered ? 1.04 : 1.0,
-        duration: const Duration(milliseconds: 180),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? info.color.withOpacity(0.07)
+                : Theme.of(context).colorScheme.surface,
+            border: Border.all(
               color: _hovered
-                  ? info.color.withValues(alpha: 0.07)
-                  : Theme.of(context).colorScheme.surface,
-              border: Border.all(
-                color: _hovered
-                    ? info.color.withValues(alpha: 0.5)
-                    : Colors.grey.shade200,
-                width: _hovered ? 1.5 : 1,
+                  ? info.color.withOpacity(0.5)
+                  : Colors.grey.shade200,
+              width: _hovered ? 1.5 : 1,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              if (_hovered)
+                BoxShadow(
+                  color: info.color.withOpacity(0.15),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44, // Reduced from 52
+                height: 44, // Reduced from 52
+                decoration: BoxDecoration(
+                  color: info.color.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: widget.badge.iconUrl != null
+                      ? Image.network(
+                          widget.badge.iconUrl!,
+                          width: 26, // Reduced from 32
+                          height: 26, // Reduced from 32
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => info.hasEmoji
+                              ? Text(info.emoji!,
+                                  style: AppTextStyles.emoji(size: 20))
+                              : Icon(info.icon, color: info.color, size: 22),
+                        )
+                      : (info.hasEmoji
+                          ? Text(info.emoji!,
+                              style: AppTextStyles.emoji(size: 20))
+                          : Icon(info.icon, color: info.color, size: 22)),
+                ),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                if (_hovered)
-                  BoxShadow(
-                    color: info.color.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: info.color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: widget.badge.iconUrl != null
-                        ? Image.network(
-                            widget.badge.iconUrl!,
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => info.hasEmoji
-                                ? Text(info.emoji!,
-                                    style: AppTextStyles.emoji())
-                                : Icon(info.icon, color: info.color, size: 28),
-                          )
-                        : (info.hasEmoji
-                            ? Text(info.emoji!, style: AppTextStyles.emoji())
-                            : Icon(info.icon, color: info.color, size: 28)),
-                  ),
-                ),
-                const SizedBox(height: 8),
+              const SizedBox(height: 8),
+              Text(
+                widget.badge.name,
+                style: AppTextStyles.small(color: Colors.grey[700]),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (widget.badge.points != null && widget.badge.points! > 0) ...[
+                const SizedBox(height: 4),
                 Text(
-                  widget.badge.name,
-                  style: AppTextStyles.small(color: Colors.grey[700]),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  '+${widget.badge.points} pts',
+                  style: AppTextStyles.captionBold(color: info.color),
                 ),
-                if (widget.badge.points != null &&
-                    widget.badge.points! > 0) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '+${widget.badge.points} pts',
-                    style: AppTextStyles.captionBold(color: info.color),
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ),

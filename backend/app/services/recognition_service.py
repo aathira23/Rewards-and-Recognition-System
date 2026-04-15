@@ -1,120 +1,113 @@
-from sqlalchemy.orm import Session, joinedload
+from __future__ import annotations
+
+import logging
+from sqlalchemy.orm import Session
 from typing import Optional, List, Any, Dict
 from datetime import datetime, timezone, timedelta
+from cachetools import TTLCache
 
-from app.models.badges import Badge
-from app.models.ecards import ECard
-from app.models.recognition_feed import RecognitionFeed
-from app.models.points_policy import PointsPolicy
-from app.models.users import User
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
 from app.utils.enums import ReferenceType
 from app.core.config import settings
+from app.repository.recognition_repository import RecognitionRepository
+
+logger = logging.getLogger(__name__)
+
+# Module-level caches
+_badge_cache: TTLCache = TTLCache(maxsize=100, ttl=60 * 60)       # 1 h
+_ecard_policy_cache: TTLCache = TTLCache(maxsize=10, ttl=60 * 60) # 1 h
+_leaderboard_cache: TTLCache = TTLCache(maxsize=50, ttl=60 * 60)  # 1 h
 
 
 class RecognitionService:
     """Service for managing recognitions and leaderboard."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
+        self.repository = RecognitionRepository(db)
         self.points_service = PointsService(db)
-        self.notification_service = NotificationService(db)
+        self.notification_service = NotificationService(db, token=self._token)
 
     # --- Badge Management ---
-    def get_badges(self, active_only: bool = True) -> List[Badge]:
-        """Get all badges."""
-        query = self.db.query(Badge)
-        if active_only:
-            query = query.filter(Badge.is_active == True)
-        return query.all()
+    def get_badges(self, active_only: bool = True):
+        """Get all badges (served from 1 h cache)."""
+        cache_key = f"badges:{active_only}"
+        if cache_key in _badge_cache:
+            return _badge_cache[cache_key]
+        result = self.repository.get_badges(active_only)
+        _badge_cache[cache_key] = result
+        return result
 
-    def get_badge_by_id(self, badge_id: int) -> Optional[Badge]:
-        """Get a badge by ID."""
-        return self.db.query(Badge).filter(Badge.id == badge_id).first()
+    def get_badge_by_id(self, badge_id: int):
+        """Get a badge by ID (served from 1 h cache)."""
+        cache_key = f"badge:{badge_id}"
+        if cache_key in _badge_cache:
+            return _badge_cache[cache_key]
+        badge = self.repository.get_badge_by_id(badge_id)
+        if badge:
+            _badge_cache[cache_key] = badge
+        return badge
 
-    def create_badge(self, name: str, description: str = None, icon_url: str = None) -> Badge:
+    def create_badge(self, name: str, description: str = None, icon_url: str = None):
         """Create a new badge."""
-        # Prevent creating duplicate badges by name (case-insensitive)
-        from sqlalchemy import func
-        existing = self.db.query(Badge).filter(func.lower(Badge.name) == name.lower()).first()
+        existing = self.repository.get_badge_by_name(name)
         if existing:
             raise ValueError("Badge with this name already exists")
+        result = self.repository.create_badge(name, description, icon_url)
+        _badge_cache.clear()  # invalidate badge caches on create
+        return result
 
-        badge = Badge(name=name, description=description, icon_url=icon_url)
-        self.db.add(badge)
-        self.db.commit()
-        self.db.refresh(badge)
-        return badge
-
-    def update_badge(self, badge_id: int, data: Dict[str, Any]) -> Badge:
+    def update_badge(self, badge_id: int, data: Dict[str, Any]):
         """Update an existing badge."""
-        badge = self.get_badge_by_id(badge_id)
+        badge = self.repository.get_badge_by_id(badge_id)
         if not badge:
             raise ValueError("Badge not found")
-        for key, value in data.items():
-            if value is not None:
-                setattr(badge, key, value)
-        self.db.commit()
-        self.db.refresh(badge)
-        return badge
+        result = self.repository.save_badge(badge_id, **{k: v for k, v in data.items() if v is not None})
+        _badge_cache.clear()  # invalidate badge caches on update
+        return result
 
     # --- eCard / Recognition Logic ---
-    def _get_ecard_policy(self) -> Optional[PointsPolicy]:
-        """Return the generic (event_key IS NULL) ECARD policy row, or None."""
-        return self.db.query(PointsPolicy).filter(
-            PointsPolicy.recognition_type == "ECARD",
-            PointsPolicy.event_key == None,
-            PointsPolicy.is_active == True
-        ).first()
+    def _get_ecard_policy(self):
+        """Return the generic ECARD policy row from cache (1 h TTL), or None."""
+        cache_key = "ecard_policy"
+        if cache_key in _ecard_policy_cache:
+            policy = _ecard_policy_cache[cache_key]
+            # Ensure the object is bound to the current session to avoid DetachedInstanceError
+            if policy:
+                return self.db.merge(policy, load=False)
+            return None
+        policy = self.repository.get_ecard_policy()
+        _ecard_policy_cache[cache_key] = policy
+        return policy
 
-    def _check_monthly_limit(self, sender_id: int, policy: PointsPolicy) -> None:
+    def _check_monthly_limit(self, sender_id: int, policy) -> None:
         """Raise ValueError if sender has hit their monthly eCard limit."""
         if not policy or not policy.monthly_limit:
             return
         start_of_month = datetime.now(timezone.utc).replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
-        monthly_sent = self.db.query(ECard).filter(
-            ECard.sender_id == sender_id,
-            ECard.created_at >= start_of_month
-        ).count()
+        monthly_sent = self.repository.count_ecards_since(sender_id, start_of_month)
         if monthly_sent >= policy.monthly_limit:
             raise ValueError(
                 f"You have reached your monthly eCard limit of {policy.monthly_limit}. "
                 "Your limit resets at the start of next month."
             )
 
-    def _check_cooldown(self, sender_id: int, policy: PointsPolicy) -> None:
+    def _check_cooldown(self, sender_id: int, policy) -> None:
         """Raise ValueError if sender is still within the cooldown window."""
         if not policy:
             return
 
-        # New behaviour: if a `consecutive_limit` is configured, count only
-        # eCards within a recent window (hours) so the consecutive threshold
-        # applies to recent sends (e.g., same day). When the threshold is
-        # reached, determine a cooldown in hours using the policy's
-        # `cooldown_hours` if present, else fall back to `cooldown_days`
-        # converted to hours, and finally to a default setting.
         if getattr(policy, 'consecutive_limit', None):
-            # --- Consecutive-send window cooldown ---
-            # Count sends within the configurable window. If the sender has hit
-            # consecutive_limit sends in that window, activate a cooldown.
-            # The legacy cooldown_days path is intentionally SKIPPED when
-            # consecutive_limit is configured.
             n = int(policy.consecutive_limit)
             now_utc = datetime.now(timezone.utc)
             window_start = now_utc - timedelta(hours=int(getattr(settings, 'ECARD_CONSECUTIVE_WINDOW_HOURS', 24)))
-            window_count = self.db.query(ECard).filter(
-                ECard.sender_id == sender_id,
-                ECard.created_at >= window_start
-            ).count()
+            window_count = self.repository.count_ecards_since(sender_id, window_start)
             if window_count >= n:
-                # Find the most recent send in the window to anchor the cooldown.
-                last_ecard = self.db.query(ECard).filter(
-                    ECard.sender_id == sender_id,
-                    ECard.created_at >= window_start
-                ).order_by(ECard.created_at.desc()).first()
+                last_ecard = self.repository.get_last_ecard(sender_id, since=window_start)
                 if getattr(policy, 'cooldown_hours', None) is not None:
                     cooldown_hours = int(policy.cooldown_hours)
                 else:
@@ -127,15 +120,10 @@ class RecognitionService:
                         f"Please wait {hours_left} more hour(s) before sending another eCard "
                         f"(cooldown: {cooldown_hours} hour(s) after {policy.consecutive_limit} sends in the window)."
                     )
-            # Whether limit was reached or not, do NOT fall through to legacy logic.
             return
 
-        # Legacy path: only reached when consecutive_limit is NOT configured.
-        # Backwards-compatible behaviour: if cooldown_days is configured use it
         if getattr(policy, 'cooldown_days', None):
-            last_ecard = self.db.query(ECard).filter(
-                ECard.sender_id == sender_id
-            ).order_by(ECard.created_at.desc()).first()
+            last_ecard = self.repository.get_last_ecard(sender_id)
             if not last_ecard:
                 return
             cooldown_end = last_ecard.created_at + timedelta(days=policy.cooldown_days)
@@ -147,14 +135,48 @@ class RecognitionService:
                     f"(cooldown: {policy.cooldown_days} day(s) between sends)."
                 )
 
+    # ── Persona helpers ─────────────────────────────────────────────
+
+    def _resolve_persona_label(
+        self, sender_id: int, persona_type: str, persona_label: Optional[str]
+    ) -> Optional[str]:
+        """Return the display label for the chosen persona.
+
+        PERSONAL  → None (caller should resolve from user profile as before)
+        DEPARTMENT → user's department name (or the explicit label if given)
+        """
+        if persona_type == "PERSONAL":
+            return None
+
+        if persona_type == "DEPARTMENT":
+            if persona_label:
+                return persona_label
+            # Derive from the sender's profile via User Service
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                profile = get_user_profile(sender_id, self._token)
+                if profile and profile.department_name:
+                    return profile.department_name
+            return "Your Department"
+
+        return None
+
     def send_ecard(
         self,
         sender_id: int,
         receiver_id: int,
         badge_id: int,
-        message: Optional[str] = None
+        message: Optional[str] = None,
+        token: Optional[str] = None,
+        persona_type: str = "PERSONAL",
+        persona_label: Optional[str] = None,
     ) -> ECard:
-        """Send an eCard recognition."""
+        """Send an eCard recognition.
+
+        persona_type: PERSONAL (default) — shown as the sender's name.
+                      DEPARTMENT — shown as the sender's department name
+                      (fully anonymous; actual sender_id kept only for audit).
+        """
         if sender_id == receiver_id:
             raise ValueError("You cannot send a recognition to yourself.")
 
@@ -179,19 +201,21 @@ class RecognitionService:
         self._check_monthly_limit(sender_id, policy)
         self._check_cooldown(sender_id, policy)
 
-        # 5. Create eCard record
-        ecard = ECard(
+        # 5. Resolve persona display label
+        resolved_label = self._resolve_persona_label(sender_id, persona_type, persona_label)
+
+        # 6. Create eCard record (sender_id always stored for audit)
+        ecard = self.repository.create_ecard(
             sender_id=sender_id,
             receiver_id=receiver_id,
             badge_id=badge_id,
-            points_awarded=points,
-            message=message
+            points=points,
+            message=message,
+            persona_type=persona_type,
+            persona_label=resolved_label,
         )
-        self.db.add(ecard)
-        self.db.commit()
-        self.db.refresh(ecard)
 
-        # 6. Award points to receiver
+        # 7. Award points to receiver
         self.points_service.award_points(
             user_id=receiver_id,
             points=points,
@@ -199,25 +223,36 @@ class RecognitionService:
             source_id=ecard.id
         )
 
-        # 5. Create recognition feed entry
+        # 8. Create recognition feed entry (actor_label used for anonymous display)
         self.create_feed_entry(
             actor_id=sender_id,
             receiver_id=receiver_id,
             source_type="ECARD",
             source_id=ecard.id,
-            message=message or f"Recognized with {badge.name}"
+            message=message or f"Recognized with {badge.name}",
+            actor_label=resolved_label,
         )
 
-        # 6. Create notification for receiver
-        sender = self.db.query(User).filter(User.id == sender_id).first()
-        sender_name = sender.name if sender else "A colleague"
+        # 9. Build display name for notification / email
+        if resolved_label:
+            # Department persona → fully anonymous; show department name
+            display_name = resolved_label
+        else:
+            # Personal persona → show sender's real name
+            display_name = "A colleague"
+            if self._token:
+                from app.services.user_profiles_client import get_user_profile
+                sender_profile = get_user_profile(sender_id, self._token)
+                if sender_profile:
+                    display_name = sender_profile.name
+
         self.notification_service.create_notification(
             user_id=receiver_id,
-            message=f"{sender_name} appreciated you with a '{badge.name}' badge! {points} points earned.",
+            message=f"{display_name} appreciated you with a '{badge.name}' badge! {points} points earned.",
             source_type=ReferenceType.ECARD.value,
             source_id=ecard.id,
             email_context={
-                "sender_name": sender_name,
+                "sender_name": display_name,
                 "badge_name": badge.name,
                 "recognition_message": message or "",
                 "points": points,
@@ -231,23 +266,13 @@ class RecognitionService:
         """Get company-wide recognition feed. Returns (total, items)."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
-        query = self.db.query(RecognitionFeed).options(
-            joinedload(RecognitionFeed.actor),
-            joinedload(RecognitionFeed.receiver)
-        ).filter(RecognitionFeed.source_type != "MANAGER_REWARD")
-        total = query.count()
-        items = query.order_by(RecognitionFeed.created_at.desc()).offset(skip).limit(per_page).all()
+        total, items = self.repository.get_feed_paginated(skip, per_page)
 
         # Inflate eCard details (specifically badges) for feed items
-        from app.models.badges import Badge
-        from app.models.ecards import ECard
-
         for item in items:
             if item.source_type == "ECARD":
-                # Fetch badge info via eCard relation
-                badge = self.db.query(Badge).join(ECard).filter(ECard.id == item.source_id).first()
+                badge = self.repository.get_badge_for_ecard(item.source_id)
                 if badge:
-                    # Attach to object for Pydantic schema to pick up
                     item.badge = badge
 
         return total, items
@@ -256,25 +281,15 @@ class RecognitionService:
         """Get recognitions received and sent by a user."""
         from app.schemas.ecards import ECardResponse
 
-        received = self.db.query(ECard).options(
-            joinedload(ECard.sender),
-            joinedload(ECard.badge)
-        ).filter(ECard.receiver_id == user_id).order_by(ECard.created_at.desc()).all()
-
-        sent = self.db.query(ECard).options(
-            joinedload(ECard.receiver),
-            joinedload(ECard.badge)
-        ).filter(ECard.sender_id == user_id).order_by(ECard.created_at.desc()).all()
+        received = self.repository.get_ecards_received(user_id)
+        sent = self.repository.get_ecards_sent(user_id)
 
         # Limit context for the sender's UI
         policy = self._get_ecard_policy()
         start_of_month = datetime.now(timezone.utc).replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
-        monthly_sent = self.db.query(ECard).filter(
-            ECard.sender_id == user_id,
-            ECard.created_at >= start_of_month
-        ).count()
+        monthly_sent = self.repository.count_ecards_since(user_id, start_of_month)
 
         next_available_at = None
         # Determine next available send time according to configured policy.
@@ -286,15 +301,9 @@ class RecognitionService:
                 n = int(policy.consecutive_limit)
                 now_utc = datetime.now(timezone.utc)
                 window_start = now_utc - timedelta(hours=int(getattr(settings, 'ECARD_CONSECUTIVE_WINDOW_HOURS', 24)))
-                window_count = self.db.query(ECard).filter(
-                    ECard.sender_id == user_id,
-                    ECard.created_at >= window_start
-                ).count()
+                window_count = self.repository.count_ecards_since(user_id, window_start)
                 if window_count >= n:
-                    last = self.db.query(ECard).filter(
-                        ECard.sender_id == user_id,
-                        ECard.created_at >= window_start
-                    ).order_by(ECard.created_at.desc()).first()
+                    last = self.repository.get_last_ecard(user_id, since=window_start)
                     if getattr(policy, 'cooldown_hours', None) is not None:
                         cooldown_hours = int(policy.cooldown_hours)
                     else:
@@ -304,9 +313,7 @@ class RecognitionService:
                         next_available_at = cooldown_end.isoformat()
             # Legacy: only when consecutive_limit is NOT configured.
             elif getattr(policy, 'cooldown_days', None):
-                last_ecard = self.db.query(ECard).filter(
-                    ECard.sender_id == user_id
-                ).order_by(ECard.created_at.desc()).first()
+                last_ecard = self.repository.get_last_ecard(user_id)
                 if last_ecard:
                     cooldown_end = last_ecard.created_at + timedelta(days=policy.cooldown_days)
                     if datetime.now(timezone.utc) < cooldown_end:
@@ -330,20 +337,18 @@ class RecognitionService:
         receiver_id: Optional[int],
         source_type: str,
         source_id: int,
-        message: str
-    ) -> RecognitionFeed:
+        message: str,
+        actor_label: Optional[str] = None,
+    ):
         """Create a new entry in the recognition feed."""
-        entry = RecognitionFeed(
+        return self.repository.create_feed_entry(
             actor_id=actor_id,
             receiver_id=receiver_id,
             source_type=source_type,
             source_id=source_id,
-            message=message
+            message=message,
+            actor_label=actor_label,
         )
-        self.db.add(entry)
-        self.db.commit()
-        self.db.refresh(entry)
-        return entry
 
     # --- Automated Logic ---
     def create_automated_recognition(
@@ -354,20 +359,17 @@ class RecognitionService:
     ) -> RecognitionFeed:
         """Logic for automated system recognitions."""
         # 1. Fetch points from policy
-        policy = self.db.query(PointsPolicy).filter(
-            PointsPolicy.recognition_type == "CELEBRATION",
-            PointsPolicy.event_key == celebration_type,
-            PointsPolicy.is_active == True
-        ).first()
+        policy = self.repository.get_celebration_policy(celebration_type)
         points = policy.points if policy else 500
 
         # 2. Award points
-        # In a real system, we'd also create a record in 'celebrations' table
-        # For simplicity and feed logic, we directly feed the recognition feed
-
         # Find an admin user to act as the "system" sender
-        admin = self.db.query(User).filter(User.role == "ADMIN").first()
-        system_actor_id = admin.id if admin else 1 # fallback to 1 if no admin found
+        system_actor_id = 1
+        if self._token:
+            from app.services.user_profiles_client import get_users_by_role
+            admins = get_users_by_role(self._token, ["ADMIN"])
+            if admins:
+                system_actor_id = admins[0].id
 
         entry = self.create_feed_entry(
             actor_id=system_actor_id,
@@ -388,11 +390,11 @@ class RecognitionService:
 
     # --- Leaderboard ---
     def get_leaderboard(self, period: str = "MONTHLY", metric: str = "POINTS", limit: int = 10) -> List[Dict[str, Any]]:
-        """Calculate leaderboard ranking."""
-        from sqlalchemy import func, desc
-        from app.models.points_ledger import PointsLedger
-        from app.models.wallets import Wallet
-        from app.models.ecards import ECard
+        """Calculate leaderboard ranking (served from 1 h cache)."""
+        cache_key = f"{period}:{metric}:{limit}"
+        if cache_key in _leaderboard_cache:
+            logger.debug("Leaderboard cache HIT — key=%s", cache_key)
+            return _leaderboard_cache[cache_key]
 
         # Determine start date. For 'ALL_TIME' do not apply a date filter.
         start_date: Optional[datetime] = datetime.now().replace(
@@ -403,42 +405,30 @@ class RecognitionService:
         elif period == "ALL_TIME":
             start_date = None
 
-        # Base Query
         if metric == "POINTS":
-            # Rank by total points received (excluding budget allocations)
-            query = self.db.query(
-                User,
-                func.sum(PointsLedger.points).label("total_score"),
-                func.count(PointsLedger.id).label("count")
-            ).join(Wallet, User.id == Wallet.user_id
-            ).join(PointsLedger, Wallet.id == PointsLedger.target_wallet_id
-            ).filter(
-                PointsLedger.transaction_type == "CREDIT",
-                PointsLedger.reference_type != "BUDGET_ALLOCATION",  # Exclude HR budget allocations
-            )
-            if start_date is not None:
-                query = query.filter(PointsLedger.created_at >= start_date)
-            results = query.group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+            results = self.repository.get_points_leaderboard(start_date, limit)
         else:
-            # Rank by number of recognitions (eCards) received
-            query = self.db.query(
-                User,
-                func.count(ECard.id).label("total_score"),
-                func.sum(ECard.points_awarded).label("points")
-            ).join(ECard, User.id == ECard.receiver_id)
-            if start_date is not None:
-                query = query.filter(ECard.created_at >= start_date)
-            results = query.group_by(User.id).order_by(desc("total_score")).limit(limit).all()
+            results = self.repository.get_recognition_leaderboard(start_date, limit)
+
+        # Batch-resolve user names/departments via User Service
+        user_ids = [r[0] for r in results]
+        profiles_map = {}
+        if self._token and user_ids:
+            from app.services.user_profiles_client import get_users_batch
+            profiles_map = get_users_batch(user_ids, self._token)
 
         leaderboard = []
-        for rank, (user, score, secondary) in enumerate(results, start=1):
+        for rank, (user_id, score, secondary) in enumerate(results, start=1):
+            profile = profiles_map.get(user_id)
             leaderboard.append({
-                "user_id": user.id,
-                "name": user.name,
-                "department_name": user.department.name if user.department else None,
+                "user_id": user_id,
+                "name": profile.name if profile else f"User {user_id}",
+                "department_name": profile.department_name if profile else None,
                 "rank": rank,
                 "score": int(score or 0),
                 "recognitions_received": int(secondary or 0) if metric == "POINTS" else int(score or 0)
             })
 
+        _leaderboard_cache[cache_key] = leaderboard
+        logger.debug("Leaderboard cache STORE — key=%s, entries=%d", cache_key, len(leaderboard))
         return leaderboard

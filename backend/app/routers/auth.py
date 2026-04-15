@@ -1,18 +1,14 @@
 """
 Authentication API endpoints.
+
+Authentication is handled by the centralized User Service.
 """
-from datetime import timedelta
-
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
-from app.core.database import get_db
-from app.core.security import (
-    verify_password,
-    create_access_token,
-)
-from app.models.users import User
-from app.utils.constants import ERROR_INCORRECT_LOGIN, SUCCESS_LOGIN
+from app.core.config import settings
+from app.utils.constants import ERROR_INCORRECT_LOGIN
+from app.utils.response import build_response, SUCCESS_MESSAGE
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -20,27 +16,74 @@ router = APIRouter()
 
 
 @router.post("/login")
-def login(
+async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
 ):
-    """Login endpoint compatible with OAuth2 Password Flow."""
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.password):
+    """Login endpoint.
+
+    Proxies credentials to Styria and returns the Styria Bearer token.
+    All subsequent requests must carry that token — it will be validated
+    against the User Service on first use (Cache 1 miss) and cached.
+    """
+    return await _login_via_user_service(form_data.username, form_data.password)
+
+
+# ── User Service proxy login ──────────────────────────────────────────────────
+
+async def _login_via_user_service(email: str, password: str):
+    """Forward credentials to Styria and return its token to the frontend."""
+    try:
+        async with httpx.AsyncClient(
+            timeout=15.0, verify=settings.USER_SERVICE_VERIFY_SSL
+        ) as client:
+            resp = await client.post(
+                settings.STYRIA_LOGIN_URL,
+                json={"username": email, "password": password},
+            )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"User Service unreachable: {exc}",
+        )
+
+    if resp.status_code == 401 or resp.status_code == 403:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_INCORRECT_LOGIN,
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_expires = timedelta(hours=24)
-    token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
-    access_token = create_access_token(data=token_data, expires_delta=access_expires)
+    if not resp.is_success:
+        raise HTTPException(
+            status_code=resp.status_code,
+            detail=f"User Service login failed: {resp.text}",
+        )
 
-    # Return standard OAuth2 response at the top level for Swagger compatibility
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_id": user.id,
-        "message": SUCCESS_LOGIN
-    }
+    data = resp.json()
+    # Styria typically wraps its token in response_data or at top level.
+    # Accept both shapes.
+    payload = data.get("response_data") or data.get("responseData") or data
+
+    access_token = (
+        payload.get("access_token")
+        or payload.get("token")
+        or payload.get("jwt")
+    )
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="User Service did not return a token",
+        )
+
+    user_id = payload.get("user_id") or payload.get("id") or 0
+
+    return build_response(
+        status.HTTP_200_OK,
+        SUCCESS_MESSAGE,
+        None,
+        {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": user_id,
+        },
+    )

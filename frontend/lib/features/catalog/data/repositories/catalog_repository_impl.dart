@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/reward_entity.dart';
 import '../../domain/repositories/catalog_repository.dart';
@@ -14,6 +15,8 @@ class CatalogRepositoryImpl implements CatalogRepository {
     try {
       final (_, items) = await remoteDataSource.getCatalogItems(perPage: 100);
       return Right(items);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -24,6 +27,8 @@ class CatalogRepositoryImpl implements CatalogRepository {
     try {
       final success = await remoteDataSource.redeemItem(rewardId);
       return Right(success);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -34,6 +39,8 @@ class CatalogRepositoryImpl implements CatalogRepository {
     try {
       final history = await remoteDataSource.getHistory();
       return Right(history);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -46,6 +53,8 @@ class CatalogRepositoryImpl implements CatalogRepository {
       final success =
           await remoteDataSource.submitConversionRequest(points, type);
       return Right(success);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -56,6 +65,8 @@ class CatalogRepositoryImpl implements CatalogRepository {
     try {
       final rules = await remoteDataSource.getPointsRules();
       return Right(rules);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

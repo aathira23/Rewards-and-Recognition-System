@@ -109,4 +109,35 @@ class HrApprovalsRepositoryImpl implements HrApprovalsRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, List<Map<String, dynamic>>>>
+      fetchAllEmployees() async {
+    try {
+      final data = await remoteDataSource.fetchAllEmployees();
+      return Right(data);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on NetworkException {
+      return const Left(NetworkFailure('No internet connection'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> triggerLifeEvent(
+      int userId, String celebrationType) async {
+    try {
+      final result =
+          await remoteDataSource.triggerLifeEvent(userId, celebrationType);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on NetworkException {
+      return const Left(NetworkFailure('No internet connection'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

@@ -64,3 +64,17 @@ class BulkAllocateBudgets extends HrApprovalsEvent {
   @override
   List<Object?> get props => [points, departmentId, roleFilter];
 }
+
+/// Load all employees for life-event selection.
+class LoadEmployees extends HrApprovalsEvent {}
+
+/// Trigger a BIRTH or MARRIAGE life-event celebration for an employee.
+class TriggerLifeEvent extends HrApprovalsEvent {
+  final int userId;
+  final String celebrationType; // 'BIRTH' or 'MARRIAGE'
+
+  const TriggerLifeEvent({required this.userId, required this.celebrationType});
+
+  @override
+  List<Object?> get props => [userId, celebrationType];
+}

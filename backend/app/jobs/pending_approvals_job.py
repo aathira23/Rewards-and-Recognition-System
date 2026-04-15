@@ -19,12 +19,12 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app.core.database import SessionLocal
+from app.core.config import settings
 from app.jobs.email_worker import enqueue_email
 from app.models.awards import Award
 from app.models.award_approvals import AwardApproval
 from app.models.award_types import AwardType
 from app.models.points_conversion import PointsConversion
-from app.models.users import User
 from app.utils.enums import AwardStatus, ConversionStatus, EmailEventType, UserRole
 
 logger = logging.getLogger(__name__)
@@ -72,6 +72,7 @@ def send_pending_approval_reminders() -> int:
     db = SessionLocal()
     try:
         count = 0
+        token = settings.SYSTEM_TOKEN
 
         # ── 1. Pending award nominations (use approval chain) ────────────
         pending_awards = (
@@ -91,13 +92,15 @@ def send_pending_approval_reminders() -> int:
                 continue
 
             if next_level == "MANAGER":
-                nominee = db.query(User).filter(User.id == award.nominee_id).first()
-                if nominee and nominee.manager_id:
-                    approver_award_counts[nominee.manager_id] += 1
+                from app.services.user_profiles_client import get_user_profile
+                nominee_profile = get_user_profile(award.nominee_id, token) if token else None
+                if nominee_profile and nominee_profile.manager_id:
+                    approver_award_counts[nominee_profile.manager_id] += 1
             else:
                 roles = _LEVEL_TO_ROLES.get(next_level, [])
-                if roles:
-                    users = db.query(User).filter(User.role.in_(roles)).all()
+                if roles and token:
+                    from app.services.user_profiles_client import get_users_by_role
+                    users = get_users_by_role(token, roles)
                     for u in users:
                         approver_award_counts[u.id] += 1
 
@@ -109,12 +112,9 @@ def send_pending_approval_reminders() -> int:
         ) or 0
 
         hr_user_ids: set[int] = set()
-        if pending_conversions_count > 0:
-            hr_users = (
-                db.query(User)
-                .filter(User.role.in_([UserRole.HR.value, UserRole.ADMIN.value]))
-                .all()
-            )
+        if pending_conversions_count > 0 and token:
+            from app.services.user_profiles_client import get_users_by_role
+            hr_users = get_users_by_role(token, [UserRole.HR.value, UserRole.ADMIN.value])
             hr_user_ids = {u.id for u in hr_users}
 
         # ── 3. Merge and send one reminder per approver ──────────────────
@@ -136,6 +136,7 @@ def send_pending_approval_reminders() -> int:
                     "pending_awards": award_count,
                     "pending_conversions": conv_count,
                 },
+                token=token,
             )
             count += 1
 

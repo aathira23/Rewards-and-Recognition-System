@@ -1,54 +1,47 @@
 from typing import Optional, List
+import logging
 from sqlalchemy.orm import Session
 
 from app.models.wallets import Wallet
 from app.models.wallet_funding import WalletFunding
-from app.models.points_ledger import PointsLedger
-from app.models.users import User
 from app.models.notifications import Notification
 from app.utils.enums import WalletType, TransactionType, ReferenceType, UserRole
 from app.services.points_service import PointsService
 from app.services.recognition_service import RecognitionService
+from app.repository.wallets_repository import WalletsRepository
+
+logger = logging.getLogger(__name__)
 
 
 class WalletsService:
     """Service for managing wallets and budget allocation."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
+        self.repository = WalletsRepository(db)
         self.points_service = PointsService(db)
         self.recognition_service = RecognitionService(db)
 
+    def _get_user_profile(self, user_id: int):
+        """Look up user via User Service cache."""
+        if not self._token:
+            return None
+        from app.services.user_profiles_client import get_user_profile
+        return get_user_profile(user_id, self._token)
+
     def get_or_create_wallet(self, user_id: int, wallet_type: WalletType) -> Wallet:
         """Get or create a wallet for a user."""
-        wallet = self.db.query(Wallet).filter(
-            Wallet.user_id == user_id,
-            Wallet.wallet_type == wallet_type.value
-        ).first()
-
-        if not wallet:
-            wallet = Wallet(
-                user_id=user_id,
-                wallet_type=wallet_type.value,
-                balance=0
-            )
-            self.db.add(wallet)
-            self.db.commit()
-            self.db.refresh(wallet)
-
-        return wallet
+        return self.repository.get_or_create_wallet(user_id, wallet_type)
 
     def get_manager_wallet(self, user_id: int) -> Optional[Wallet]:
         """Get manager wallet for a user."""
-        return self.db.query(Wallet).filter(
-            Wallet.user_id == user_id,
-            Wallet.wallet_type == WalletType.MANAGER.value
-        ).first()
+        return self.repository.get_wallet(user_id, WalletType.MANAGER.value)
 
     def allocate_budget(self, manager_id: int, points: int, allocated_by: int) -> WalletFunding:
         """Allocate budget to manager wallet (HR only)."""
         # 1. Verify the target user is actually a manager or dept head
-        target_user = self.db.query(User).filter(User.id == manager_id).first()
+        target_user = self._get_user_profile(manager_id)
         if not target_user:
             raise ValueError(f"User with ID {manager_id} not found")
 
@@ -59,32 +52,26 @@ class WalletsService:
         wallet = self.get_or_create_wallet(manager_id, WalletType.MANAGER)
 
         # 3. Create wallet funding record
-        funding = WalletFunding(
-            manager_wallet_id=wallet.id,
-            funded_by=allocated_by,
-            points=points
-        )
-        self.db.add(funding)
+        funding = self.repository.create_funding(wallet.id, allocated_by, points)
 
         # 4. Update wallet balance
         wallet.balance += points
 
         # 5. Create ledger entry
-        ledger = PointsLedger(
-            target_wallet_id=wallet.id,
+        ledger = self.repository.add_ledger_entry(
             points=points,
             transaction_type=TransactionType.CREDIT.value,
             reference_type="BUDGET_ALLOCATION",
-            reference_id=0 # Funding id will be available after commit
+            reference_id=0,
+            target_wallet_id=wallet.id,
         )
-        self.db.add(ledger)
 
-        self.db.commit()
-        self.db.refresh(funding)
+        self.repository.commit()
+        self.repository.refresh(funding)
 
         # Update ledger with funding ID
         ledger.reference_id = funding.id
-        self.db.commit()
+        self.repository.commit()
 
         # 6. Notify manager
         notification = Notification(
@@ -94,15 +81,15 @@ class WalletsService:
             source_id=funding.id
         )
         self.db.add(notification)
-        self.db.commit()
+        self.repository.commit()
 
         return funding
 
     def manager_reward_employee(self, manager_id: int, employee_id: int, points: int, reason: str):
         """Manager rewards employee from their wallet."""
         # 0. Validate permission/hierarchy
-        manager = self.db.query(User).filter(User.id == manager_id).first()
-        employee = self.db.query(User).filter(User.id == employee_id).first()
+        manager = self._get_user_profile(manager_id)
+        employee = self._get_user_profile(employee_id)
 
         if not manager or not employee:
             raise ValueError("Manager or Employee not found.")
@@ -145,15 +132,12 @@ class WalletsService:
         )
         self.db.add(notification)
 
-        self.db.commit()
+        self.repository.commit()
         return batch
 
     def get_wallet_balance(self, user_id: int, wallet_type: str = "EMPLOYEE") -> int:
         """Get wallet balance for a user."""
-        wallet = self.db.query(Wallet).filter(
-            Wallet.user_id == user_id,
-            Wallet.wallet_type == wallet_type
-        ).first()
+        wallet = self.repository.get_wallet(user_id, wallet_type)
         return wallet.balance if wallet else 0
 
     def bulk_allocate_budget(
@@ -165,25 +149,32 @@ class WalletsService:
         role_filter: Optional[str] = None
     ) -> int:
         """Bulk allocate budget to multiple managers."""
-        query = self.db.query(User)
+        # Resolve matching managers via User Service
+        if not self._token:
+            return 0
 
-        if user_ids:
-            query = query.filter(User.id.in_(user_ids))
-        elif department_id:
-            query = query.filter(User.department_id == department_id)
-            # When filtering by department, we usually only want to fund managers
-            if not role_filter:
-                query = query.filter(User.role.in_([UserRole.MANAGER.value, UserRole.DEPT_HEAD.value]))
+        from app.services.user_profiles_client import get_users_list
+        all_data = get_users_list(self._token, skip=0, limit=10_000)
+        all_users = all_data.get("items", [])
 
-        if role_filter:
-            query = query.filter(User.role == role_filter)
+        default_roles = [UserRole.MANAGER.value, UserRole.DEPT_HEAD.value]
 
-        managers = query.all()
+        managers = []
+        for p in all_users:
+            if user_ids:
+                if p.id not in user_ids:
+                    continue
+            elif department_id:
+                if p.department_id != department_id:
+                    continue
+                if not role_filter and p.role not in default_roles:
+                    continue
+            if role_filter and p.role != role_filter:
+                continue
+            managers.append(p)
+
         count = 0
         for manager in managers:
-            # We reuse the existing single allocation logic
-            # Note: This will do a commit per manager, which is safer for partial failures
-            # but slower. For bulk of ~100s it's fine.
             self.allocate_budget(manager.id, points, allocated_by)
             count += 1
 

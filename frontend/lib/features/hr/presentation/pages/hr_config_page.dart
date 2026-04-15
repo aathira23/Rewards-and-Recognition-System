@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/main_layout.dart';
 import '../../../../core/utils/responsive.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../injection_container.dart';
 import '../../data/datasources/hr_config_remote_data_source.dart';
@@ -43,10 +44,10 @@ class _HrConfigViewState extends State<_HrConfigView>
     'MERCHANDISE': 'MERCH',
     // Award eligibility friendly labels
     'Any employee (peer)': 'PEER',
-    'Managers, Dept Heads & HR (manager-only)': 'MANAGER_ONLY',
-    'Dept Heads & HR (senior management)': 'SENIOR_MGMT',
+    'Managers, Department Heads & HR (manager-only)': 'MANAGER_ONLY',
+    'Department Heads & HR (senior management)': 'SENIOR_MGMT',
     // Legacy/short labels (kept for backward compatibility)
-    'Managers, Dept Heads & HR': 'MANAGER_ONLY',
+    'Managers, Department Heads & HR': 'MANAGER_ONLY',
     'MANAGER ONLY': 'MANAGER_ONLY',
     'SENIOR MGMT': 'SENIOR_MGMT',
     'MANAGER->DEPT HEAD': 'MANAGER,DEPT_HEAD',
@@ -99,11 +100,56 @@ class _HrConfigViewState extends State<_HrConfigView>
                   Responsive.pagePadding(context),
                   0,
                 ),
-                child: AppPageHeader(
-                  action: _RefreshBtn(
-                    onTap: () =>
-                        context.read<HrConfigBloc>().add(LoadAllHrConfig()),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () =>
+                          MainLayout.of(context)?.selectTabByTitle('Dashboard'),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_back_rounded,
+                                size: 20, color: Colors.black87),
+                            const SizedBox(width: 8),
+                            Text('Back to Dashboard',
+                                style: AppTextStyles.bodyBold(
+                                    color: Colors.black87)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'System Configuration',
+                                style: AppTextStyles.headline1(
+                                    color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Manage award types, rewards catalog, and points policy',
+                                style: AppTextStyles.body(
+                                    color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _RefreshBtn(
+                          onTap: () => context
+                              .read<HrConfigBloc>()
+                              .add(LoadAllHrConfig()),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -293,8 +339,8 @@ class _HrConfigViewState extends State<_HrConfigView>
             controller: eligC,
             dropdownOptions: const [
               'Any employee (peer)',
-              'Managers, Dept Heads & HR (manager-only)',
-              'Dept Heads & HR (senior management)',
+              'Managers, Department Heads & HR (manager-only)',
+              'Department Heads & HR (senior management)',
             ]),
         _Field(
             label: 'Approval Workflow',
@@ -926,6 +972,8 @@ class _HrConfigViewState extends State<_HrConfigView>
                       DropdownMenuEntry(value: 'BIRTHDAY', label: 'BIRTHDAY'),
                       DropdownMenuEntry(
                           value: 'ANNIVERSARY', label: 'ANNIVERSARY'),
+                      DropdownMenuEntry(value: 'BIRTH', label: 'BIRTH'),
+                      DropdownMenuEntry(value: 'MARRIAGE', label: 'MARRIAGE'),
                     ],
                     onSelected: (v) {
                       if (v != null) {
@@ -1170,8 +1218,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.08),
+                            color: theme.colorScheme.primary.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -1209,7 +1256,7 @@ class _HrConfigViewState extends State<_HrConfigView>
                                     ),
                                   );
                             },
-                            activeThumbColor: theme.colorScheme.primary,
+                            activeColor: theme.colorScheme.primary,
                           ),
                         ] else ...[
                           Container(
@@ -1430,11 +1477,11 @@ class _HrConfigViewState extends State<_HrConfigView>
 
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-    ));
+    if (isError) {
+      AppSnackbar.error(context, msg);
+    } else {
+      AppSnackbar.success(context, msg);
+    }
   }
 }
 

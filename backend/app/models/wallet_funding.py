@@ -15,10 +15,9 @@ class WalletFunding(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)
     manager_wallet_id = Column(BigInteger, ForeignKey("wallets.id"), nullable=False)
-    funded_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    funded_by = Column(BigInteger, nullable=False)
     points = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     manager_wallet = relationship("Wallet", back_populates="funding_records")
-    funder = relationship("User")

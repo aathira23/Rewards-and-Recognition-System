@@ -1,4 +1,0 @@
-@Library("centralized-jenkins") _
-   yarn_docker_build {
-
-    }

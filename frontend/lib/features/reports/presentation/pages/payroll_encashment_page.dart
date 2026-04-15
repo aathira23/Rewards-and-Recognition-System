@@ -8,6 +8,7 @@ import '../bloc/payroll_state.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/utils/date_formatter.dart';
 
 class PayrollEncashmentPage extends StatelessWidget {
@@ -65,17 +66,10 @@ class _PayrollViewState extends State<_PayrollView> {
     return BlocConsumer<PayrollBloc, PayrollState>(
       listener: (context, state) {
         if (state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.successMessage!),
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.success(context, state.successMessage!);
         }
         if (state.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: ${state.error}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ));
+          AppSnackbar.error(context, state.error!);
         }
       },
       builder: (context, state) {
@@ -263,7 +257,7 @@ class _PayrollViewState extends State<_PayrollView> {
                 CircleAvatar(
                   radius: 14,
                   backgroundColor:
-                      theme.colorScheme.primary.withValues(alpha: 0.1),
+                      theme.colorScheme.primary.withOpacity(0.1),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: TextStyle(

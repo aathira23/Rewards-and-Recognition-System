@@ -1,25 +1,26 @@
 from datetime import date
 from typing import Optional, Dict, Any, List
-from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
-from app.models.users import User
-from app.models.departments import Department
-from app.models.recognition_feed import RecognitionFeed
-from app.models.redemptions import Redemption
-from app.models.rewards import Reward
-from app.models.wallets import Wallet
-from app.models.wallet_funding import WalletFunding
-from app.models.points_conversion import PointsConversion
-from app.models.points_ledger import PointsLedger
-from app.utils.enums import WalletType, ConversionStatus, Scope
+from app.utils.enums import Scope
+from app.repository.analytics_repository import AnalyticsRepository
 
 
 class AnalyticsService:
     """Service for generating analytics and metrics."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
+        self.repository = AnalyticsRepository(db)
+
+    def _get_user_names_batch(self, user_ids: set) -> dict:
+        """Batch-resolve user names via User Service."""
+        if not user_ids or not self._token:
+            return {}
+        from app.services.user_profiles_client import get_users_batch
+        profiles = get_users_batch(list(user_ids), self._token)
+        return {uid: p.name for uid, p in profiles.items()}
 
     def get_recognition_report(
         self,
@@ -28,37 +29,32 @@ class AnalyticsService:
         department_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """Get detailed recognition report."""
-        query = self.db.query(RecognitionFeed).join(
-            User, RecognitionFeed.receiver_id == User.id, isouter=True
-        )
+        # If department filter is requested, resolve member IDs via User Service
+        receiver_ids = None
+        if department_id and self._token:
+            from app.services.user_profiles_client import get_users_list
+            all_data = get_users_list(self._token, skip=0, limit=10_000)
+            receiver_ids = [
+                p.id for p in all_data.get("items", [])
+                if p.department_id == department_id
+            ]
 
-        if from_date:
-            query = query.filter(RecognitionFeed.created_at >= from_date)
-        if to_date:
-            query = query.filter(RecognitionFeed.created_at <= to_date)
-        if department_id:
-            query = query.filter(User.department_id == department_id)
+        results = self.repository.get_recognitions(from_date, to_date, receiver_ids)
 
-        results = query.order_by(RecognitionFeed.created_at.desc()).all()
+        # Batch-load user names from User Service
+        uid_set = {r.actor_id for r in results} | {r.receiver_id for r in results if r.receiver_id}
+        users_map = self._get_user_names_batch(uid_set)
 
         report_data = []
         for r in results:
-            # Try to find points from ledger by matching receiver's wallet
-            points_row = self.db.query(PointsLedger.points).join(
-                Wallet, PointsLedger.target_wallet_id == Wallet.id
-            ).filter(
-                PointsLedger.reference_type == r.source_type,
-                PointsLedger.reference_id == r.source_id,
-                PointsLedger.transaction_type == "CREDIT",
-                Wallet.user_id == r.receiver_id
-            ).first()
-
-            points = points_row[0] if points_row else 0
+            points = self.repository.get_points_for_recognition(
+                r.source_type, r.source_id, r.receiver_id
+            ) or 0
 
             report_data.append({
                 "id": r.id,
-                "actor_name": r.actor.name if r.actor else "System",
-                "receiver_name": r.receiver.name if r.receiver else "Unknown",
+                "actor_name": users_map.get(r.actor_id) or f"User {r.actor_id}",
+                "receiver_name": users_map.get(r.receiver_id) or f"User {r.receiver_id}",
                 "source_type": r.source_type,
                 "points": points,
                 "message": r.message,
@@ -72,20 +68,16 @@ class AnalyticsService:
         to_date: Optional[date] = None
     ) -> List[Dict[str, Any]]:
         """Get reward redemption report."""
-        query = self.db.query(Redemption).join(Reward).join(User)
+        results = self.repository.get_redemptions(from_date, to_date)
 
-        if from_date:
-            query = query.filter(Redemption.created_at >= from_date)
-        if to_date:
-            query = query.filter(Redemption.created_at <= to_date)
-
-        results = query.order_by(Redemption.created_at.desc()).all()
+        uid_set = {r.user_id for r in results}
+        users_map = self._get_user_names_batch(uid_set)
 
         report_data = []
         for r in results:
             report_data.append({
                 "id": r.id,
-                "user_name": r.user.name,
+                "user_name": users_map.get(r.user_id) or f"User {r.user_id}",
                 "reward_name": r.reward.name,
                 "points_used": r.points_used,
                 "status": r.status,
@@ -95,21 +87,19 @@ class AnalyticsService:
 
     def get_wallet_utilization_report(self) -> List[Dict[str, Any]]:
         """Get manager wallet utilization report."""
-        managers = self.db.query(User).filter(User.role.in_(["MANAGER", "DEPT_HEAD"])).all()
+        # Resolve managers via User Service
+        managers = []
+        if self._token:
+            from app.services.user_profiles_client import get_users_by_role
+            managers = get_users_by_role(self._token, ["MANAGER", "DEPT_HEAD"])
 
         report_data = []
         for m in managers:
-            wallet = self.db.query(Wallet).filter(
-                Wallet.user_id == m.id,
-                Wallet.wallet_type == WalletType.MANAGER.value
-            ).first()
+            wallet = self.repository.get_manager_wallet(m.id)
+            if not wallet:
+                continue
 
-            if not wallet: continue
-
-            # Total allocated (from funding records)
-            total_allocated = self.db.query(func.sum(WalletFunding.points)).filter(
-                WalletFunding.manager_wallet_id == wallet.id
-            ).scalar() or 0
+            total_allocated = self.repository.get_total_funding(wallet.id)
 
             report_data.append({
                 "manager_id": m.id,
@@ -122,24 +112,17 @@ class AnalyticsService:
 
     def get_payroll_report(self, month_str: str) -> List[Dict[str, Any]]:
         """Get monthly payroll report for approved conversions."""
-        # month_str format: YYYY-MM
         year, month = map(int, month_str.split("-"))
+        results = self.repository.get_approved_conversions(year, month)
 
-        query = self.db.query(PointsConversion).join(
-            User, PointsConversion.user_id == User.id
-        ).filter(
-            PointsConversion.status == ConversionStatus.APPROVED.value,
-            extract('year', PointsConversion.approved_at) == year,
-            extract('month', PointsConversion.approved_at) == month
-        )
-
-        results = query.all()
+        uid_set = {r.user_id for r in results}
+        users_map = self._get_user_names_batch(uid_set)
 
         report_data = []
         for r in results:
             report_data.append({
-                "user_name": r.user.name,
-                "employee_id": None, # Could add if available in User model
+                "user_name": users_map.get(r.user_id) or f"User {r.user_id}",
+                "employee_id": None,
                 "points_converted": r.points_converted,
                 "cash_amount": float(r.cash_amount),
                 "status": r.status,
@@ -161,22 +144,8 @@ class AnalyticsService:
         user_ids = self._get_scope_user_ids(current_user, scope)
 
         # 2. Key Statistics
-        total_recognitions = self.db.query(func.count(RecognitionFeed.id)).filter(
-            RecognitionFeed.receiver_id.in_(user_ids) if user_ids is not None else True,
-            RecognitionFeed.created_at >= from_date if from_date else True,
-            RecognitionFeed.created_at <= to_date if to_date else True
-        ).scalar() or 0
-
-        total_points = self.db.query(func.sum(PointsLedger.points)).join(
-            Wallet, PointsLedger.target_wallet_id == Wallet.id
-        ).filter(
-            Wallet.user_id.in_(user_ids) if user_ids is not None else True,
-            # Only count credits posted to employee wallets — exclude manager budget allocations
-            Wallet.wallet_type == WalletType.EMPLOYEE.value,
-            PointsLedger.transaction_type == "CREDIT",
-            PointsLedger.created_at >= from_date if from_date else True,
-            PointsLedger.created_at <= to_date if to_date else True
-        ).scalar() or 0
+        total_recognitions = self.repository.count_recognitions(user_ids, from_date, to_date)
+        total_points = self.repository.sum_points_distributed(user_ids, from_date, to_date)
 
         # 3. Trends (Last 30 days or specified range)
         trends = self.get_recognition_trends(user_ids, from_date, to_date)
@@ -205,34 +174,42 @@ class AnalyticsService:
             "top_recognized": top_recognized,
             "scope": scope,
             "scope_name": scope_name,
-            "user_count": len(user_ids) if user_ids else self.db.query(User).count(),
+            "user_count": len(user_ids) if user_ids else self._get_total_user_count(),
             "breakdown": breakdown,
         }
+
+    def _get_total_user_count(self) -> int:
+        """Get total user count from User Service."""
+        if self._token:
+            from app.services.user_profiles_client import get_users_list
+            data = get_users_list(self._token, skip=0, limit=10_000)
+            return data.get("total", 0)
+        return 0
 
     def _get_scope_user_ids(self, user: Any, scope: Scope) -> Optional[List[int]]:
         """Identify which users belong to the requested scope."""
         if scope == Scope.TEAM:
-            # Direct reports
-            subordinates = self.db.query(User.id).filter(User.manager_id == user.id).all()
-            return [s.id for s in subordinates]
-
+            # Get direct reports via User Service cache
+            if self._token:
+                from app.services.user_profiles_client import get_all_cached_profiles, get_users_list
+                # Ensure cache is warm
+                get_users_list(self._token, skip=0, limit=10_000)
+                profiles = get_all_cached_profiles()
+                return [uid for uid, p in profiles.items() if p.manager_id == user.id]
+            return []
         elif scope == Scope.DEPARTMENT:
-            # Everyone in the dept
             dept_id = user.department_id
-            if not dept_id: return []
-            members = self.db.query(User.id).filter(User.department_id == dept_id).all()
-            return [m.id for m in members]
-
-        # ORG scope or HR/Admin role - returns None to signify "no filter" (all users)
+            if not dept_id or not self._token:
+                return []
+            from app.services.user_profiles_client import get_users_list
+            all_data = get_users_list(self._token, skip=0, limit=10_000)
+            return [p.id for p in all_data.get("items", []) if p.department_id == dept_id]
         return None
 
     def _get_scope_name(self, user: Any, scope: Scope) -> str:
         """Return a human-readable label for the current scope."""
         if scope == Scope.DEPARTMENT:
-            dept = self.db.query(Department).filter(
-                Department.id == user.department_id
-            ).first()
-            return dept.name if dept else "Department"
+            return user.department_name or "Department"
         if scope == Scope.TEAM:
             return f"{user.name}'s Team"
         return "Organization"
@@ -249,42 +226,33 @@ class AnalyticsService:
         (manager) breakdown for DEPARTMENT scope. Returns [] for TEAM scope.
         """
         if scope == Scope.ORG:
-            departments = self.db.query(Department).all()
+            # Fetch all users from User Service once
+            all_users: List = []
+            if self._token:
+                from app.services.user_profiles_client import get_users_list
+                all_data = get_users_list(self._token, skip=0, limit=10_000)
+                all_users = all_data.get("items", [])
+
+            # Derive unique departments directly from user profiles
+            dept_map: Dict[int, str] = {}
+            for p in all_users:
+                if p.department_id and p.department_name and p.department_id not in dept_map:
+                    dept_map[p.department_id] = p.department_name
+
             result = []
-            for dept in departments:
-                member_ids = [
-                    u.id for u in self.db.query(User.id).filter(
-                        User.department_id == dept.id
-                    ).all()
-                ]
+            for dept_id, dept_name in dept_map.items():
+                member_ids = [p.id for p in all_users if p.department_id == dept_id]
                 if not member_ids:
                     continue
-                rec_count = self.db.query(func.count(RecognitionFeed.id)).filter(
-                    RecognitionFeed.receiver_id.in_(member_ids),
-                    *(
-                        [RecognitionFeed.created_at >= from_date] if from_date else []
-                    ),
-                    *(
-                        [RecognitionFeed.created_at <= to_date] if to_date else []
-                    ),
-                ).scalar() or 0
-                pts = self.db.query(func.sum(PointsLedger.points)).join(
-                    Wallet, PointsLedger.target_wallet_id == Wallet.id
-                ).filter(
-                    Wallet.user_id.in_(member_ids),
-                    # Only count employee wallet credits (exclude manager allocations)
-                    Wallet.wallet_type == WalletType.EMPLOYEE.value,
-                    PointsLedger.transaction_type == "CREDIT",
-                    *(
-                        [PointsLedger.created_at >= from_date] if from_date else []
-                    ),
-                    *(
-                        [PointsLedger.created_at <= to_date] if to_date else []
-                    ),
-                ).scalar() or 0
+                rec_count = self.repository.count_recognitions_for_users(
+                    member_ids, from_date, to_date
+                )
+                pts = self.repository.sum_points_for_users(
+                    member_ids, from_date, to_date
+                )
                 engagement = self.get_engagement_rate(member_ids)
                 result.append({
-                    "name": dept.name,
+                    "name": dept_name,
                     "recognition_count": rec_count,
                     "points": int(pts),
                     "user_count": len(member_ids),
@@ -295,43 +263,31 @@ class AnalyticsService:
 
         if scope == Scope.DEPARTMENT:
             dept_id = user.department_id
-            if not dept_id:
+            if not dept_id or not self._token:
                 return []
-            managers = self.db.query(User).filter(
-                User.department_id == dept_id,
-                User.manager_id != None,
-            ).all()
-            # Group by manager (excluding the Department Head themselves)
+            from app.services.user_profiles_client import get_users_list, get_all_cached_profiles
+            # Warm cache and get all users
+            get_users_list(self._token, skip=0, limit=10_000)
+            all_profiles = get_all_cached_profiles()
+            # Find all users in this department
+            dept_users = [p for p in all_profiles.values() if p.department_id == dept_id]
+            # Group by manager_id
             manager_ids = list({
-                u.manager_id for u in managers
-                if u.manager_id and u.manager_id != user.id
+                p.manager_id for p in dept_users
+                if p.manager_id and p.manager_id != user.id
             })
+            names_map = self._get_user_names_batch(set(manager_ids))
             result = []
             for mgr_id in manager_ids:
-                mgr = self.db.query(User).filter(User.id == mgr_id).first()
-                if not mgr:
-                    continue
-                team_ids = [
-                    u.id for u in self.db.query(User.id).filter(
-                        User.manager_id == mgr_id
-                    ).all()
-                ]
+                team_ids = [p.id for p in all_profiles.values() if p.manager_id == mgr_id]
                 if not team_ids:
                     continue
-                rec_count = self.db.query(func.count(RecognitionFeed.id)).filter(
-                    RecognitionFeed.receiver_id.in_(team_ids),
-                ).scalar() or 0
-                pts = self.db.query(func.sum(PointsLedger.points)).join(
-                    Wallet, PointsLedger.target_wallet_id == Wallet.id
-                ).filter(
-                    Wallet.user_id.in_(team_ids),
-                    # Only count employee wallet credits (exclude manager allocations)
-                    Wallet.wallet_type == WalletType.EMPLOYEE.value,
-                    PointsLedger.transaction_type == "CREDIT",
-                ).scalar() or 0
+                mgr_name = names_map.get(mgr_id) or f"User {mgr_id}"
+                rec_count = self.repository.count_recognitions_for_users(team_ids)
+                pts = self.repository.sum_points_for_users(team_ids)
                 engagement = self.get_engagement_rate(team_ids)
                 result.append({
-                    "name": f"{mgr.name}'s Team",
+                    "name": f"{mgr_name}'s Team",
                     "recognition_count": rec_count,
                     "points": int(pts),
                     "user_count": len(team_ids),
@@ -344,81 +300,36 @@ class AnalyticsService:
 
     def get_recognition_trends(self, user_ids: Optional[List[int]], from_date: Optional[date], to_date: Optional[date]):
         """Calculate counts of recognitions per day."""
-        query = self.db.query(
-            func.date(RecognitionFeed.created_at).label('date'),
-            func.count(RecognitionFeed.id).label('count')
-        )
-
-        if user_ids is not None:
-            query = query.filter(RecognitionFeed.receiver_id.in_(user_ids))
-
-        if from_date:
-            query = query.filter(RecognitionFeed.created_at >= from_date)
-        if to_date:
-            query = query.filter(RecognitionFeed.created_at <= to_date)
-
-        results = query.group_by(func.date(RecognitionFeed.created_at)).order_by('date').all()
+        results = self.repository.get_recognition_trends(user_ids, from_date, to_date)
         return [{"date": str(r.date), "count": r.count} for r in results]
 
     def get_top_recognizers(self, user_ids: Optional[List[int]], limit: int = 5):
         """Find users who gave most recognitions."""
-        query = self.db.query(
-            User.name,
-            func.count(RecognitionFeed.id).label('count')
-        ).join(RecognitionFeed, User.id == RecognitionFeed.actor_id)
-
-        if user_ids is not None:
-            query = query.filter(User.id.in_(user_ids))
-
-        results = query.group_by(User.id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
-        return [{"name": r.name, "count": r.count} for r in results]
+        results = self.repository.get_top_recognizers(user_ids, limit)
+        id_set = {r.actor_id for r in results}
+        names = self._get_user_names_batch(id_set)
+        return [{"name": names.get(r.actor_id) or f"User {r.actor_id}", "count": r.count} for r in results]
 
     def get_top_recognized(self, user_ids: Optional[List[int]], limit: int = 5):
         """Find users who received most recognitions."""
-        query = self.db.query(
-            User.name,
-            func.count(RecognitionFeed.id).label('count')
-        ).join(RecognitionFeed, User.id == RecognitionFeed.receiver_id)
-
-        if user_ids is not None:
-            query = query.filter(User.id.in_(user_ids))
-
-        results = query.group_by(User.id).order_by(func.count(RecognitionFeed.id).desc()).limit(limit).all()
-        return [{"name": r.name, "count": r.count} for r in results]
+        results = self.repository.get_top_recognized(user_ids, limit)
+        id_set = {r.receiver_id for r in results}
+        names = self._get_user_names_batch(id_set)
+        return [{"name": names.get(r.receiver_id) or f"User {r.receiver_id}", "count": r.count} for r in results]
 
     def get_engagement_rate(self, user_ids: Optional[List[int]]) -> float:
         """Percentage of users that have participated in recognition."""
-        total_users = len(user_ids) if user_ids is not None else self.db.query(User).count()
-        if total_users == 0: return 0.0
-
-        # Active users (gave or received)
-        query_received = self.db.query(RecognitionFeed.receiver_id.label('uid'))
-        query_sent = self.db.query(RecognitionFeed.actor_id.label('uid'))
-
-        if user_ids is not None:
-            query_received = query_received.filter(RecognitionFeed.receiver_id.in_(user_ids))
-            query_sent = query_sent.filter(RecognitionFeed.actor_id.in_(user_ids))
-
-        active_users_count = query_received.union(query_sent).distinct().count()
+        total_users = len(user_ids) if user_ids is not None else self._get_total_user_count()
+        if total_users == 0:
+            return 0.0
+        active_users_count = self.repository.get_active_user_count(user_ids)
         return round((active_users_count / total_users) * 100, 2)
     def get_expiry_forecast(self, days: int = 30) -> List[Dict[str, Any]]:
         """Forecast points expiring in the next N days."""
-        from app.models.points_batches import PointsBatch
-        from datetime import date, timedelta
+        from datetime import timedelta
 
         target_date = date.today() + timedelta(days=days)
-
-        query = self.db.query(
-            PointsBatch.expiry_date,
-            func.sum(PointsBatch.remaining_points).label('total_points'),
-            func.count(PointsBatch.user_id.distinct()).label('user_count')
-        ).filter(
-            PointsBatch.remaining_points > 0,
-            PointsBatch.expiry_date <= target_date,
-            PointsBatch.expiry_date >= date.today()
-        ).group_by(PointsBatch.expiry_date).order_by(PointsBatch.expiry_date)
-
-        results = query.all()
+        results = self.repository.get_expiry_forecast(target_date)
 
         forecast_data = []
         for r in results:

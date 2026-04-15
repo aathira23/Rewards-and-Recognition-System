@@ -15,6 +15,8 @@ class HrApprovalsBloc extends Bloc<HrApprovalsEvent, HrApprovalsState> {
     on<LoadManagers>(_onLoadManagers);
     on<AllocateBudgetToManager>(_onAllocate);
     on<BulkAllocateBudgets>(_onBulkAllocate);
+    on<LoadEmployees>(_onLoadEmployees);
+    on<TriggerLifeEvent>(_onTriggerLifeEvent);
   }
 
   Future<void> _onLoadNominations(
@@ -98,6 +100,35 @@ class HrApprovalsBloc extends Bloc<HrApprovalsEvent, HrApprovalsState> {
       (count) {
         emit(state.copyWith(successMessage: 'Allocated to $count wallets'));
         add(LoadManagers());
+      },
+    );
+  }
+
+  Future<void> _onLoadEmployees(
+      LoadEmployees event, Emitter<HrApprovalsState> emit) async {
+    emit(state.copyWith(empLoading: true));
+    final result = await repository.fetchAllEmployees();
+    result.fold(
+      (f) => emit(state.copyWith(empLoading: false, error: f.message)),
+      (data) => emit(state.copyWith(empLoading: false, employees: data)),
+    );
+  }
+
+  Future<void> _onTriggerLifeEvent(
+      TriggerLifeEvent event, Emitter<HrApprovalsState> emit) async {
+    emit(state.copyWith(lifeEventLoading: true));
+    final result =
+        await repository.triggerLifeEvent(event.userId, event.celebrationType);
+    result.fold(
+      (f) => emit(state.copyWith(lifeEventLoading: false, error: f.message)),
+      (data) {
+        final name = data['user_name'] ?? 'employee';
+        final type =
+            event.celebrationType == 'BIRTH' ? 'New Baby 🍼' : 'Marriage 💍';
+        emit(state.copyWith(
+          lifeEventLoading: false,
+          successMessage: '$type celebration triggered for $name',
+        ));
       },
     );
   }

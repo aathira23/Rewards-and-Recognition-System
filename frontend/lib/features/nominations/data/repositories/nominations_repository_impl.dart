@@ -43,12 +43,16 @@ class NominationsRepositoryImpl implements NominationsRepository {
     required int nomineeId,
     required int awardTypeId,
     required String citation,
+    String? personaType,
+    String? personaLabel,
   }) async {
     try {
       final result = await remoteDataSource.createNomination(
         nomineeId: nomineeId,
         awardTypeId: awardTypeId,
         citation: citation,
+        personaType: personaType,
+        personaLabel: personaLabel,
       );
       return Right(result);
     } on ServerException catch (e) {

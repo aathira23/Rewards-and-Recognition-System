@@ -49,6 +49,7 @@ SUCCESS_APPROVAL_STATUS_RETRIEVED = "Approval status retrieved"
 SUCCESS_CELEBRATIONS_FETCHED = "Upcoming celebrations fetched"
 SUCCESS_CELEBRATION_HISTORY_FETCHED = "Celebration history fetched"
 SUCCESS_CELEBRATIONS_PROCESSED = "Processed {} birthdays and {} anniversaries"
+SUCCESS_LIFE_EVENT_TRIGGERED = "{} celebration triggered for {}"
 
 SUCCESS_CONFIGS_RETRIEVED = "Configurations retrieved"
 SUCCESS_CONFIG_UPDATED = "Config '{}' updated"
@@ -121,6 +122,9 @@ ERROR_EMPLOYEES_CANNOT_APPROVE = "Employees cannot approve nominations"
 ERROR_INVALID_NOMINATION_ACTION = "Invalid action. Must be 'APPROVE' or 'REJECT'."
 
 ERROR_ONLY_HR_ADMIN_PROCESS_CELEBRATIONS = "Only HR/Admin can trigger celebration processing"
+ERROR_ONLY_HR_ADMIN_TRIGGER_LIFE_EVENT = "Only HR/Admin can trigger life event celebrations"
+ERROR_LIFE_EVENT_DUPLICATE = "This life event celebration has already been awarded to this employee this year"
+ERROR_LIFE_EVENT_USER_NOT_FOUND = "Employee not found"
 
 ERROR_ACCESS_DENIED = "Access denied"
 ERROR_CONFIG_RETRIEVAL_FAILED = "Config retrieval failed: {}"

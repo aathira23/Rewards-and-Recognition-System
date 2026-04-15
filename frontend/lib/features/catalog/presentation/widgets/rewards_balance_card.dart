@@ -1,3 +1,4 @@
+import 'package:rr_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
 
@@ -13,6 +14,65 @@ class RewardsBalanceCard extends StatelessWidget {
     this.expiryDate,
   });
 
+  /// Compact badge variant shown in the page header top-right.
+  static Widget badge({required int balance}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8EAF6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: Text('⭐', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'BALANCE',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF9E9E9E),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              Text(
+                '$balance Points',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -26,20 +86,20 @@ class RewardsBalanceCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: isDark
               ? [
-                  theme.colorScheme.primary.withValues(alpha: 0.9),
+                  theme.colorScheme.primary.withOpacity(0.9),
                   theme.colorScheme.primaryContainer,
-                  theme.colorScheme.secondary.withValues(alpha: 0.7),
+                  theme.colorScheme.secondary.withOpacity(0.7),
                 ]
               : [
-                  const Color(0xFF1E56BD),
-                  const Color(0xFF3B7BF2),
+                  AppTheme.brandBlue,
+                  AppTheme.brandBlueLight,
                 ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : theme.colorScheme.primary)
-                .withValues(alpha: 0.25),
+            color: (isDark ? Colors.black : AppTheme.brandBlue)
+                .withOpacity(0.25),
             blurRadius: 25,
             offset: const Offset(0, 12),
           ),
@@ -58,7 +118,7 @@ class RewardsBalanceCard extends StatelessWidget {
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withOpacity(0.1),
                 ),
               ),
             ),
@@ -76,7 +136,7 @@ class RewardsBalanceCard extends StatelessWidget {
                           Text(
                             'Your Points Balance',
                             style: AppTextStyles.cardTitle(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withOpacity(0.8),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -94,7 +154,7 @@ class RewardsBalanceCard extends StatelessWidget {
                               Text(
                                 'pts',
                                 style: AppTextStyles.pageTitle(
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: Colors.white.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -104,7 +164,7 @@ class RewardsBalanceCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -117,13 +177,13 @@ class RewardsBalanceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withOpacity(0.1),
                       ),
                     ),
                     child: Row(

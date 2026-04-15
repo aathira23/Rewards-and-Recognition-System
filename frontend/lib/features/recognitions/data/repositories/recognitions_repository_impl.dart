@@ -41,12 +41,16 @@ class RecognitionsRepositoryImpl implements RecognitionsRepository {
     required int receiverId,
     required int badgeId,
     String? message,
+    required String personaType,
+    String? personaLabel,
   }) async {
     try {
       final recognition = await remoteDataSource.sendRecognition(
         receiverId: receiverId,
         badgeId: badgeId,
         message: message,
+        personaType: personaType,
+        personaLabel: personaLabel,
       );
       return Right(recognition);
     } on ServerException catch (e) {

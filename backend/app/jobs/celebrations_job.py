@@ -3,6 +3,7 @@ Celebrations job - Automated birthday and anniversary recognition.
 PRODUCTION: Uses unified CelebrationService for consistency.
 """
 from app.core.database import SessionLocal
+from app.core.config import settings
 from app.services.celebration_service import CelebrationService
 
 
@@ -21,8 +22,9 @@ def process_celebrations():
     try:
         print("🎉 Starting celebration processing...")
 
-        # Use unified service method
-        service = CelebrationService(db)
+        # Use SYSTEM_TOKEN so email service can look up users via User Service
+        token = settings.SYSTEM_TOKEN
+        service = CelebrationService(db, token=token)
         result = service.process_today_celebrations()
 
         print("✅ Celebration processing complete:")

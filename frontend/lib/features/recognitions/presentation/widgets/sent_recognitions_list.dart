@@ -57,7 +57,7 @@ class _SentRecognitionTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+            backgroundColor: theme.primaryColor.withOpacity(0.1),
             child: Text(
               recognition.receiverName != null &&
                       recognition.receiverName!.isNotEmpty

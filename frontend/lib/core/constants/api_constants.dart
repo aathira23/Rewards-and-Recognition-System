@@ -5,11 +5,15 @@ const int kDefaultPageSize = 6;
 class ApiConstants {
   // Use http://localhost:8000/api/v1 for Chrome Web development
   // Use http://10.0.2.2:8000/api/v1 for Android Emulator
-  static const String baseUrl = 'http://127.0.0.1:8000/';
+  static const String baseUrl = 'http://127.0.0.1:8000/api/v1/';
 
   // Auth Endpoints
   static const String login = 'auth/login';
   static const String register = 'auth/register';
+
+  /// Dev helper (user_service mode) — validates a raw Styria token and returns it
+  /// in the standard login response shape so the frontend can store it.
+  static const String tokenLogin = 'auth/token-login';
 
   // Recognition Endpoints
   static const String recognitionFeed = 'recognitions/feed';
@@ -50,6 +54,7 @@ class ApiConstants {
   static const String celebrationsUpcoming = 'celebrations/upcoming';
   static const String celebrationsHistory = 'celebrations/history';
   static const String celebrationsProcess = 'celebrations/process-today';
+  static const String celebrationsTrigger = 'celebrations/trigger';
 
   // Notifications
   static const String notifications = 'inbox/';

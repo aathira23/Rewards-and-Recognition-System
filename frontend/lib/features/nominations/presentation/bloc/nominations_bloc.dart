@@ -76,6 +76,8 @@ class NominationsBloc extends Bloc<NominationsEvent, NominationsState> {
       nomineeId: event.nomineeId,
       awardTypeId: event.awardTypeId,
       citation: event.citation,
+      personaType: event.personaType,
+      personaLabel: event.personaLabel,
     ));
     result.fold(
       (f) => emit(state.copyWith(

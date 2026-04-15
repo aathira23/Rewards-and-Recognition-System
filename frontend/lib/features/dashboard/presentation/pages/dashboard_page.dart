@@ -4,11 +4,13 @@ import 'package:rr_frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:rr_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:rr_frontend/core/presentation/models/nav_destination.dart';
 import 'package:rr_frontend/core/presentation/widgets/main_layout.dart';
+import 'package:rr_frontend/features/dashboard/presentation/pages/dashboard_home_page.dart';
 import 'package:rr_frontend/features/recognitions/presentation/pages/employee_recognitions_page.dart';
-import 'package:rr_frontend/features/points/presentation/pages/points_page.dart';
+
+import 'package:rr_frontend/features/points/presentation/pages/my_activity_page.dart';
+import 'package:rr_frontend/features/points/presentation/pages/leaderboard_page.dart';
 import 'package:rr_frontend/features/catalog/presentation/pages/employee_rewards_page.dart';
-import 'package:rr_frontend/features/nominations/presentation/pages/employee_nominations_page.dart';
-import 'package:rr_frontend/features/nominations/presentation/pages/manager_approvals_page.dart';
+import 'package:rr_frontend/features/nominations/presentation/pages/awards_page.dart';
 import 'package:rr_frontend/features/analytics/presentation/pages/analytics_page.dart';
 import 'package:rr_frontend/features/reports/presentation/pages/reports_page.dart';
 import 'package:rr_frontend/features/hr/presentation/pages/hr_config_page.dart';
@@ -78,6 +80,31 @@ class _DashboardPageState extends State<DashboardPage> {
 
     if (r == 'HR' || r == 'ADMIN') {
       return [
+        const NavDestination(
+          title: 'Dashboard',
+          heading: 'Rewards & Recognition',
+          subtitle: 'Overview of rewards and recognition',
+          icon: Icons.dashboard_rounded,
+          page: DashboardHomePage(),
+        ),
+        const NavDestination(
+          title: 'Awards',
+          subtitle: 'View nominations and award status',
+          icon: Icons.emoji_events_rounded,
+          page: AwardsPage(),
+        ),
+        const NavDestination(
+          title: 'eCards',
+          subtitle: 'Spread positivity & appreciate peers!',
+          icon: Icons.favorite_outline_rounded,
+          page: EmployeeRecognitionsPage(),
+        ),
+        const NavDestination(
+          title: 'Rewards',
+          subtitle: 'Redeem your hard-earned points',
+          icon: Icons.shopping_bag_rounded,
+          page: EmployeeRewardsPage(),
+        ),
         NavDestination(
           title: 'Analytics',
           subtitle: 'Organisation-wide performance insights',
@@ -97,10 +124,24 @@ class _DashboardPageState extends State<DashboardPage> {
           page: HrConfigPage(),
         ),
         const NavDestination(
-          title: 'Approvals & Allocation',
-          subtitle: 'Review nominations, conversions & allocate budgets',
+          title: 'Allocations',
+          subtitle: 'Review conversions & allocate budgets',
           icon: Icons.task_alt_rounded,
           page: HrApprovalsPage(),
+        ),
+        NavDestination(
+          title: 'My Activity',
+          subtitle: 'Track your point earnings, redemptions, and conversions',
+          icon: Icons.history_rounded,
+          page: MyActivityPage(userRole: r),
+        ),
+        const NavDestination(
+          title: 'Leaderboard',
+          heading: 'Leaderboard',
+          subtitle: 'Rise to the top & inspire others!',
+          icon: Icons.military_tech_outlined,
+          page: LeaderboardPage(),
+          isHidden: true,
         ),
       ];
     }
@@ -108,19 +149,26 @@ class _DashboardPageState extends State<DashboardPage> {
     // ── MANAGER / DEPT_HEAD ───────────────────────────────────────
     if (r == 'MANAGER' || r == 'DEPT_HEAD') {
       return [
-        const NavDestination(
+        NavDestination(
           title: 'Recognitions',
-          heading: 'Recognitions Center',
-          subtitle: 'Appreciate and celebrate your colleagues',
+          heading: 'Rewards & Recognition',
+          subtitle: 'Celebrate, Earn, and Redeem!',
           icon: Icons.card_giftcard_rounded,
+          page: const DashboardHomePage(),
+        ),
+        const NavDestination(
+          title: 'eCards',
+          heading: 'eCards',
+          subtitle: 'Spread positivity & appreciate peers!',
+          icon: Icons.favorite_outline_rounded,
           page: EmployeeRecognitionsPage(),
         ),
         NavDestination(
-          title: 'Points',
-          heading: 'Points Overview',
-          subtitle: 'Track your earnings and influence',
-          icon: Icons.account_balance_wallet_rounded,
-          page: PointsPage(userRole: r),
+          title: 'My Activity',
+          heading: 'My Activity',
+          subtitle: 'Track your point earnings, redemptions, and conversions',
+          icon: Icons.history_rounded,
+          page: MyActivityPage(userRole: r),
         ),
         const NavDestination(
           title: 'Rewards',
@@ -130,11 +178,11 @@ class _DashboardPageState extends State<DashboardPage> {
           page: EmployeeRewardsPage(),
         ),
         const NavDestination(
-          title: 'Approvals',
-          heading: 'Nomination Approvals',
-          subtitle: 'Review and action pending award nominations',
-          icon: Icons.task_alt_rounded,
-          page: ManagerApprovalsPage(),
+          title: 'Awards',
+          heading: 'Awards & Approvals',
+          subtitle: 'Nominations, awards, and approvals',
+          icon: Icons.emoji_events_rounded,
+          page: AwardsPage(),
         ),
         NavDestination(
           title: 'Analytics',
@@ -142,24 +190,39 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.analytics_rounded,
           page: AnalyticsPage(userRole: r),
         ),
+        const NavDestination(
+          title: 'Leaderboard',
+          heading: 'Leaderboard',
+          subtitle: 'Rise to the top & inspire others!',
+          icon: Icons.military_tech_outlined,
+          page: LeaderboardPage(),
+          isHidden: true,
+        ),
       ];
     }
 
     // ── EMPLOYEE ──────────────────────────────────────────────────
     return [
-      const NavDestination(
+      NavDestination(
         title: 'Recognitions',
-        heading: 'Recognitions Center',
-        subtitle: 'Appreciate and celebrate your colleagues',
+        heading: 'Rewards & Recognition',
+        subtitle: 'Celebrate, Earn, and Redeem!',
         icon: Icons.card_giftcard_rounded,
+        page: const DashboardHomePage(),
+      ),
+      const NavDestination(
+        title: 'eCards',
+        heading: 'eCards',
+        subtitle: 'Spread positivity & appreciate peers!',
+        icon: Icons.favorite_outline_rounded,
         page: EmployeeRecognitionsPage(),
       ),
       NavDestination(
-        title: 'Points',
+        title: 'My Activity',
         heading: 'Points Overview',
         subtitle: 'Track your earnings and influence',
-        icon: Icons.account_balance_wallet_rounded,
-        page: PointsPage(userRole: r),
+        icon: Icons.history_rounded,
+        page: MyActivityPage(userRole: r),
       ),
       const NavDestination(
         title: 'Rewards',
@@ -169,10 +232,18 @@ class _DashboardPageState extends State<DashboardPage> {
         page: EmployeeRewardsPage(),
       ),
       const NavDestination(
-        title: 'Nominations',
+        title: 'Awards',
         subtitle: 'Nominate a colleague or check your award status',
         icon: Icons.emoji_events_rounded,
-        page: EmployeeNominationsPage(),
+        page: AwardsPage(),
+      ),
+      const NavDestination(
+        title: 'Leaderboard',
+        heading: 'Leaderboard',
+        subtitle: 'Rise to the top & inspire others!',
+        icon: Icons.military_tech_outlined,
+        page: LeaderboardPage(),
+        isHidden: true,
       ),
     ];
   }

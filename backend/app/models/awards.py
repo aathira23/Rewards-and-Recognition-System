@@ -14,16 +14,16 @@ class Award(Base):
     __tablename__ = "awards"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    nominee_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    nominator_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    nominee_id = Column(BigInteger, nullable=False)
+    nominator_id = Column(BigInteger, nullable=False)
     award_type_id = Column(BigInteger, ForeignKey("award_types.id"), nullable=False)
     status = Column(String, nullable=False)  # PENDING, APPROVED, REJECTED
     points_awarded = Column(Integer, nullable=True)
     citation = Column(Text, nullable=True)
+    persona_type = Column(String, nullable=True)   # PERSONAL | DEPARTMENT | Company
+    persona_label = Column(String, nullable=True)  # e.g. "HR Department" / "Tarento"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    nominee = relationship("User", foreign_keys=[nominee_id], back_populates="nominations_received")
-    nominator = relationship("User", foreign_keys=[nominator_id], back_populates="nominations_made")
     award_type = relationship("AwardType", back_populates="awards")
     approvals = relationship("AwardApproval", back_populates="award")

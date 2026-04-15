@@ -83,6 +83,8 @@ class RecognitionsBloc extends Bloc<RecognitionsEvent, RecognitionsState> {
       receiverId: event.receiverId,
       badgeId: event.badgeId,
       message: event.message,
+      personaType: event.personaType,
+      personaLabel: event.personaLabel,
     ));
     result.fold(
       (failure) => emit(state.copyWith(

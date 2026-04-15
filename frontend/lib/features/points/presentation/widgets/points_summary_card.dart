@@ -8,6 +8,7 @@ import '../bloc/budget_event.dart';
 import '../bloc/budget_state.dart';
 import '../../domain/entities/points_summary_entity.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 
 /// Wallet card with a toggle between "My Points" and "Manager Wallet".
 /// The toggle only appears for MANAGER / DEPT_HEAD / HR roles.
@@ -64,18 +65,12 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
           prev.error != curr.error,
       listener: (context, budgetState) {
         if (budgetState.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(budgetState.successMessage!),
-            backgroundColor: Colors.green,
-          ));
+          AppSnackbar.success(context, budgetState.successMessage!);
           widget.onActionCompleted?.call();
           context.read<BudgetBloc>().add(ClearBudgetMessages());
         }
         if (budgetState.error != null && budgetState.wallet != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(budgetState.error!),
-            backgroundColor: Colors.red,
-          ));
+          AppSnackbar.error(context, budgetState.error!);
           context.read<BudgetBloc>().add(ClearBudgetMessages());
         }
       },
@@ -93,7 +88,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: grad.first.withValues(alpha: 0.3),
+              color: grad.first.withOpacity(0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -162,7 +157,7 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
     return Container(
       height: 34,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(17),
       ),
       child: Row(
@@ -397,9 +392,9 @@ class _PointsSummaryCardState extends State<PointsSummaryCard> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

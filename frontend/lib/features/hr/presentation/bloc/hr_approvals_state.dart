@@ -10,6 +10,11 @@ class HrApprovalsState extends Equatable {
   final bool mgLoading;
   final List<Map<String, dynamic>> managers;
 
+  // Life-event celebrations
+  final bool empLoading;
+  final List<Map<String, dynamic>> employees;
+  final bool lifeEventLoading;
+
   final String? error;
   final String? successMessage;
 
@@ -20,6 +25,9 @@ class HrApprovalsState extends Equatable {
     this.conversions = const [],
     this.mgLoading = false,
     this.managers = const [],
+    this.empLoading = false,
+    this.employees = const [],
+    this.lifeEventLoading = false,
     this.error,
     this.successMessage,
   });
@@ -31,6 +39,9 @@ class HrApprovalsState extends Equatable {
     List<Map<String, dynamic>>? conversions,
     bool? mgLoading,
     List<Map<String, dynamic>>? managers,
+    bool? empLoading,
+    List<Map<String, dynamic>>? employees,
+    bool? lifeEventLoading,
     String? error,
     String? successMessage,
   }) {
@@ -41,6 +52,9 @@ class HrApprovalsState extends Equatable {
       conversions: conversions ?? this.conversions,
       mgLoading: mgLoading ?? this.mgLoading,
       managers: managers ?? this.managers,
+      empLoading: empLoading ?? this.empLoading,
+      employees: employees ?? this.employees,
+      lifeEventLoading: lifeEventLoading ?? this.lifeEventLoading,
       error: error,
       successMessage: successMessage,
     );
@@ -54,6 +68,9 @@ class HrApprovalsState extends Equatable {
         conversions,
         mgLoading,
         managers,
+        empLoading,
+        employees,
+        lifeEventLoading,
         error,
         successMessage,
       ];

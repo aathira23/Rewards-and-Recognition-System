@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rr_frontend/core/theme/app_text_styles.dart';
@@ -21,6 +22,10 @@ class _LoginPageState extends State<LoginPage> {
   String? _loginError;
   Timer? _errorTimer;
 
+  // Dev-only: paste a raw Styria token to log in without OAuth flow
+  bool _showDevPanel = false;
+  final _tokenController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     _errorTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
+    _tokenController.dispose();
     super.dispose();
   }
 
@@ -249,6 +255,8 @@ class _LoginPageState extends State<LoginPage> {
                                   );
                                 },
                               ),
+                              // Dev-only: token login panel (only visible in debug builds)
+                              if (kDebugMode) ..._buildDevTokenPanel(context),
                             ],
                           ),
                         ),
@@ -262,6 +270,89 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildDevTokenPanel(BuildContext context) {
+    final theme = Theme.of(context);
+    return [
+      const SizedBox(height: 20),
+      GestureDetector(
+        onTap: () => setState(() => _showDevPanel = !_showDevPanel),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _showDevPanel ? Icons.expand_less : Icons.developer_mode_rounded,
+              size: 16,
+              color: theme.colorScheme.outline,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Dev: use Styria token',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ],
+        ),
+      ),
+      AnimatedCrossFade(
+        duration: const Duration(milliseconds: 250),
+        crossFadeState: _showDevPanel
+            ? CrossFadeState.showSecond
+            : CrossFadeState.showFirst,
+        firstChild: const SizedBox.shrink(),
+        secondChild: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tokenController,
+              maxLines: 4,
+              minLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Paste Styria Bearer token',
+                hintText: 'eyJ...',
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.all(10),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => _tokenController.clear(),
+                  tooltip: 'Clear',
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                final isLoading = state is AuthLoading;
+                return OutlinedButton.icon(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          final raw = _tokenController.text.trim();
+                          if (raw.isEmpty) return;
+                          // Strip leading "Bearer " if the user copied the full header
+                          final token = raw.startsWith('Bearer ')
+                              ? raw.substring(7).trim()
+                              : raw;
+                          context.read<AuthBloc>().add(
+                                AuthTokenLoginRequested(token: token),
+                              );
+                        },
+                  icon: const Icon(Icons.login, size: 18),
+                  label: const Text('Login with Token'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 40),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ];
   }
 }
 
@@ -391,7 +482,7 @@ class _LoginCarouselState extends State<_LoginCarousel> {
                       slide['subtitle'],
                       textAlign: TextAlign.center,
                       style: AppTextStyles.loginSubtitle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withOpacity(0.8),
                       ),
                     ),
                   ),
@@ -427,7 +518,7 @@ class _LoginCarouselState extends State<_LoginCarousel> {
                     decoration: BoxDecoration(
                       color: index == _currentPage
                           ? Colors.white
-                          : Colors.white.withValues(alpha: 0.4),
+                          : Colors.white.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

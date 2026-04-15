@@ -22,12 +22,22 @@ class MainLayout extends StatefulWidget {
     this.onLogout,
   });
 
+  static MainLayoutState? of(BuildContext context) {
+    return context.findAncestorStateOfType<MainLayoutState>();
+  }
+
   @override
-  State<MainLayout> createState() => _MainLayoutState();
+  State<MainLayout> createState() => MainLayoutState();
 }
 
-class _MainLayoutState extends State<MainLayout> {
+class MainLayoutState extends State<MainLayout> {
+  static const Color _topBarColor = Color(0xFF4D33B7);
+  static const Color _sidebarBgColor = Colors.white;
+  static const Color _sidebarTextColor = Colors.black87;
+  static const Color _sidebarActiveColor = Color(0xFF4D33B7);
+
   late int _selectedIndex;
+  int? _hoveredNavIndex;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Overlay for user profile popup
@@ -54,12 +64,17 @@ class _MainLayoutState extends State<MainLayout> {
     super.dispose();
   }
 
-  void _selectIndex(int index) {
+  void selectIndex(int index) {
     setState(() => _selectedIndex = index);
     _removeProfileOverlay();
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
     }
+  }
+
+  void selectTabByTitle(String title) {
+    final idx = widget.destinations.indexWhere((d) => d.title == title);
+    if (idx != -1) selectIndex(idx);
   }
 
   // ── Profile overlay ────────────────────────────────────────────────
@@ -161,109 +176,159 @@ class _MainLayoutState extends State<MainLayout> {
 
   // ── Compact icon+label sidebar nav (desktop) ──────────────────────
   Widget _buildCompactNavList() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      itemCount: widget.destinations.length,
-      itemBuilder: (context, index) {
-        final dest = widget.destinations[index];
-        final isSelected = _selectedIndex == index;
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      children: [
+        for (int index = 0; index < widget.destinations.length; index++)
+          if (!widget.destinations[index].isHidden)
+            _buildCompactNavItem(index, widget.destinations[index]),
+      ],
+    );
+  }
 
-        return Tooltip(
-          message: dest.title,
-          preferBelow: false,
-          child: InkWell(
-            onTap: () => _selectIndex(index),
-            splashColor: Colors.white.withValues(alpha: 0.1),
-            highlightColor: Colors.white.withValues(alpha: 0.06),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 44,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.white.withValues(alpha: 0.18)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      dest.icon,
-                      size: 22,
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dest.title,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.55),
-                      letterSpacing: 0.1,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+  Widget _buildCompactNavItem(int index, NavDestination dest) {
+    final isSelected = _selectedIndex == index;
+    final isHovered = _hoveredNavIndex == index;
+    final isActive = isSelected || isHovered;
+
+    return Tooltip(
+      message: dest.title,
+      preferBelow: false,
+      child: InkWell(
+        onTap: () => selectIndex(index),
+        onHover: (hovering) {
+          setState(() {
+            _hoveredNavIndex = hovering ? index : null;
+          });
+        },
+        splashColor: _sidebarActiveColor.withOpacity(0.12),
+        highlightColor: _sidebarActiveColor.withOpacity(0.06),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 3,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: isSelected ? _sidebarActiveColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-            ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 44,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? _sidebarActiveColor.withOpacity(0.10)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        dest.icon,
+                        size: 22,
+                        color: isActive
+                            ? _sidebarActiveColor
+                            : _sidebarTextColor.withOpacity(0.75),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dest.title,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight:
+                            isActive ? FontWeight.w700 : FontWeight.w500,
+                        color: isActive
+                            ? _sidebarActiveColor
+                            : _sidebarTextColor.withOpacity(0.75),
+                        letterSpacing: 0.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   // ── Row-style nav for mobile drawer ──────────────────────────────
   Widget _buildDrawerNavList(ThemeData theme) {
+    final visibleIndices = <int>[];
+    for (int i = 0; i < widget.destinations.length; i++) {
+      if (!widget.destinations[i].isHidden) visibleIndices.add(i);
+    }
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: widget.destinations.length,
+      itemCount: visibleIndices.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
-      itemBuilder: (context, index) {
+      itemBuilder: (context, listIndex) {
+        final index = visibleIndices[listIndex];
         final dest = widget.destinations[index];
         final isSelected = _selectedIndex == index;
+        final isHovered = _hoveredNavIndex == index;
+        final isActive = isSelected || isHovered;
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _selectIndex(index),
+            onTap: () => selectIndex(index),
+            onHover: (hovering) {
+              setState(() {
+                _hoveredNavIndex = hovering ? index : null;
+              });
+            },
             borderRadius: BorderRadius.circular(8),
-            splashColor: Colors.white.withValues(alpha: 0.1),
+            splashColor: _sidebarActiveColor.withOpacity(0.10),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.15)
+                color: isActive
+                    ? _sidebarActiveColor.withOpacity(0.08)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
+                  Container(
+                    width: 3,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? _sidebarActiveColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   Icon(dest.icon,
                       size: 20,
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.6)),
+                      color: isActive
+                          ? _sidebarActiveColor
+                          : _sidebarTextColor.withOpacity(0.75)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       dest.title,
                       style: AppTextStyles.navItem(
-                        isSelected: isSelected,
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.65),
+                        isSelected: isActive,
+                        color: isActive
+                            ? _sidebarActiveColor
+                            : _sidebarTextColor.withOpacity(0.75),
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -278,31 +343,14 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  // ── Compact brand ─────────────────────────────────────────────────
-  Widget _buildCompactBrand() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.hub_outlined, color: Colors.white, size: 22),
-        ),
-      ),
-    );
-  }
-
   // ── Compact user avatar — clicking opens popup ────────────────────
   Widget _buildCompactUserProfile() {
     final isPopupOpen = _profileOverlay != null;
     return Container(
       decoration: BoxDecoration(
         border: Border(
-            top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+          top: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Center(
@@ -316,22 +364,21 @@ class _MainLayoutState extends State<MainLayout> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isPopupOpen
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.3),
+                  color:
+                      isPopupOpen ? _sidebarActiveColor : Colors.grey.shade400,
                   width: isPopupOpen ? 2 : 1.5,
                 ),
               ),
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: isPopupOpen
-                    ? Colors.white.withValues(alpha: 0.3)
-                    : Colors.white.withValues(alpha: 0.18),
+                    ? _sidebarActiveColor.withOpacity(0.10)
+                    : Colors.grey.shade100,
                 child: Text(
                   widget.userName.isNotEmpty
                       ? widget.userName[0].toUpperCase()
                       : 'U',
-                  style: AppTextStyles.smallBold(color: Colors.white),
+                  style: AppTextStyles.smallBold(color: _sidebarActiveColor),
                 ),
               ),
             ),
@@ -347,9 +394,10 @@ class _MainLayoutState extends State<MainLayout> {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
       child: Row(
         children: [
-          const Icon(Icons.hub_outlined, color: Colors.white),
+          const Icon(Icons.hub_outlined, color: _sidebarActiveColor),
           const SizedBox(width: 12),
-          Text('engage', style: AppTextStyles.headline1(color: Colors.white)),
+          Text('engage',
+              style: AppTextStyles.headline1(color: _sidebarTextColor)),
         ],
       ),
     );
@@ -359,18 +407,19 @@ class _MainLayoutState extends State<MainLayout> {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-            top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+          top: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            backgroundColor: _sidebarActiveColor.withOpacity(0.10),
             child: Text(
               widget.userName.isNotEmpty
                   ? widget.userName[0].toUpperCase()
                   : 'U',
-              style: AppTextStyles.smallBold(color: Colors.white),
+              style: AppTextStyles.smallBold(color: _sidebarActiveColor),
             ),
           ),
           const SizedBox(width: 12),
@@ -379,12 +428,11 @@ class _MainLayoutState extends State<MainLayout> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.userName,
-                    style: AppTextStyles.bodyBold(color: Colors.white),
+                    style: AppTextStyles.bodyBold(color: _sidebarTextColor),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1),
                 Text(widget.userRole,
-                    style: AppTextStyles.caption(
-                        color: Colors.white.withValues(alpha: 0.6)),
+                    style: AppTextStyles.caption(color: Colors.grey.shade600),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1),
               ],
@@ -393,7 +441,7 @@ class _MainLayoutState extends State<MainLayout> {
           if (widget.onLogout != null)
             IconButton(
               icon: Icon(Icons.logout_rounded,
-                  size: 20, color: Colors.white.withValues(alpha: 0.6)),
+                  size: 20, color: Colors.grey.shade700),
               onPressed: () => _showLogoutConfirmation(context),
               tooltip: 'Logout',
             ),
@@ -415,13 +463,11 @@ class _MainLayoutState extends State<MainLayout> {
       drawer: showSidebar
           ? null
           : Drawer(
-              backgroundColor: AppTheme.brandSecondary,
+              backgroundColor: _sidebarBgColor,
               child: SafeArea(
                 child: Column(
                   children: [
                     _buildDrawerBrand(),
-                    Divider(
-                        height: 1, color: Colors.white.withValues(alpha: 0.12)),
                     const SizedBox(height: 8),
                     Expanded(child: _buildDrawerNavList(theme)),
                     _buildDrawerUserProfile(),
@@ -430,90 +476,90 @@ class _MainLayoutState extends State<MainLayout> {
               ),
             ),
 
-      body: Row(
+      body: Column(
         children: [
-          // ── Desktop Compact Sidebar ────────────────────────────────
-          if (showSidebar)
-            Container(
-              width: 75,
-              color: AppTheme.brandSecondary,
-              child: Column(
-                children: [
-                  _buildCompactBrand(),
-                  Divider(
-                      height: 1, color: Colors.white.withValues(alpha: 0.12)),
-                  const SizedBox(height: 4),
-                  Expanded(child: _buildCompactNavList()),
-                  _buildCompactUserProfile(),
-                ],
-              ),
+          // Top Bar (full width)
+          Container(
+            height: 56,
+            padding: EdgeInsets.only(
+              // Remove the left inset when the mobile drawer (no sidebar)
+              // is used so the hamburger icon can sit at the extreme left.
+              left: !showSidebar ? 0 : (isMobile ? 16 : 24),
+              right: isMobile ? 16 : 24,
             ),
-
-          // ── Main Content ───────────────────────────────────────────
-          Expanded(
-            child: Column(
+            decoration: BoxDecoration(
+              color: _topBarColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                // Top Bar
-                Container(
-                  height: isMobile ? 60 : 64,
-                  padding: EdgeInsets.only(
-                    // Remove the left inset when the mobile drawer (no sidebar)
-                    // is used so the hamburger icon can sit at the extreme left.
-                    left: !showSidebar ? 0 : (isMobile ? 16 : 24),
-                    right: isMobile ? 16 : 24,
+                if (!showSidebar)
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.brandBlue,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                if (!showSidebar) const SizedBox(width: 8),
+                Expanded(
                   child: Row(
                     children: [
-                      if (!showSidebar)
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.menu, color: Colors.white),
-                          onPressed: () =>
-                              _scaffoldKey.currentState?.openDrawer(),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              widget.destinations[_selectedIndex].heading ??
-                                  widget.destinations[_selectedIndex].title,
-                              style:
-                                  AppTextStyles.headline1(color: Colors.white),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            if (widget.destinations[_selectedIndex].subtitle !=
-                                null) ...[
-                              const SizedBox(height: 1),
-                              Text(
-                                widget.destinations[_selectedIndex].subtitle!,
-                                style: AppTextStyles.small(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ],
-                          ],
+                        child: const Icon(
+                          Icons.hub_outlined,
+                          color: Colors.white,
+                          size: 20,
                         ),
                       ),
-                      const NotificationBell(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Rewards Service',
+                          style: AppTextStyles.headline1(color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                // Content Area
+                const NotificationBell(),
+              ],
+            ),
+          ),
+
+          // Below topbar: sidebar + page content
+          Expanded(
+            child: Row(
+              children: [
+                if (showSidebar)
+                  Container(
+                    width: 84,
+                    decoration: BoxDecoration(
+                      color: _sidebarBgColor,
+                      border: Border(
+                        right: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        Expanded(child: _buildCompactNavList()),
+                        _buildCompactUserProfile(),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: Container(
                     color: theme.colorScheme.surfaceContainer,
@@ -551,7 +597,7 @@ class _ProfilePopupCard extends StatelessWidget {
     return Material(
       elevation: 16,
       borderRadius: BorderRadius.circular(14),
-      shadowColor: Colors.black.withValues(alpha: 0.18),
+      shadowColor: Colors.black.withOpacity(0.18),
       clipBehavior: Clip.antiAlias,
       child: Container(
         width: 230,
@@ -567,7 +613,7 @@ class _ProfilePopupCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
               decoration: BoxDecoration(
-                color: AppTheme.brandSecondary.withValues(alpha: 0.06),
+                color: AppTheme.brandSecondary.withOpacity(0.06),
                 border: Border(
                   bottom: BorderSide(color: Colors.grey.shade200),
                 ),
@@ -577,7 +623,7 @@ class _ProfilePopupCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor:
-                        AppTheme.brandSecondary.withValues(alpha: 0.15),
+                        AppTheme.brandSecondary.withOpacity(0.15),
                     child: Text(
                       userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                       style: AppTextStyles.sectionTitle(

@@ -8,10 +8,14 @@ class CreateNominationParams {
   final int nomineeId;
   final int awardTypeId;
   final String citation;
+  final String? personaType;
+  final String? personaLabel;
   const CreateNominationParams({
     required this.nomineeId,
     required this.awardTypeId,
     required this.citation,
+    this.personaType,
+    this.personaLabel,
   });
 }
 
@@ -27,6 +31,8 @@ class CreateNominationUseCase
       nomineeId: params.nomineeId,
       awardTypeId: params.awardTypeId,
       citation: params.citation,
+      personaType: params.personaType,
+      personaLabel: params.personaLabel,
     );
   }
 }

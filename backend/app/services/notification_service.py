@@ -1,10 +1,19 @@
 from sqlalchemy.orm import Session
+from typing import Optional
+import logging
+import threading
 from app.models.notifications import Notification
 from app.jobs.email_worker import enqueue_email
+from app.repository.notification_repository import NotificationRepository
+
+logger = logging.getLogger(__name__)
 
 
 # Map in-app source_type → EmailEventType for auto-dispatch.
 _SOURCE_TO_EMAIL_EVENT: dict = {}  # populated lazily to avoid circular imports
+
+# Source types that also trigger a Teams notification (when Teams is enabled).
+_TEAMS_SOURCE_TYPES = {"ECARD", "AWARD", "CELEBRATION"}
 
 
 def _get_source_email_map() -> dict:
@@ -26,8 +35,10 @@ def _get_source_email_map() -> dict:
 class NotificationService:
     """Service for managing notifications."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self._token = token
+        self.repository = NotificationRepository(db)
 
     def create_notification(
         self,
@@ -39,25 +50,8 @@ class NotificationService:
         email_event_type: str | None = None,
         email_context: dict | None = None,
     ) -> Notification:
-        """Create an in-app notification and optionally enqueue an email.
-
-        Parameters
-        ----------
-        email_event_type : str | None
-            Explicit ``EmailEventType`` value.  When *None* the method
-            attempts an automatic lookup via ``_SOURCE_TO_EMAIL_EVENT``.
-        email_context : dict | None
-            Extra Jinja2 context passed to the email template.
-        """
-        notification = Notification(
-            user_id=user_id,
-            message=message,
-            source_type=source_type,
-            source_id=source_id
-        )
-        self.db.add(notification)
-        self.db.commit()
-        self.db.refresh(notification)
+        """Create an in-app notification and optionally enqueue an email."""
+        notification = self.repository.create(user_id, message, source_type, source_id)
 
         # --- Auto-dispatch email (best-effort, non-blocking) ---
         evt = email_event_type
@@ -69,7 +63,16 @@ class NotificationService:
                 event_type=evt,
                 recipient_user_id=user_id,
                 context=ctx,
+                token=self._token,
             )
+
+        # --- Auto-dispatch Teams (best-effort, non-blocking) ---
+        # Teams is sent as part of the unified email+teams call in EmailService._dispatch()
+        # when TEAMS_NOTIFICATIONS_ENABLED is True.
+        # This separate path only fires when email is NOT being dispatched for this event
+        # (i.e. no email_event_type mapped) to avoid duplicating Teams messages.
+        if source_type in _TEAMS_SOURCE_TYPES and evt is None:
+            self._enqueue_teams(user_id=user_id, body=message)
 
         return notification
 
@@ -83,43 +86,19 @@ class NotificationService:
         """Get notifications for a user. Returns (total, items)."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
-        query = self.db.query(Notification).filter(Notification.user_id == user_id)
-
-        if unread_only:
-            query = query.filter(Notification.is_read == False)
-
-        total = query.count()
-        items = query.order_by(Notification.created_at.desc()).offset(skip).limit(per_page).all()
-        return total, items
+        return self.repository.get_by_user_paginated(user_id, unread_only, skip, per_page)
 
     def get_unread_count(self, user_id: int) -> int:
         """Get count of unread notifications."""
-        return self.db.query(Notification).filter(
-            Notification.user_id == user_id,
-            Notification.is_read == False
-        ).count()
+        return self.repository.get_unread_count(user_id)
 
     def mark_as_read(self, notification_id: int, user_id: int) -> bool:
         """Mark a notification as read."""
-        notification = self.db.query(Notification).filter(
-            Notification.id == notification_id,
-            Notification.user_id == user_id
-        ).first()
-
-        if not notification:
-            return False
-
-        notification.is_read = True
-        self.db.commit()
-        return True
+        return self.repository.mark_read(notification_id, user_id)
 
     def mark_all_as_read(self, user_id: int):
         """Mark all notifications as read for a user."""
-        self.db.query(Notification).filter(
-            Notification.user_id == user_id,
-            Notification.is_read == False
-        ).update({"is_read": True}, synchronize_session=False)
-        self.db.commit()
+        self.repository.mark_all_read(user_id)
 
     def send_email_notification(self, user_id: int, subject: str, body: str):
         """Send email notification via background worker."""
@@ -128,34 +107,86 @@ class NotificationService:
             event_type=EmailEventType.HR_CRITICAL,
             recipient_user_id=user_id,
             context={"short_reason": subject, "detailed_message": body},
+            token=self._token,
         )
+
+    def send_teams_notification(
+        self,
+        user_id: int,
+        title: str,
+        body: str,
+        action_url: str = "",
+    ) -> None:
+        """
+        Send a Microsoft Teams message to a user (best-effort, non-blocking).
+        Resolves the user's email from local DB or User Service, then calls
+        the notification service. Does nothing if Teams is disabled.
+        """
+        from app.core.config import settings
+        if not settings.TEAMS_NOTIFICATIONS_ENABLED:
+            return
+        self._enqueue_teams(user_id=user_id, body=body, title=title, action_url=action_url)
+
+    def _enqueue_teams(
+        self,
+        *,
+        user_id: int,
+        body: str,
+        title: str = "Rewards & Recognition",
+        action_url: str = "",
+    ) -> None:
+        """Resolve user email and fire Teams notification in a background thread."""
+        from app.core.config import settings
+        if not settings.TEAMS_NOTIFICATIONS_ENABLED:
+            return
+
+        # Capture state needed by the thread (DB session is not thread-safe).
+        token = self._token
+        _title = title
+        _body = body
+        _url = action_url or settings.FRONTEND_URL
+
+        # Resolve email synchronously (fast local DB lookup).
+        email = self._resolve_user_email(user_id, token=token)
+        if not email:
+            logger.debug(
+                "_enqueue_teams: no email resolved for user %s, skipping Teams notification",
+                user_id,
+            )
+            return
+
+        def _fire() -> None:
+            from app.utils.notification_client import send_teams
+            send_teams([email], title=_title, body=_body, action_url=_url, token=token)
+
+        t = threading.Thread(target=_fire, daemon=True, name=f"teams-notify-{user_id}")
+        t.start()
+
+    def _resolve_user_email(self, user_id: int, *, token: Optional[str] = None) -> Optional[str]:
+        """Return the user's email via User Service."""
+        _token = token or self._token
+        if _token:
+            from app.services.user_profiles_client import get_user_profile
+            profile = get_user_profile(user_id, _token)
+            if profile and profile.email:
+                return profile.email
+        return None
+
     def send_expiry_reminders(self, days_before: int = 7) -> int:
         """Send notifications to users whose points are expiring soon."""
-        from app.models.points_batches import PointsBatch
-        from sqlalchemy import func
         from datetime import date, timedelta
 
         expiry_target = date.today() + timedelta(days=days_before)
 
-        # 1. Find all batches expiring on the target date
-        expiring_batches = self.db.query(
-            PointsBatch.user_id,
-            func.sum(PointsBatch.remaining_points).label('total_expiring')
-        ).filter(
-            PointsBatch.expiry_date == expiry_target,
-            PointsBatch.remaining_points > 0
-        ).group_by(PointsBatch.user_id).all()
+        expiring_batches = self.repository.get_expiring_batches_grouped(expiry_target)
 
         count = 0
         for batch in expiring_batches:
             msg = f"Friendly Reminder: {int(batch.total_expiring)} of your points will expire on {expiry_target.strftime('%d %b %Y')}. Don't forget to spend them!"
 
-            # 2. Avoid duplicate notifications for the same day
-            existing = self.db.query(Notification).filter(
-                Notification.user_id == batch.user_id,
-                Notification.source_type == "EXPIRY_REMINDER",
-                Notification.message.like(f"%{expiry_target.strftime('%d %b %Y')}%")
-            ).first()
+            existing = self.repository.find_by_user_source_message_like(
+                batch.user_id, "EXPIRY_REMINDER", f"%{expiry_target.strftime('%d %b %Y')}%"
+            )
 
             if not existing:
                 self.create_notification(

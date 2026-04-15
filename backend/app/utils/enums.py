@@ -63,6 +63,9 @@ class CelebrationType(str, Enum):
     """Celebration event types."""
     BIRTHDAY = "BIRTHDAY"
     ANNIVERSARY = "ANNIVERSARY"
+    # Manual life events — triggered by HR on behalf of the employee
+    BIRTH = "BIRTH"          # New baby / child birth
+    MARRIAGE = "MARRIAGE"    # Wedding / marriage
 
 
 class AwardStatus(str, Enum):

@@ -17,6 +17,8 @@ class WalletResponse(WalletBase):
     id: int
     user_id: int
     created_at: datetime
+    total_allocated: Optional[int] = None
+    total_rewarded: Optional[int] = None
 
     class Config:
         from_attributes = True

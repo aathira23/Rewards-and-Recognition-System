@@ -2,7 +2,7 @@
 Award schemas for request/response validation.
 """
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -33,6 +33,8 @@ class AwardNominationCreate(AwardBase):
     """Schema for creating an award nomination."""
     nominee_id: int
     citation: Optional[str] = None
+    persona_type: Optional[str] = None   # PERSONAL | DEPARTMENT | Company
+    persona_label: Optional[str] = None  # e.g. "HR Department"
 
 
 class AwardResponse(AwardBase):
@@ -43,6 +45,8 @@ class AwardResponse(AwardBase):
     status: str
     points_awarded: Optional[int]
     citation: Optional[str] = None
+    persona_type: Optional[str] = None
+    persona_label: Optional[str] = None
     next_required_level: Optional[str] = None
     created_at: datetime
 
@@ -66,6 +70,15 @@ class AwardActionRequest(BaseModel):
     comments: Optional[str] = None
 
 
+class OtherApprovalEntry(BaseModel):
+    """A single approval/rejection action by someone other than the current user."""
+    level: str
+    approver_name: Optional[str] = None
+    action: str              # APPROVED or REJECTED
+    comment: Optional[str] = None
+    action_at: Optional[datetime] = None
+
+
 class ApprovalHistoryItem(BaseModel):
     """One entry in a user's approval history — award info + their action."""
     # Approval record fields
@@ -85,6 +98,9 @@ class ApprovalHistoryItem(BaseModel):
     nominee_name: str
     nominator_name: str
     created_at: datetime
+
+    # Full approval chain (all other approvers on this nomination)
+    other_approvals: List[OtherApprovalEntry] = []
 
     class Config:
         from_attributes = True

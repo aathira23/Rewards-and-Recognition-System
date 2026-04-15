@@ -10,6 +10,8 @@ abstract class NominationsRepository {
     required int nomineeId,
     required int awardTypeId,
     required String citation,
+    String? personaType,
+    String? personaLabel,
   });
   Future<Either<Failure, void>> approveNomination(int nominationId,
       {String? comments});

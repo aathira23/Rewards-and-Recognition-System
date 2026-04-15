@@ -15,4 +15,11 @@ abstract class HrApprovalsRepository {
   /// Returns the number of updated wallets.
   Future<Either<Failure, int>> bulkAllocateBudget(
       int points, int? departmentId, String? roleFilter);
+
+  /// Fetch all employees (for life-event selection).
+  Future<Either<Failure, List<Map<String, dynamic>>>> fetchAllEmployees();
+
+  /// Trigger a BIRTH or MARRIAGE life-event celebration (HR only).
+  Future<Either<Failure, Map<String, dynamic>>> triggerLifeEvent(
+      int userId, String celebrationType);
 }

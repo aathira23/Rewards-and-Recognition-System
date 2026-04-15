@@ -6,6 +6,7 @@ import '../../../../injection_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../bloc/user_mgmt_bloc.dart';
 import '../bloc/user_mgmt_event.dart';
 import '../bloc/user_mgmt_state.dart';
@@ -34,16 +35,10 @@ class _UserManagementView extends StatelessWidget {
       body: BlocConsumer<UserMgmtBloc, UserMgmtState>(
         listener: (context, state) {
           if (state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.successMessage!),
-              backgroundColor: Colors.green,
-            ));
+            AppSnackbar.success(context, state.successMessage!);
           }
           if (state.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.error!),
-              backgroundColor: Colors.red,
-            ));
+            AppSnackbar.error(context, state.error!);
           }
         },
         builder: (context, state) {
@@ -175,7 +170,7 @@ class _UserManagementView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(role, style: AppTextStyles.captionBold(color: color)),

@@ -7,8 +7,15 @@ import '../../../../core/widgets/empty_state_view.dart';
 
 class RecognitionFeedList extends StatelessWidget {
   final List<RecognitionEntity> feed;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
-  const RecognitionFeedList({super.key, required this.feed});
+  const RecognitionFeedList({
+    super.key,
+    required this.feed,
+    this.shrinkWrap = false,
+    this.physics,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +30,8 @@ class RecognitionFeedList extends StatelessWidget {
 
     return ListView.builder(
       itemCount: feed.length,
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       itemBuilder: (context, index) {
         final r = feed[index];
         final type = (r.sourceType ?? 'ECARD').toUpperCase();
@@ -67,18 +76,35 @@ class _FeedItem extends StatelessWidget {
       );
     } else if (type == 'CELEBRATION') {
       const c = Color(0xFF7C3AED);
-      final isBirthday = message.toLowerCase().contains('birthday');
+      final msgLower = message.toLowerCase();
+      final isBirthday = msgLower.contains('birthday');
+      final isNewBaby = msgLower.contains('baby') || msgLower.contains('birth');
+      final isMarriage =
+          msgLower.contains('marriage') || msgLower.contains('married');
+
+      final IconData celebIcon = isBirthday
+          ? Icons.cake_rounded
+          : isNewBaby
+              ? Icons.child_friendly_rounded
+              : isMarriage
+                  ? Icons.favorite_rounded
+                  : Icons.workspace_premium_rounded;
+
+      final String celebLabel = isBirthday
+          ? 'Birthday 🎂'
+          : isNewBaby
+              ? 'New Baby 🍼'
+              : isMarriage
+                  ? 'Marriage 💍'
+                  : 'Work Anniversary 🌟';
+
       iconBg = const Color(0xFFEDE9FE);
-      iconChild = Icon(
-        isBirthday ? Icons.cake_rounded : Icons.workspace_premium_rounded,
-        color: c,
-        size: 20,
-      );
+      iconChild = Icon(celebIcon, color: c, size: 20);
       titleLine = _nameText(receiverName, "'s special day");
       tagLine = _Tag(
-        label: isBirthday ? 'Birthday 🎂' : 'Work Anniversary 🌟',
+        label: celebLabel,
         color: c,
-        icon: isBirthday ? Icons.cake_rounded : Icons.workspace_premium_rounded,
+        icon: celebIcon,
       );
     } else {
       // ECARD
@@ -108,7 +134,7 @@ class _FeedItem extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -221,9 +247,9 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        border: Border.all(color: color.withOpacity(0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

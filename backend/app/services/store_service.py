@@ -1,58 +1,55 @@
 """
 Store service - Business logic for reward catalog and redemptions.
 """
+from __future__ import annotations
+
+import logging
 from typing import Any, List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
 from datetime import datetime
+from cachetools import TTLCache
 
-from app.models.rewards import Reward
-from app.models.redemptions import Redemption
-from app.models.points_conversion import PointsConversion
 from app.services.points_service import PointsService
 from app.services.notification_service import NotificationService
 from app.utils.enums import RedemptionStatus, ConversionStatus, ReferenceType
+from app.repository.store_repository import StoreRepository
+
+logger = logging.getLogger(__name__)
+
+# Module-level caches
+_catalog_cache: TTLCache = TTLCache(maxsize=200, ttl=15 * 60)  # 15 min
+_policy_cache: TTLCache = TTLCache(maxsize=20, ttl=60 * 60)    # 1 h
 
 
 class StoreService:
     """Service for managing the rewards catalog and redemptions."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, token: Optional[str] = None):
         self.db = db
+        self.repository = StoreRepository(db)
         self.points_service = PointsService(db)
-        self.notification_service = NotificationService(db)
+        self.notification_service = NotificationService(db, token=token)
 
     def get_catalog(self, page: int = 1, per_page: int = 20, include_inactive: bool = False):
-        """Get rewards from the catalog, paginated. Returns (total, items).
-
-        For the employee-facing catalog (include_inactive=False) rewards with
-        stock_quantity == 0 are excluded as well as inactive ones.
-        When include_inactive=True (HR config view) every reward is returned.
-        """
+        """Get rewards from the catalog, paginated (served from 15 min cache)."""
         from app.utils.constants import clamp_pagination
         page, per_page, skip = clamp_pagination(page, per_page)
-        query = self.db.query(Reward)
-        if not include_inactive:
-            query = query.filter(
-                Reward.is_active == True,
-                # hide rewards that are fully out of stock from employees
-                or_(Reward.stock_quantity == None, Reward.stock_quantity > 0),
-            )
-        total = query.count()
-        items = query.offset(skip).limit(per_page).all()
-        return total, items
+        cache_key = f"catalog:{skip}:{per_page}:{include_inactive}"
+        if cache_key in _catalog_cache:
+            return _catalog_cache[cache_key]
+        result = self.repository.get_catalog_paginated(skip, per_page, include_inactive)
+        _catalog_cache[cache_key] = result
+        return result
 
-    def get_reward_by_id(self, reward_id: int) -> Optional[Reward]:
+    def get_reward_by_id(self, reward_id: int):
         """Get a specific reward by ID."""
-        return self.db.query(Reward).filter(Reward.id == reward_id).first()
+        return self.repository.get_reward_by_id(reward_id)
 
-    def create_reward(self, reward_data: Any) -> Reward:
+    def create_reward(self, reward_data: Any):
         """Create a new reward item in the store."""
-        reward = Reward(**reward_data.model_dump())
-        self.db.add(reward)
-        self.db.commit()
-        self.db.refresh(reward)
-        return reward
+        result = self.repository.create_reward(reward_data.model_dump())
+        _catalog_cache.clear()
+        return result
 
     def update_reward(self, reward_id: int, reward_data: Any) -> Reward:
         """Update an existing reward item."""
@@ -62,15 +59,11 @@ class StoreService:
 
         update_data = reward_data.model_dump(exclude_unset=True)
 
-        for key, value in update_data.items():
-            setattr(reward, key, value)
-
         # HR controls is_active manually — stock hitting 0 does NOT auto-deactivate.
         # 0-stock rewards are simply hidden from the employee catalog by the query filter.
 
-        self.db.commit()
-        self.db.refresh(reward)
-        return reward
+        _catalog_cache.clear()  # invalidate catalog on update
+        return self.repository.save_reward(reward_id, **update_data)
 
     def redeem_reward(self, user_id: int, reward_id: int) -> Redemption:
         """Instant redemption for Merch or Vouchers."""
@@ -85,9 +78,18 @@ class StoreService:
         if reward.stock_quantity is not None:
             if reward.stock_quantity <= 0:
                 # Auto-deactivate if stock is 0
-                reward.is_active = False
-                self.db.commit()
+                self.repository.save_reward(reward_id, is_active=False)
                 raise ValueError("This reward is out of stock.")
+
+        # Check balance accounting for points locked in pending conversions
+        current_balance = self.points_service.get_user_balance(user_id)
+        pending_points = self.points_service.get_pending_conversion_points(user_id)
+        available = current_balance - pending_points
+        if available < reward.points_required:
+            raise ValueError(
+                f"Insufficient points. Available: {available} "
+                f"({pending_points} points are reserved for a pending conversion request)."
+            )
 
         # 1. Deduct points via FIFO
         self.points_service.deduct_points(
@@ -103,18 +105,16 @@ class StoreService:
             # Auto-deactivate if stock reaches 0
             if reward.stock_quantity <= 0:
                 reward.is_active = False
+            _catalog_cache.clear()  # stock changed
 
         # 3. Create redemption record
         # All catalog items (Merchandise & Gift Cards) are instant fulfillment
-        redemption = Redemption(
+        redemption = self.repository.create_redemption(
             user_id=user_id,
             reward_id=reward.id,
             points_used=reward.points_required,
-            status=RedemptionStatus.FULFILLED.value
+            status=RedemptionStatus.FULFILLED.value,
         )
-        self.db.add(redemption)
-        self.db.commit()
-        self.db.refresh(redemption)
 
         # 4. Notify user
         remaining_balance = self.points_service.get_user_balance(user_id)
@@ -143,22 +143,28 @@ class StoreService:
     ) -> PointsConversion:
         """Create a conversion request for Payroll or CSR (requires approval)."""
 
-        # 1. Check balance first
+        # 0. Block if user already has a pending conversion request
+        if self.repository.has_pending_conversion(user_id):
+            raise ValueError(
+                "You already have a pending conversion request. "
+                "Please wait for it to be approved or rejected before submitting a new one."
+            )
+
+        # 1. Check balance (minus points already locked in pending conversions)
         current_balance = self.points_service.get_user_balance(user_id)
-        if current_balance < points:
-            raise ValueError(f"Insufficient points. Balance: {current_balance}, Requested: {points}")
+        pending_points = self.points_service.get_pending_conversion_points(user_id)
+        available = current_balance - pending_points
+        if available < points:
+            raise ValueError(f"Insufficient points. Available: {available}, Requested: {points}")
 
         # 2. Create conversion record (PENDING)
-        conversion = PointsConversion(
+        conversion = self.repository.create_conversion(
             user_id=user_id,
-            points_converted=points,
+            points=points,
             cash_amount=cash_amount,
             conversion_type=conversion_type,
-            status=ConversionStatus.PENDING.value
+            status=ConversionStatus.PENDING.value,
         )
-        self.db.add(conversion)
-        self.db.commit()
-        self.db.refresh(conversion)
 
         # NOTE: We don't deduct points yet.
         # Points are usually deducted upon APPROVAL for payroll.
@@ -179,36 +185,38 @@ class StoreService:
 
         return conversion
 
-    def get_redemption_history(self, user_id: int) -> List[Redemption]:
+    def get_redemption_history(self, user_id: int):
         """Get all standard redemptions for a user."""
-        return self.db.query(Redemption).filter(
-            Redemption.user_id == user_id
-        ).order_by(Redemption.created_at.desc()).all()
+        return self.repository.get_redemptions_by_user(user_id)
 
-    def get_conversion_history(self, user_id: int) -> List[PointsConversion]:
+    def get_conversion_history(self, user_id: int):
         """Get all conversion requests for a user."""
-        return self.db.query(PointsConversion).filter(
-            PointsConversion.user_id == user_id
-        ).order_by(PointsConversion.requested_at.desc()).all()
+        return self.repository.get_conversions_by_user(user_id)
 
-    def get_all_conversion_history(self) -> List[PointsConversion]:
+    def get_all_conversion_history(self):
         """Get all conversion requests (HR/admin view)."""
-        return self.db.query(PointsConversion).order_by(PointsConversion.requested_at.desc()).all()
+        return self.repository.get_all_conversions()
 
-    def get_pending_conversions(self) -> List[PointsConversion]:
+    def get_pending_conversions(self):
         """Get all pending conversion requests (Admin)."""
-        return self.db.query(PointsConversion).filter(
-            PointsConversion.status == ConversionStatus.PENDING.value
-        ).all()
+        return self.repository.get_pending_conversions()
 
-    def approve_conversion(self, conversion_id: int, approver_id: int) -> PointsConversion:
+    def approve_conversion(self, conversion_id: int, approver_id: int):
         """Approve a conversion request and deduct points."""
-        conversion = self.db.query(PointsConversion).filter(PointsConversion.id == conversion_id).first()
+        conversion = self.repository.get_conversion_by_id(conversion_id)
         if not conversion:
             raise ValueError("Conversion request not found.")
 
         if conversion.status != ConversionStatus.PENDING.value:
             raise ValueError("Only pending requests can be approved.")
+
+        # Re-validate that user still has enough points before deducting
+        current_balance = self.points_service.get_user_balance(conversion.user_id)
+        if current_balance < conversion.points_converted:
+            raise ValueError(
+                f"Cannot approve: user's balance ({current_balance}) is less than "
+                f"the requested conversion ({conversion.points_converted} points)."
+            )
 
         # 1. Deduct points via FIFO upon approval
         self.points_service.deduct_points(
@@ -219,17 +227,20 @@ class StoreService:
         )
 
         # 2. Update Status
-        conversion.status = ConversionStatus.APPROVED.value # Or PAID if immediate
-        conversion.approved_by = approver_id
-        conversion.approved_at = datetime.now()
-
-        self.db.commit()
-        self.db.refresh(conversion)
+        _now = datetime.now()
+        self.repository.save_conversion(
+            conversion_id,
+            status=ConversionStatus.APPROVED.value,
+            approved_by=approver_id,
+            approved_at=_now,
+        )
+        # Re-fetch so the rest of the method has current values
+        conversion = self.repository.get_conversion_by_id(conversion_id)
 
         # 3. Notify User
         self.notification_service.create_notification(
-            user_id=conversion.user_id,
-            message=f"Your points conversion request for {conversion.points_converted} points has been approved.",
+            user_id=conversion["user_id"],
+            message=f"Your points conversion request for {conversion['points_converted']} points has been approved.",
             source_type=ReferenceType.CONVERSION.value,
             source_id=conversion.id,
             email_event_type="CONVERSION_APPROVED",
@@ -245,23 +256,25 @@ class StoreService:
 
         return conversion
 
-    def reject_conversion(self, conversion_id: int, approver_id: int) -> PointsConversion:
+    def reject_conversion(self, conversion_id: int, approver_id: int):
         """Reject a conversion request."""
-        conversion = self.db.query(PointsConversion).filter(PointsConversion.id == conversion_id).first()
+        conversion = self.repository.get_conversion_by_id(conversion_id)
         if not conversion:
             raise ValueError("Conversion request not found.")
 
-        conversion.status = ConversionStatus.REJECTED.value
-        conversion.approved_by = approver_id
-        conversion.approved_at = datetime.now()
-
-        self.db.commit()
-        self.db.refresh(conversion)
+        _now = datetime.now()
+        self.repository.save_conversion(
+            conversion_id,
+            status=ConversionStatus.REJECTED.value,
+            approved_by=approver_id,
+            approved_at=_now,
+        )
+        conversion = self.repository.get_conversion_by_id(conversion_id)
 
         # Notify User
         self.notification_service.create_notification(
-            user_id=conversion.user_id,
-            message=f"Your points conversion request for {conversion.points_converted} points has been rejected.",
+            user_id=conversion["user_id"],
+            message=f"Your points conversion request for {conversion['points_converted']} points has been rejected.",
             source_type=ReferenceType.CONVERSION.value,
             source_id=conversion.id,
             email_event_type="CONVERSION_REJECTED",
@@ -277,72 +290,52 @@ class StoreService:
 
         return conversion
 
-    def get_policies(self, include_inactive: bool = False) -> List[Any]:
-        """Get all points and conversion rules. If not include_inactive, returns only active."""
-        from app.models.points_policy import PointsPolicy
-        query = self.db.query(PointsPolicy)
-        if not include_inactive:
-            query = query.filter(PointsPolicy.is_active == True)
-        return query.all()
+    def get_policies(self, include_inactive: bool = False):
+        """Get all points and conversion rules (served from 1 h cache)."""
+        cache_key = f"policies:{include_inactive}"
+        if cache_key in _policy_cache:
+            return _policy_cache[cache_key]
+        result = self.repository.get_policies(include_inactive)
+        _policy_cache[cache_key] = result
+        return result
 
-    def create_policy(self, policy_data: Any) -> Any:
+    def create_policy(self, policy_data: Any):
         """Create a new point policy, deactivating any existing duplicate first.
 
         Duplicate identity:
           - CONVERSION rules  → same recognition_type + conversion_reward_type
           - All other rules   → same recognition_type + event_key (None or value)
         """
-        from app.models.points_policy import PointsPolicy
-
         data = policy_data.model_dump()
         rec_type = data.get("recognition_type")
+        event_key = data.get("event_key")
+        conv_reward_type = data.get("conversion_reward_type")
 
-        if rec_type == "CONVERSION":
-            conv_reward_type = data.get("conversion_reward_type")
-            duplicates = self.db.query(PointsPolicy).filter(
-                PointsPolicy.recognition_type == rec_type,
-                PointsPolicy.conversion_reward_type == conv_reward_type,
-            ).all()
-        else:
-            event_key = data.get("event_key")
-            query = self.db.query(PointsPolicy).filter(
-                PointsPolicy.recognition_type == rec_type,
-            )
-            if event_key:
-                query = query.filter(PointsPolicy.event_key == event_key)
-            else:
-                query = query.filter(PointsPolicy.event_key == None)
-            duplicates = query.all()
+        duplicates = self.repository.find_duplicate_policies(
+            recognition_type=rec_type,
+            event_key=event_key,
+            conversion_reward_type=conv_reward_type,
+        )
 
         if duplicates:
             # Update the existing record instead of creating a new one
-            policy = duplicates[0] # Usually there should only be one
-            for key, value in data.items():
-                if key != "id": # Prevent ID overwrite
-                    setattr(policy, key, value)
-            
-            # Ensure it is active
-            policy.is_active = True
+            policy = duplicates[0]
+            update_kwargs = {k: v for k, v in data.items() if k != "id"}
+            update_kwargs["is_active"] = True
+            _policy_cache.clear()
+            return self.repository.save_policy(policy["id"], **update_kwargs)
         else:
-            # Create a new record
-            policy = PointsPolicy(**data)
-            self.db.add(policy)
-            
-        self.db.commit()
-        self.db.refresh(policy)
-        return policy
+            result = self.repository.create_policy(data)
+            _policy_cache.clear()
+            return result
 
-    def update_policy(self, policy_id: int, policy_data: Any) -> Any:
+    def update_policy(self, policy_id: int, policy_data: Any):
         """Update an existing policy."""
-        from app.models.points_policy import PointsPolicy
-        policy = self.db.query(PointsPolicy).filter(PointsPolicy.id == policy_id).first()
+        policy = self.repository.get_policy_by_id(policy_id)
         if not policy:
             raise ValueError("Policy not found.")
 
         update_data = policy_data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(policy, key, value)
 
-        self.db.commit()
-        self.db.refresh(policy)
-        return policy
+        _policy_cache.clear()
+        return self.repository.save_policy(policy_id, **update_data)

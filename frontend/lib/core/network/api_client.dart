@@ -5,27 +5,36 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:dio/browser.dart' show BrowserHttpClientAdapter;
 import 'auth_interceptor.dart';
+import 'cache_interceptor.dart';
 import '../constants/api_constants.dart';
 import '../errors/exceptions.dart';
 
 class ApiClient {
   final Dio _dio;
+  late final CacheInterceptor _cacheInterceptor;
 
   ApiClient({Dio? dio, AuthInterceptor? authInterceptor})
       : _dio = dio ?? Dio() {
+    _cacheInterceptor = CacheInterceptor(
+      defaultTtl: const Duration(minutes: 5),
+      maxEntries: 200,
+    );
     _applyBaseOptions();
     // Use browser HTTP adapter when running on web.
-    // withCredentials:true is required because the backend sends
-    // Access-Control-Allow-Credentials:true with a specific origin.
     if (kIsWeb) {
-      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: true);
+      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: false);
     }
 
     if (authInterceptor != null) {
       _dio.interceptors.add(authInterceptor);
     }
+    // Add the in-memory GET response cache interceptor.
+    _dio.interceptors.add(_cacheInterceptor);
     _initializeInterceptors();
   }
+
+  /// Clear the in-memory response cache (e.g. on logout).
+  void clearCache() => _cacheInterceptor.clearAll();
 
   void _applyBaseOptions() {
     _dio.options.baseUrl = ApiConstants.baseUrl;
@@ -40,6 +49,19 @@ class ApiClient {
   }
 
   void _initializeInterceptors() {
+    // Unwrap the backend envelope: { "responseData": ... } → { "data": ... }
+    _dio.interceptors.add(InterceptorsWrapper(
+      onResponse: (response, handler) {
+        if (response.data is Map && response.data.containsKey('responseData')) {
+          response.data = {
+            ...response.data,
+            'data': response.data['responseData'],
+          };
+        }
+        handler.next(response);
+      },
+    ));
+
     // Only log in debug mode to avoid noisy connection errors in production.
     if (kDebugMode) {
       _dio.interceptors.add(LogInterceptor(
@@ -158,7 +180,11 @@ class ApiClient {
       String message = 'Something went wrong on the server.';
 
       // Try to extract error message from backend response if available
-      if (data is Map && data.containsKey('message')) {
+      if (data is Map &&
+          data.containsKey('errorMessage') &&
+          data['errorMessage'] != null) {
+        message = data['errorMessage'].toString();
+      } else if (data is Map && data.containsKey('message')) {
         message = data['message'];
       } else if (data is Map && data.containsKey('detail')) {
         // Handle FastAPI detail messages

@@ -1,6 +1,10 @@
 """
 Dependency injection utilities.
+
+Authentication is handled by the centralized User Service.
+User data is resolved from the User Service cache — no local users table.
 """
+import logging
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -8,98 +12,66 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import decode_access_token
 from app.core.config import settings
+from app.schemas.user_context import UserContext
+
+logger = logging.getLogger(__name__)
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
+# Optional token dependency (does not raise when missing)
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login",
+    auto_error=False,
+)
+# ─── User Service auth helpers ─────────────────────────────────────────────
 
-def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
+
+async def _get_current_user_from_service(token: str):
     """
-    Get current user ID from JWT token.
-
-    Args:
-        token: JWT access token
-
-    Returns:
-        User ID
-
-    Raises:
-        HTTPException: If token is invalid or user not found
+    Validate token via User Service (Cache 1) → return UserContext.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    from app.services.user_service_client import get_user_context
 
-    payload = decode_access_token(token)
-    if payload is None:
-        raise credentials_exception
+    return await get_user_context(token)
 
-    user_id: Optional[int] = payload.get("sub")
-    if user_id is None:
-        raise credentials_exception
 
-    # Log token payload for debugging RBAC issues (redacts sensitive fields)
+# ─── Public dependencies (used by all routers) ────────────────────────────
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+):
+    """
+    Get current authenticated user.
+
+    Returns UserContext (from the User Service TTL cache).
+    """
+    return await _get_current_user_from_service(token)
+
+
+def get_current_user_id(
+    current_user=Depends(get_current_user),
+) -> int:
+    """
+    Return the current user's ID.
+
+    Derives from get_current_user so the full auth chain is always enforced —
+    no separate token decoding, no security bypass in either mode.
+    """
+    return current_user.id
+
+
+async def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+):
+    """
+    Attempt to return current user; return None if token is missing or invalid.
+    Used by endpoints that allow unauthenticated access (e.g. first user creation).
+    """
+    if not token:
+        return None
     try:
-        import logging
-        logger = logging.getLogger(__name__)
-        redacted = dict(payload)
-        # redact typical sensitive fields if present
-        if "email" in redacted:
-            redacted["email"] = "<redacted>"
-        if "exp" in redacted:
-            redacted["exp"] = "<exp>"
-        logger.debug("Decoded access token payload: %s", redacted)
-    except Exception:
-        pass
-
-    return int(user_id)
-
-
-def get_current_user(
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
-):
-    """
-    Get current authenticated user from database.
-
-    Args:
-        db: Database session
-        user_id: Current user ID from token
-
-    Returns:
-        User model instance
-
-    Raises:
-        HTTPException: If user not found
-    """
-    from app.models.users import User
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-
-def get_optional_current_user(
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
-):
-    """
-    Attempt to return current user, but return None if token missing/invalid.
-    Useful for endpoints that allow unauthenticated access only when system has no users.
-    """
-    from app.core.security import decode_access_token
-    from app.models.users import User
-
-    payload = decode_access_token(token)
-    if payload is None:
+        return await get_current_user(token=token)
+    except HTTPException:
         return None
-    user_id = payload.get("sub")
-    if user_id is None:
-        return None
-    user = db.query(User).filter(User.id == int(user_id)).first()
-    return user

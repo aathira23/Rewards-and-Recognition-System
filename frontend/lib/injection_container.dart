@@ -16,6 +16,7 @@ import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/check_auth_status_usecase.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
+import 'features/auth/domain/usecases/token_login_usecase.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 
 import 'features/profile/data/datasources/profile_remote_data_source.dart';
@@ -170,11 +171,13 @@ Future<void> init() async {
       logoutUseCase: sl(),
       checkAuthStatusUseCase: sl(),
       getMeUseCase: sl(),
+      tokenLoginUseCase: sl(),
     ),
   );
 
   // Use cases
   sl.registerLazySingleton(() => LoginUseCase(sl()));
+  sl.registerLazySingleton(() => TokenLoginUseCase(sl()));
   sl.registerLazySingleton(() => GetMeUseCase(sl()));
   sl.registerLazySingleton(() => GetUsersUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));

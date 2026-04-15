@@ -1,45 +1,72 @@
+"""
+Standardised response builder matching company microservice pattern.
+
+All endpoints return:
+    {
+        "statusCode": 200,
+        "statusMessage": "Success",
+        "errorMessage": null,
+        "responseData": { ... }
+    }
+"""
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import status as http_status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_204_NO_CONTENT,
+    HTTP_400_BAD_REQUEST,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_403_FORBIDDEN,
+    HTTP_404_NOT_FOUND,
+    HTTP_409_CONFLICT,
+    HTTP_500_INTERNAL_SERVER_ERROR,
+)
+
+# Standard status messages
+SUCCESS_MESSAGE = "Success"
+FAILURE_MESSAGE = "Failed"
 
 
-from fastapi.encoders import jsonable_encoder
-
-def _now_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
-
-
-class CommonResponse(BaseModel):
-    status: str
+class ResponseBuilder(BaseModel):
     status_code: int
-    message: Optional[str] = ""
-    data: Optional[Any] = None
-    timestamp: str
-
-    class Config:
-        from_attributes = True
+    status_message: str
+    error_message: Optional[Any] = None
+    response_data: Optional[Any] = None
 
 
-def _build_body(status_text: str, status_code: int, message: str | None, data: Any) -> Any:
-    response = CommonResponse(
-        status=status_text,
+def build_response(
+    status_code: int,
+    status_message: str,
+    error_message: Any = None,
+    response_data: Any = None,
+) -> JSONResponse:
+    """Primary response builder — company standard format."""
+    encoded_data = jsonable_encoder(response_data)
+    return JSONResponse(
         status_code=status_code,
-        message=message or "",
-        data=data,
-        timestamp=_now_iso(),
+        content={
+            "statusCode": status_code,
+            "statusMessage": status_message,
+            "errorMessage": error_message,
+            "responseData": encoded_data,
+        },
     )
-    # Exclude None values
-    return jsonable_encoder(response, exclude_none=True)
 
 
-def success(data: Any = None, message: str | None = "OK", status_code: int = http_status.HTTP_200_OK) -> JSONResponse:
-    body = _build_body("success", status_code, message, data)
-    return JSONResponse(status_code=status_code, content=body)
+# ─── Convenience wrappers (keep existing call-sites working) ────────
+
+def success(
+    data: Any = None,
+    message: str | None = None,
+    status_code: int = HTTP_200_OK,
+) -> JSONResponse:
+    return build_response(status_code, SUCCESS_MESSAGE, None, data)
 
 
 def paginated_success(
@@ -48,10 +75,11 @@ def paginated_success(
     total: int,
     page: int,
     per_page: int,
-    message: str | None = "OK",
+    message: str | None = None,
 ) -> JSONResponse:
-    """Standard paginated response with metadata."""
+    """Paginated list response — pagination metadata in responseData."""
     import math
+
     total_pages = math.ceil(total / per_page) if per_page > 0 else 0
     payload = {
         "items": items,
@@ -60,39 +88,40 @@ def paginated_success(
         "per_page": per_page,
         "total_pages": total_pages,
     }
-    return success(data=payload, message=message)
+    return build_response(HTTP_200_OK, SUCCESS_MESSAGE, None, payload)
 
 
-def created(data: Any = None, message: str | None = "Created") -> JSONResponse:
-    return success(data=data, message=message, status_code=http_status.HTTP_201_CREATED)
+def created(data: Any = None, message: str | None = None) -> JSONResponse:
+    return build_response(HTTP_201_CREATED, SUCCESS_MESSAGE, None, data)
 
 
-def no_content(message: str | None = "No content") -> JSONResponse:
-    body = _build_body("success", http_status.HTTP_204_NO_CONTENT, message, None)
-    return JSONResponse(status_code=http_status.HTTP_204_NO_CONTENT, content=body)
+def no_content(message: str | None = None) -> JSONResponse:
+    return build_response(HTTP_204_NO_CONTENT, SUCCESS_MESSAGE, None, None)
 
 
-def client_error(message: str | None = "Bad request", data: Any = None, status_code: int = http_status.HTTP_400_BAD_REQUEST) -> JSONResponse:
-    body = _build_body("error", status_code, message, data)
-    return JSONResponse(status_code=status_code, content=body)
+def client_error(
+    message: str | None = "Bad request",
+    data: Any = None,
+    status_code: int = HTTP_400_BAD_REQUEST,
+) -> JSONResponse:
+    return build_response(status_code, FAILURE_MESSAGE, message, data)
 
 
 def unauthorized(message: str | None = "Unauthorized", data: Any = None) -> JSONResponse:
-    return client_error(message=message, data=data, status_code=http_status.HTTP_401_UNAUTHORIZED)
+    return build_response(HTTP_401_UNAUTHORIZED, FAILURE_MESSAGE, message, data)
 
 
 def forbidden(message: str | None = "Forbidden", data: Any = None) -> JSONResponse:
-    return client_error(message=message, data=data, status_code=http_status.HTTP_403_FORBIDDEN)
+    return build_response(HTTP_403_FORBIDDEN, FAILURE_MESSAGE, message, data)
 
 
 def not_found(message: str | None = "Not found", data: Any = None) -> JSONResponse:
-    return client_error(message=message, data=data, status_code=http_status.HTTP_404_NOT_FOUND)
+    return build_response(HTTP_404_NOT_FOUND, FAILURE_MESSAGE, message, data)
 
 
 def conflict(message: str | None = "Conflict", data: Any = None) -> JSONResponse:
-    return client_error(message=message, data=data, status_code=http_status.HTTP_409_CONFLICT)
+    return build_response(HTTP_409_CONFLICT, FAILURE_MESSAGE, message, data)
 
 
 def server_error(message: str | None = "Internal server error", data: Any = None) -> JSONResponse:
-    body = _build_body("error", http_status.HTTP_500_INTERNAL_SERVER_ERROR, message, data)
-    return JSONResponse(status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, content=body)
+    return build_response(HTTP_500_INTERNAL_SERVER_ERROR, FAILURE_MESSAGE, message, data)

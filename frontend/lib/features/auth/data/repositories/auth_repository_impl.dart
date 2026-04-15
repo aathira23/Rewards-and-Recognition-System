@@ -47,6 +47,22 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, AuthEntity>> tokenLogin(
+      {required String token}) async {
+    try {
+      final authModel = await remoteDataSource.tokenLogin(token: token);
+      await localDataSource.saveToken(authModel.token);
+      return Right(authModel);
+    } on UnauthorizedException {
+      return Left(ServerFailure('Token is invalid or expired.'));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure('Token login failed. Please try again.'));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> logout() async {
     try {
       await localDataSource.clearToken();

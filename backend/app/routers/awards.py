@@ -5,13 +5,42 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
-from app.models.users import User
+from app.core.dependencies import get_current_user, oauth2_scheme
 from app.schemas.awards import AwardNominationCreate, AwardResponse, AwardActionRequest, ApprovalHistoryItem
 from app.schemas.award_types import AwardTypeCreate, AwardTypeUpdate, AwardTypeResponse
 from app.services.awards_service import AwardsService
 from app.utils.enums import UserRole, ApprovalLevel
 from app.utils.response import success, client_error, created, conflict, server_error, paginated_success
+from app.services.user_profiles_client import get_users_batch
+
+
+def _enrich_award_responses(responses: list[AwardResponse], token: str) -> list[AwardResponse]:
+    """Populate nominee / nominator from the authoritative profile source.
+
+    Always enriches via the centralized User Service batch API (cached).
+    """
+    uid_set = set()
+    for r in responses:
+        if r.nominee_id:
+            uid_set.add(r.nominee_id)
+        if r.nominator_id:
+            uid_set.add(r.nominator_id)
+    if not uid_set:
+        return responses
+
+    profiles = get_users_batch(list(uid_set), token)
+
+    for r in responses:
+        p = profiles.get(r.nominee_id)
+        if p and getattr(p, "name", None):
+            r.nominee = {"id": r.nominee_id, "name": p.name}
+        if r.persona_label:
+            r.nominator = {"id": r.nominator_id, "name": r.persona_label}
+        else:
+            p = profiles.get(r.nominator_id)
+            if p and getattr(p, "name", None):
+                r.nominator = {"id": r.nominator_id, "name": p.name}
+    return responses
 from app.utils.constants import (
     DEFAULT_PAGE_SIZE, SUCCESS_NOMINATION_SUCCESSFUL, SUCCESS_NOMINATIONS_FETCHED,
     SUCCESS_AWARD_TYPES_FETCHED, ERROR_ONLY_HR_ADMIN_CREATE_AWARD_TYPE,
@@ -32,18 +61,23 @@ router = APIRouter()
 def nominate_for_award(
     nomination: AwardNominationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Nominate an employee for an award."""
-    service = AwardsService(db)
+    service = AwardsService(db, token=token)
     try:
         result = service.nominate_for_award(
             nominator_id=current_user.id,
             nominee_id=nomination.nominee_id,
             award_type_id=nomination.award_type_id,
-            citation=nomination.citation
+            citation=nomination.citation,
+            persona_type=nomination.persona_type,
+            persona_label=nomination.persona_label,
         )
-        return created(data=AwardResponse.model_validate(result), message=SUCCESS_NOMINATION_SUCCESSFUL)
+        resp = AwardResponse.model_validate(result)
+        _enrich_award_responses([resp], token)
+        return created(data=resp, message=SUCCESS_NOMINATION_SUCCESSFUL)
     except HTTPException as e:
         # Map known duplicate nomination to structured conflict
         detail = e.detail if hasattr(e, 'detail') else str(e)
@@ -61,10 +95,11 @@ def get_nominations(
     per_page: int = DEFAULT_PAGE_SIZE,
     status_filter: str = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get award nominations (filtered by role)."""
-    service = AwardsService(db)
+    service = AwardsService(db, token=token)
     total, nominations = service.get_nominations(
         user_id=current_user.id,
         role=current_user.role,
@@ -72,8 +107,10 @@ def get_nominations(
         page=page,
         per_page=per_page
     )
+    items = [AwardResponse.model_validate(n) for n in nominations]
+    _enrich_award_responses(items, token)
     return paginated_success(
-        items=[AwardResponse.model_validate(n) for n in nominations],
+        items=items,
         total=total,
         page=page,
         per_page=per_page,
@@ -85,17 +122,16 @@ def get_nominations(
 @router.get("/")
 def get_award_types(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Get award types the current user is eligible to nominate for."""
     service = AwardsService(db)
     # HR and Admin see ALL award types (including inactive) for config management.
     # Other roles only see active award types they are eligible for.
     is_hr_admin = current_user.role in (UserRole.HR.value, UserRole.ADMIN.value)
-    role_filter = None if is_hr_admin else current_user.role
     active_only = not is_hr_admin
 
-    types = service.get_award_types(active_only=active_only, user_role=role_filter)
+    types = service.get_award_types(active_only=active_only, user_role=current_user.role)
     return success(data=[AwardTypeResponse.model_validate(t) for t in types], message=SUCCESS_AWARD_TYPES_FETCHED)
 
 
@@ -103,7 +139,7 @@ def get_award_types(
 def create_award_type(
     award_type: AwardTypeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Create a new award type (admin only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
@@ -138,7 +174,7 @@ def update_award_type(
     type_id: int,
     award_type: AwardTypeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Update an award type (admin only)."""
     if current_user.role not in (UserRole.HR.value, UserRole.ADMIN.value):
@@ -154,12 +190,13 @@ def update_award_type(
 @router.get("/nominations/my-approvals")
 def get_my_approval_history(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Return all nominations the current user has personally approved or rejected."""
     if current_user.role == UserRole.EMPLOYEE.value:
         return success(data=[], message=SUCCESS_NO_APPROVAL_HISTORY)
-    service = AwardsService(db)
+    service = AwardsService(db, token=token)
     items = service.get_my_approval_history(user_id=current_user.id)
     return success(
         data=[ApprovalHistoryItem(**item).model_dump(mode='json') for item in items],
@@ -172,7 +209,8 @@ def get_my_approval_history(
 def get_nomination(
     nomination_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get specific nomination details."""
     service = AwardsService(db)
@@ -185,7 +223,9 @@ def get_nomination(
        current_user.id not in [nomination.nominator_id, nomination.nominee_id]:
         return client_error(message=ERROR_UNAUTHORIZED_NOMINATION_VIEW, status_code=403)
 
-    return success(data=AwardResponse.model_validate(nomination), message=SUCCESS_NOMINATION_DETAILS_FETCHED)
+    resp = AwardResponse.model_validate(nomination)
+    _enrich_award_responses([resp], token)
+    return success(data=resp, message=SUCCESS_NOMINATION_DETAILS_FETCHED)
 
 
 @router.post("/nominations/{nomination_id}/action")
@@ -193,14 +233,15 @@ def action_nomination(
     nomination_id: int,
     request: AwardActionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Approve or reject an award nomination."""
     # Basic role check: Manager or above can approve
     if current_user.role == UserRole.EMPLOYEE.value:
         return client_error(message=ERROR_EMPLOYEES_CANNOT_APPROVE, status_code=403)
 
-    service = AwardsService(db)
+    service = AwardsService(db, token=token)
     # Validate action value strictly
     action = (request.action or "").strip().upper()
     if action not in ("APPROVE", "REJECT"):
@@ -219,7 +260,9 @@ def action_nomination(
             approval_level=approval_level,
             comments=request.comments
         )
-        return success(data=AwardResponse.model_validate(result), message=SUCCESS_NOMINATION_APPROVED)
+        resp = AwardResponse.model_validate(result)
+        _enrich_award_responses([resp], token)
+        return success(data=resp, message=SUCCESS_NOMINATION_APPROVED)
     else:
         result = service.reject_nomination(
             award_id=nomination_id,
@@ -227,17 +270,20 @@ def action_nomination(
             approval_level=approval_level,
             comments=request.comments or "Rejected"
         )
-        return success(data=AwardResponse.model_validate(result), message=SUCCESS_NOMINATION_REJECTED)
+        resp = AwardResponse.model_validate(result)
+        _enrich_award_responses([resp], token)
+        return success(data=resp, message=SUCCESS_NOMINATION_REJECTED)
 
 
 @router.get("/nominations/{nomination_id}/approval-status")
 def get_approval_status(
     nomination_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """Get detailed approval status and workflow progress for a nomination."""
-    service = AwardsService(db)
+    service = AwardsService(db, token=token)
 
     # Verify nomination exists and user has access
     nomination = service.get_nomination(nomination_id)
